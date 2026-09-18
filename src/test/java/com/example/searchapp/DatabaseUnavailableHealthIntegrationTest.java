@@ -17,7 +17,10 @@ import org.testcontainers.utility.DockerImageName;
 
 @SpringBootTest(
     webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-    properties = "spring.datasource.hikari.connection-timeout=1000")
+    properties = {
+      "spring.datasource.hikari.connection-timeout=1000",
+      "app.api-key=test-api-key-that-is-at-least-32-characters"
+    })
 @Testcontainers
 class DatabaseUnavailableHealthIntegrationTest {
   @Container @ServiceConnection

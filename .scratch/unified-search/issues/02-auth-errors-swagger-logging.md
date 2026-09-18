@@ -14,9 +14,9 @@ back out on the response, which is the foundation the audit line in ticket 12 bu
 
 **Status:** ready-for-agent
 
-- [ ] A missing, wrong or malformed key returns 401 as `application/problem+json`, and the comparison is constant-time
-- [ ] Startup fails with a clear message when the configured key is unset or shorter than 32 characters
-- [ ] The health endpoint and the OpenAPI and Swagger paths are reachable without a key; every other API route is not
-- [ ] Swagger UI shows an authorize control for the key header and sends it on try-it-out calls
-- [ ] Uncaught exceptions render as problem-detail responses with no stack trace, SQL or constraint name in the body
-- [ ] Logs are structured JSON, each line carrying a request id that is also returned on the response
+- [x] A missing, wrong or malformed key returns 401 as `application/problem+json`, and the comparison is constant-time
+- [x] Startup fails with a clear message when the configured key is unset or shorter than 32 characters
+- [x] The health endpoint and the OpenAPI and Swagger paths are reachable without a key; every other API route is not
+- [x] Swagger UI shows an authorize control for the key header and sends it on try-it-out calls
+- [x] Uncaught exceptions render as problem-detail responses with no stack trace, SQL or constraint name in the body
+- [x] Logs are structured JSON, each line carrying a request id that is also returned on the response

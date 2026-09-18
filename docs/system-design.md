@@ -738,7 +738,7 @@ The relevance floors (`search.lexical-floor`, `search.semantic-floor`, `search.m
 
 ### 11.4 Local
 
-`docker compose up`: `pgvector/pgvector:pg17` with a healthcheck, and `app` depending on healthy DB. No credentials are needed. Result: seeded, J1 and J2 working, and summaries resolving to `failed` until a `GEMINI_API_KEY` is supplied.
+`docker compose up`: copy `.env.example` to `.env`, set the required `API_KEY`, then start `pgvector/pgvector:pg17` with a healthcheck and the app depending on healthy DB. Summaries resolve to `failed` until a `GEMINI_API_KEY` is supplied.
 
 **This is the deliverable.** Everything the brief grades is exercised here.
 
@@ -908,7 +908,7 @@ The PRD defines behaviour and success criteria; this section owns the non-functi
 | Artifact | Content | Source of truth |
 |---|---|---|
 | OpenAPI spec + Swagger UI | Every endpoint, parameter, schema and error response, served unauthenticated at `/v3/api-docs` and `/swagger-ui.html` | Generated from the controllers (springdoc), so it cannot drift from the running code |
-| `README.md` | Setup: `docker compose up` with zero credentials, plus the one optional variable that enables summaries. Example queries demonstrating J1–J3 | Hand-written |
+| `README.md` | Setup: copy `.env.example`, set the required API key, then run `docker compose up`, plus the one optional variable that enables summaries. Example queries demonstrating J1–J3 | Hand-written |
 | | Design decisions and trade-offs: the rationale recorded throughout this document plus PRD §8 (local embeddings, type ordering over fusion, deliberate cuts including multi-tenancy and deployment) | Summarised from this document and the PRD |
 | | Deviations from the brief: `title + content` as embedding input (PRD §5.3), additional read endpoints and the summary action endpoint | |
 | | Summary egress to Gemini, how to disable it, and why production would use Vertex instead | |
