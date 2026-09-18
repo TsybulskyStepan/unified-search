@@ -1,0 +1,15 @@
+spring:
+  application:
+    name: unified-search
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/unified_search}
+    username: ${DB_USER:unified_search}
+    password: ${DB_PASSWORD:unified_search}
+management:
+  endpoints:
+    web:
+      base-path: /
+      exposure:
+        include: health
+      path-mapping:
+        health: health

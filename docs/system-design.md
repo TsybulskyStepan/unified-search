@@ -922,14 +922,14 @@ The PRD defines behaviour and success criteria; this section owns the non-functi
 
 Ordered so the highest-risk assumption is tested first and every step leaves a runnable system.
 
-1. **Skeleton.** Spring Boot 4 on the existing Gradle build, Flyway V1, compose with pgvector, `onboarding` / `search` / `shared` packages with the ArchUnit boundary test, `/health`, `ApiKeyFilter` and the springdoc `X-API-Key` scheme, ProblemDetail handler, Testcontainers base test.
-2. **Embedding spike + eval set.** `Embedder`, `Chunker`, `corpus.json`, `queries.json`, and a test computing similarities directly. **Gate:** positives and negatives separate. Pick the floor.
-3. **Clients.** `POST`/`GET`, validation, `409`.
-4. **Documents.** `DocumentService` transactional write, `POST`/`GET`, long-document test.
-5. **Search.** Both retrievers, `ResultOrdering`, pagination, hydration, J1/J2/J3 tests, eval test wired to the real endpoint — including the client-absence assertions that pin `lexicalFloor`.
-6. **Seeder.**
-7. **Summaries.** `POST …/summary`, worker, lease, `GeminiSummarizer`, retry-after-`failed` and degradation tests.
-8. **Dockerfile.** Two-stage image; `docker compose up` from a clean clone verified end to end.
+1. **Skeleton.** Spring Boot 4 on the existing Gradle build, Flyway V1, compose with pgvector and a two-stage Dockerfile, `onboarding` / `search` / `shared` packages with the ArchUnit boundary test, `/health`, and a Testcontainers base test. The container image is here because the first ticket verifies `docker compose up` end to end.
+2. **API boundary.** `ApiKeyFilter`, the springdoc `X-API-Key` scheme, ProblemDetail handler, request IDs, and structured request logging.
+3. **Embedding spike + eval set.** `Embedder`, `Chunker`, `corpus.json`, `queries.json`, and a test computing similarities directly. **Gate:** positives and negatives separate. Pick the floor.
+4. **Clients.** `POST`/`GET`, validation, `409`.
+5. **Documents.** `DocumentService` transactional write, `POST`/`GET`, long-document test.
+6. **Search.** Both retrievers, `ResultOrdering`, pagination, hydration, J1/J2/J3 tests, eval test wired to the real endpoint — including the client-absence assertions that pin `lexicalFloor`.
+7. **Seeder.**
+8. **Summaries.** `POST …/summary`, worker, lease, `GeminiSummarizer`, retry-after-`failed` and degradation tests.
 9. **README** — setup, J1/J2/J3 example requests and responses, the summary state transition, the design decisions behind it, the Gemini egress note, and the latency estimates labelled as estimates.
 
 Neither deployment (§11.5), a frontend (§10) nor a load test (§12.4) is a step. Each was cut deliberately, for the reasons the sections above give.

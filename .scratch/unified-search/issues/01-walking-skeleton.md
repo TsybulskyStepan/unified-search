@@ -15,9 +15,9 @@ image exists. Building it first keeps that command green for every ticket after 
 
 **Status:** ready-for-agent
 
-- [ ] `docker compose up` from a clean clone yields a healthy app and database, the app waiting on the database healthcheck
-- [ ] Flyway applies the §3.1 schema; the three extensions and three tables exist, with `embedding_model` part of the chunk primary key
-- [ ] `GET /health` returns 200 and reports unhealthy when the database is unreachable
-- [ ] The `onboarding`, `search` and `shared` packages exist, and an ArchUnit test fails the build if the two feature modules import each other
-- [ ] An integration test base class starts `pgvector/pgvector:pg17` via Testcontainers and is exercised by at least one passing test
-- [ ] The IntelliJ scaffolding class is gone and `./gradlew check` passes
+- [x] `docker compose up` from a clean clone yields a healthy app and database, the app waiting on the database healthcheck
+- [x] Flyway applies the §3.1 schema; the three extensions and three tables exist, with `embedding_model` part of the chunk primary key
+- [x] `GET /health` returns 200 and reports unhealthy when the database is unreachable
+- [x] The `onboarding`, `search` and `shared` packages exist, and an ArchUnit test fails the build if the two feature modules import each other
+- [x] An integration test base class starts `pgvector/pgvector:pg17` via Testcontainers and is exercised by at least one passing test
+- [x] The IntelliJ scaffolding class is gone and `./gradlew check` passes
