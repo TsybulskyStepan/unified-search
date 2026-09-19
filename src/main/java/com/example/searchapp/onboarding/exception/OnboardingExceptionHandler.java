@@ -1,6 +1,7 @@
 package com.example.searchapp.onboarding.exception;
 
 import com.example.searchapp.onboarding.client.ClientNotFoundException;
+import com.example.searchapp.onboarding.client.DuplicateClientEmailException;
 import com.example.searchapp.shared.web.ProblemDetails;
 import jakarta.servlet.http.HttpServletRequest;
 import java.net.URI;
@@ -10,17 +11,15 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 /**
- * Maps the "not found" exceptions shared across onboarding's controllers to {@link ProblemDetail}
- * (§8.2). Scoped to {@code onboarding} rather than living in {@code shared.web.
- * GlobalExceptionHandler}: these exception types belong to this module, and {@code shared} must not
- * depend on it (§1.3 module boundary).
+ * Maps every exception onboarding's controllers raise — beyond validation, which {@code
+ * shared.web.GlobalExceptionHandler} already covers for every module (§1.3) — to {@link
+ * ProblemDetail} (§8.2). Scoped to {@code onboarding} rather than living in {@code shared.web}:
+ * these exception types belong to this module, and {@code shared} must not depend on it.
  *
- * <p>{@code onboarding.client.DuplicateClientEmailException} stays local to {@code
- * ClientController}, the only place that raises it. Validation failures no longer have an
- * onboarding-specific type at all — {@link
- * com.example.searchapp.shared.web.RequestValidationException} covers every module. "Not found" is
- * raised by more than one controller — {@code ClientController} and {@code DocumentController} both
- * look up a client — which is why it is centralized here instead.
+ * <p>All of it lives in one place now, not split between here and a controller-local handler: "not
+ * found" was already shared across {@code ClientController} and {@code DocumentController}; {@link
+ * DuplicateClientEmailException} is raised by only one controller, but there is no longer a
+ * validation-style exception left to justify keeping anything local.
  */
 @RestControllerAdvice(basePackages = "com.example.searchapp.onboarding")
 public class OnboardingExceptionHandler {
@@ -42,6 +41,16 @@ public class OnboardingExceptionHandler {
         HttpStatus.NOT_FOUND,
         "Not found",
         "The requested document was not found",
+        URI.create(request.getRequestURI()));
+  }
+
+  @ExceptionHandler(DuplicateClientEmailException.class)
+  ProblemDetail handleDuplicateEmail(
+      DuplicateClientEmailException exception, HttpServletRequest request) {
+    return ProblemDetails.of(
+        HttpStatus.CONFLICT,
+        "Conflict",
+        "A client with this email already exists",
         URI.create(request.getRequestURI()));
   }
 }
