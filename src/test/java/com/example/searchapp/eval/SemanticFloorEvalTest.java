@@ -2,6 +2,7 @@ package com.example.searchapp.eval;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.example.searchapp.onboarding.seed.DemoCorpus;
 import com.example.searchapp.onboarding.service.Chunk;
 import com.example.searchapp.onboarding.service.Chunker;
 import com.example.searchapp.shared.embedding.Cosine;
@@ -32,7 +33,7 @@ class SemanticFloorEvalTest {
 
   @Test
   void positiveAndNegativeSimilaritiesDoNotOverlap() {
-    EvalCorpus corpus = EvalCorpusLoader.corpus();
+    DemoCorpus corpus = EvalCorpusLoader.corpus();
     EvalQueries queries = EvalCorpusLoader.queries();
 
     List<EmbeddedDocument> documents = embedCorpus(corpus);
@@ -86,10 +87,10 @@ class SemanticFloorEvalTest {
         .isPositive();
   }
 
-  private static List<EmbeddedDocument> embedCorpus(EvalCorpus corpus) {
+  private static List<EmbeddedDocument> embedCorpus(DemoCorpus corpus) {
     List<EmbeddedDocument> documents = new ArrayList<>();
-    for (EvalCorpus.EvalClient client : corpus.clients()) {
-      for (EvalCorpus.EvalDocument document : client.documents()) {
+    for (DemoCorpus.DemoClient client : corpus.clients()) {
+      for (DemoCorpus.DemoDocument document : client.documents()) {
         List<Chunk> chunks = Chunker.split(document.content());
         List<String> embeddingInputs =
             chunks.stream()

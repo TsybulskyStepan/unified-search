@@ -16,7 +16,13 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@TestPropertySource(properties = "app.api-key=" + IntegrationTest.TEST_API_KEY)
+@TestPropertySource(
+    properties = {
+      "app.api-key=" + IntegrationTest.TEST_API_KEY,
+      // Tests create their own clients (some reusing seed-corpus emails, e.g. NevisWealth); demo
+      // seeding would collide with them. DemoSeederIntegrationTest exercises seeding directly.
+      "app.seed.enabled=false"
+    })
 @Testcontainers
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)

@@ -66,6 +66,11 @@ public class ClientRepository {
         .isPresent();
   }
 
+  /** Whether any client has ever been written — the seeding gate (§11.3). */
+  public boolean anyExist() {
+    return jdbc.sql("SELECT 1 FROM client LIMIT 1").query(Integer.class).optional().isPresent();
+  }
+
   private static Client map(ResultSet resultSet, int rowNumber) throws SQLException {
     String[] socialLinks =
         resultSet.getArray("social_links") == null

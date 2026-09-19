@@ -2,6 +2,7 @@ package com.example.searchapp.eval;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.example.searchapp.onboarding.seed.DemoCorpus;
 import com.example.searchapp.onboarding.service.Chunk;
 import com.example.searchapp.onboarding.service.Chunker;
 import com.example.searchapp.shared.embedding.Embedder;
@@ -23,12 +24,12 @@ class EmbeddingWordPieceBoundTest {
 
   @Test
   void everyCorpusChunkStaysUnderTheMeasuredWordPieceCeiling() {
-    EvalCorpus corpus = EvalCorpusLoader.corpus();
+    DemoCorpus corpus = EvalCorpusLoader.corpus();
     int checked = 0;
     int maxTokenCount = 0;
 
-    for (EvalCorpus.EvalClient client : corpus.clients()) {
-      for (EvalCorpus.EvalDocument document : client.documents()) {
+    for (DemoCorpus.DemoClient client : corpus.clients()) {
+      for (DemoCorpus.DemoDocument document : client.documents()) {
         List<Chunk> chunks = Chunker.split(document.content());
         assertThat(chunks).as("document '%s' must chunk", document.title()).isNotEmpty();
 

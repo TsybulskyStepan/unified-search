@@ -1,18 +1,24 @@
 package com.example.searchapp.eval;
 
+import com.example.searchapp.onboarding.seed.DemoCorpus;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
 
-/** Reads the eval-set JSON fixtures shared by the corpus/query-based tests (§12.3). */
+/**
+ * Reads the eval-set JSON fixtures shared by the corpus/query-based tests (§12.3). {@code
+ * corpus.json} is read from {@code seed/}, not a test-owned copy: it is the same file {@link
+ * com.example.searchapp.onboarding.seed.DemoSeeder} loads in production (§11.3), on the test
+ * classpath because it ships in {@code src/main/resources}.
+ */
 final class EvalCorpusLoader {
   private static final ObjectMapper MAPPER = new ObjectMapper();
 
   private EvalCorpusLoader() {}
 
-  static EvalCorpus corpus() {
-    return read("/eval/corpus.json", EvalCorpus.class);
+  static DemoCorpus corpus() {
+    return read("/seed/corpus.json", DemoCorpus.class);
   }
 
   static EvalQueries queries() {

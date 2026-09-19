@@ -12,9 +12,9 @@ running. It runs only when the database is empty, and is safe to run twice.
 
 **Status:** ready-for-agent
 
-- [ ] On a clean volume, startup seeds the corpus and search returns meaningful results with no manual setup
-- [ ] Seeding goes through the same creation path the API uses, not raw SQL
-- [ ] Nothing is seeded when clients already exist
-- [ ] Seeding can be turned off by configuration
-- [ ] Two instances starting at once cannot double-seed
-- [ ] The seed corpus and the eval corpus are the same file, so the demo and the tests cannot drift apart
+- [x] On a clean volume, startup seeds the corpus and search returns meaningful results with no manual setup
+- [x] Seeding goes through the same creation path the API uses, not raw SQL
+- [x] Nothing is seeded when clients already exist
+- [x] Seeding can be turned off by configuration
+- [x] Two instances starting at once cannot double-seed
+- [x] The seed corpus and the eval corpus are the same file, so the demo and the tests cannot drift apart
