@@ -674,14 +674,14 @@ Search never reads `summary` for ranking. Summary failure has no path to search.
 
 ### 8.3 Secrets
 
-- Local: `.env` consumed by compose, with a dev-only `API_KEY` in `.env.example`. `GEMINI_API_KEY` is optional and absent by default; `.env.example` documents it as the one variable that turns summaries on. It is never baked into the image, and the summary path is server-side only, so the key never reaches a client.
+- Local: `compose.yaml` ships a dev-only `API_KEY` default directly, so no file needs to exist for `docker compose up` to work. `.env`, copied from `.env.example`, overrides it with a real key and is where `GEMINI_API_KEY` — optional, absent by default — turns summaries on. Neither key is ever baked into the image, and the summary path is server-side only, so `GEMINI_API_KEY` never reaches a client.
 - GCP (documented, not built): `API_KEY` and the DB password would come from Secret Manager as env vars, and summaries would move from an API key to the Cloud Run service account through Application Default Credentials, with no key file.
 
 ### 8.4 Swagger UI and the key
 
 springdoc declares an API-key security scheme (`type: apiKey`, `in: header`, `name: X-API-Key`), so Swagger UI shows an **Authorize** button and sends the header on every try-it-out call. Without a frontend this is the only interactive path into the API, and a reviewer forced to hand-craft headers would be a poor first impression.
 
-The key itself is never served to the browser — it is typed into Authorize and held by Swagger UI for the session. Since the system runs locally (§11.4), the reviewer's key is the one in their own `.env`.
+The key itself is never served to the browser — it is typed into Authorize and held by Swagger UI for the session. Since the system runs locally (§11.4), the reviewer's key is the dev-only default `compose.yaml` ships, unless they set their own via `.env`.
 
 ---
 
@@ -743,7 +743,7 @@ The relevance floors (`search.lexical-floor`, `search.semantic-floor`, `search.m
 
 ### 11.4 Local
 
-`docker compose up`: copy `.env.example` to `.env`, set the required `API_KEY`, then start `pgvector/pgvector:pg17` with a healthcheck and the app depending on healthy DB. Summaries resolve to `failed` until a `GEMINI_API_KEY` is supplied.
+`docker compose up`: `pgvector/pgvector:pg17` with a healthcheck, and `app` — with its own healthcheck against `GET /health` — depending on healthy DB. No credentials are needed: `compose.yaml` ships a dev-only `API_KEY` default, so the command works unmodified from a clean clone. Copy `.env.example` to `.env` and set a real `API_KEY` to override the default, or add `GEMINI_API_KEY` to turn summaries on — without it they resolve to `failed`.
 
 **This is the deliverable.** Everything the brief grades is exercised here.
 
@@ -913,7 +913,7 @@ The PRD defines behaviour and success criteria; this section owns the non-functi
 | Artifact | Content | Source of truth |
 |---|---|---|
 | OpenAPI spec + Swagger UI | Every endpoint, parameter, schema and error response, served unauthenticated at `/v3/api-docs` and `/swagger-ui.html` | Generated from the controllers (springdoc), so it cannot drift from the running code |
-| `README.md` | Setup: copy `.env.example`, set the required API key, then run `docker compose up`, plus the one optional variable that enables summaries. Example queries demonstrating J1–J3 | Hand-written |
+| `README.md` | Setup: `docker compose up` with zero credentials, plus the one optional variable that enables summaries. Example queries demonstrating J1–J3 | Hand-written |
 | | Design decisions and trade-offs: the rationale recorded throughout this document plus PRD §8 (local embeddings, type ordering over fusion, deliberate cuts including multi-tenancy and deployment) | Summarised from this document and the PRD |
 | | Deviations from the brief: `title + content` as embedding input (PRD §5.3), additional read endpoints and the summary action endpoint | |
 | | Summary egress to Gemini, how to disable it, and why production would use Vertex instead | |

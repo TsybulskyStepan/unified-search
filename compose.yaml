@@ -22,9 +22,17 @@ services:
       DB_URL: jdbc:postgresql://db:5432/unified_search
       DB_USER: unified_search
       DB_PASSWORD: unified_search
-      API_KEY: ${API_KEY:?copy .env.example to .env and set API_KEY}
+      # Dev-only default so `docker compose up` needs no setup (PRD §6, system-design §11.4).
+      # Copy .env.example to .env and set your own API_KEY to override it.
+      API_KEY: ${API_KEY:-dev-only-insecure-key-do-not-use-in-production-env}
     ports:
       - "8080:8080"
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://localhost:8080/health"]
+      interval: 5s
+      timeout: 5s
+      start_period: 30s
+      retries: 12
 
 volumes:
   postgres-data:
