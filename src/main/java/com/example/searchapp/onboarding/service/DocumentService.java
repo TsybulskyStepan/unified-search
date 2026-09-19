@@ -67,14 +67,8 @@ public class DocumentService {
     return documents.findById(clientId, documentId).orElseThrow(DocumentNotFoundException::new);
   }
 
-  /**
-   * Requests a summary (§7.2). {@code none}/{@code failed} transitions to {@code pending} and
-   * nudges the worker; already {@code pending} or {@code ready} is a no-op that returns the current
-   * row unchanged — repeating the request can neither double-enqueue nor reset a job already in
-   * flight.
-   */
+  /** Requests a summary (§7.2). */
   public Document requestSummary(UUID clientId, UUID documentId) {
-    Document current = find(clientId, documentId);
     return documents
         .requestSummary(clientId, documentId)
         .map(
@@ -82,6 +76,10 @@ public class DocumentService {
               summaryWorker.nudge();
               return pending;
             })
-        .orElse(current);
+        // No row updated: not found, or a no-op (already pending/ready). Re-reading here rather
+        // than returning a snapshot taken before the update means a request that raced another
+        // one to the same none->pending transition still reports the row's real current state
+        // (e.g. pending, claimed by the request that won) instead of a stale "none".
+        .orElseGet(() -> find(clientId, documentId));
   }
 }

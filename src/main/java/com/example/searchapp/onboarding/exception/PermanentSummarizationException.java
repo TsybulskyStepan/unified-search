@@ -1,12 +1,8 @@
 package com.example.searchapp.onboarding.exception;
 
 /**
- * A {@code Summarizer} call failed in a way retrying cannot fix — bad auth, an invalid request, or
- * the summarizer being unavailable at all (system-design §7.2, §7.3). The claiming row is moved
- * straight to {@code failed}, without waiting for the attempt limit.
- *
- * <p>Lives here rather than beside {@code Summarizer} in {@code onboarding.service}: see {@link
- * TransientSummarizationException}'s note on why.
+ * A {@code Summarizer} call failed in a way retrying cannot fix (§7.2, §7.3). See {@link
+ * TransientSummarizationException} for why this lives here rather than beside {@code Summarizer}.
  */
 public class PermanentSummarizationException extends RuntimeException {
   public PermanentSummarizationException(String message) {

@@ -8,7 +8,14 @@ import com.example.searchapp.onboarding.service.StubSummarizer;
 import com.example.searchapp.onboarding.service.SummaryWorker;
 import java.net.http.HttpResponse;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.TestConfiguration;
@@ -77,6 +84,50 @@ class SummaryApiIntegrationTest extends IntegrationTest {
     assertThat(third.statusCode()).isEqualTo(200);
     assertThat(third.body()).contains("\"summary_status\":\"ready\"");
     assertThat(summarizer.callCount()).isEqualTo(1);
+  }
+
+  @Test
+  void twoConcurrentInitialRequestsBothReport202NeverAStaleNone() throws Exception {
+    // Regression for /plannotator-review [P1]: the loser of a genuine race on the none->pending
+    // transition must report the row's real current state, not a snapshot read before either
+    // request's update ran (which would still read "none" and answer 200 instead of 202).
+    summarizer.reset();
+    String clientId = createClient("Concurrent", "Request", "concurrent.request@example.com");
+    String documentId = createDocument(clientId, "Bill", "Account 222");
+
+    // Pauses the winner's nudge mid-call, so by the time both HTTP responses are asserted the row
+    // is still genuinely "pending" rather than having already raced ahead to "ready".
+    summarizer.pauseNextCall();
+
+    ExecutorService pool = Executors.newFixedThreadPool(2);
+    CountDownLatch ready = new CountDownLatch(2);
+    CountDownLatch go = new CountDownLatch(1);
+    List<Future<HttpResponse<String>>> responses = new ArrayList<>();
+    try {
+      for (int i = 0; i < 2; i++) {
+        responses.add(
+            pool.submit(
+                () -> {
+                  ready.countDown();
+                  go.await();
+                  return requestSummary(clientId, documentId);
+                }));
+      }
+      ready.await();
+      go.countDown();
+    } finally {
+      pool.shutdown();
+      assertThat(pool.awaitTermination(10, TimeUnit.SECONDS)).isTrue();
+    }
+
+    for (Future<HttpResponse<String>> response : responses) {
+      assertThat(response.get().statusCode()).isEqualTo(202);
+      assertThat(response.get().body()).contains("\"summary_status\":\"pending\"");
+    }
+    assertThat(summarizer.callCount()).isEqualTo(1);
+
+    summarizer.release();
+    awaitStatus(clientId, documentId, "ready");
   }
 
   @Test

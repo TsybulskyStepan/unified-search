@@ -22,11 +22,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.simple.JdbcClient;
 
 /**
- * The claim step of §7.2 directly: {@code FOR UPDATE SKIP LOCKED} is what makes two concurrent
- * claims never return the same row, and an expired lease is what makes a claimed-but-unfinished row
- * claimable again. Documents are inserted through {@link DocumentRepository#insert} with a dummy
- * chunk (mirrors {@code DocumentRepositoryAtomicityIntegrationTest}) so this stays a
- * repository-level test with no real embedding model or HTTP layer involved.
+ * {@link DocumentRepository#claimPending} directly (§7.2). Documents are inserted through {@link
+ * DocumentRepository#insert} with a dummy chunk (mirrors {@code
+ * DocumentRepositoryAtomicityIntegrationTest}), so this stays a repository-level test with no real
+ * embedding model or HTTP layer involved.
  */
 class SummaryLeaseIntegrationTest extends IntegrationTest {
   @Autowired private ClientRepository clients;

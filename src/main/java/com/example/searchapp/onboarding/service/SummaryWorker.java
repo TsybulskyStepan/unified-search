@@ -13,16 +13,8 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 /**
- * The DB-backed summary queue (§7.1, §7.2). {@code document} is the queue: a row claimed under a
- * lease, summarized outside any transaction, then completed with a guarded update. {@link
- * #runOnce()} is the whole cycle — claim a batch, process each, sweep attempts-exhausted rows to
- * {@code failed} — and it is safe to call concurrently or repeatedly: the claim SQL's {@code FOR
- * UPDATE SKIP LOCKED} is what makes that safe, not anything in this class.
- *
- * <p>Two triggers share {@link #runOnce()}: {@link #nudge()}, fired by the request handler for the
- * fast path, off the request thread so {@code POST …/summary} returns before any model call; and
- * {@link #sweep()}, a fixed-delay tick that recovers a nudge lost to a restart and doubles as retry
- * backoff — a row's lease keeps it unclaimable until the sweep interval has had a chance to pass.
+ * §7.1, §7.2. {@link #nudge()} and {@link #sweep()} share one {@link #runOnce()} cycle; it is safe
+ * to call concurrently or repeatedly — that's the claim SQL's doing, not this class's.
  */
 @Component
 public class SummaryWorker {
@@ -78,10 +70,8 @@ public class SummaryWorker {
           exception.getClass().getSimpleName(),
           latencyMillis(startNanos));
     } catch (RuntimeException exception) {
-      // TransientSummarizationException, and any other unexpected failure treated the same way:
-      // the attempt is already consumed at claim time, the lease guards against an immediate
-      // re-claim, and the row is left pending — exhausted by markExhaustedAsFailed() once its
-      // attempts run out and its lease expires (§7.2). A poison document cannot loop forever.
+      // TransientSummarizationException, and any other unexpected failure, treated alike: leave
+      // the row pending (§7.2 handles the rest).
       log.warn(
           "Summary outcome document_id={} attempt={} outcome=retry error={} latency_ms={}",
           job.id(),

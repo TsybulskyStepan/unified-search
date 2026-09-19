@@ -85,12 +85,7 @@ public class DocumentRepository {
         .optional();
   }
 
-  /**
-   * Idempotent request transition (§7.2): {@code none}/{@code failed} → {@code pending}, attempts
-   * reset. Scoped by {@code client_id} as well as {@code id}, defensively (§5.2's client-check
-   * comment gives the same reasoning). Empty means the document is already {@code pending} (no-op)
-   * or already {@code ready} (nothing to do) — the caller falls back to the current row.
-   */
+  /** Idempotent request transition (§7.2). Scoped by {@code client_id} too, defensively. */
   public Optional<Document> requestSummary(UUID clientId, UUID documentId) {
     return jdbc.sql(
             """
@@ -109,11 +104,7 @@ public class DocumentRepository {
         .optional();
   }
 
-  /**
-   * Claims up to {@code limit} pending rows under a lease (§7.2): {@code FOR UPDATE SKIP LOCKED}
-   * makes two concurrent callers never claim the same row, and the attempt counter increments here
-   * — at claim time — so a crash mid-call still consumes an attempt.
-   */
+  /** Claims up to {@code limit} pending rows under a lease (§7.2). */
   public List<ClaimedSummaryJob> claimPending(int limit) {
     return jdbc.sql(
             """
@@ -137,7 +128,7 @@ public class DocumentRepository {
         .list();
   }
 
-  /** Completes a claimed row successfully (§7.2). A no-op if the row moved on in the meantime. */
+  /** Completes a claimed row successfully (§7.2). */
   public void completeSummarySuccess(UUID documentId, String summary) {
     jdbc.sql(
             """
@@ -152,7 +143,7 @@ public class DocumentRepository {
         .update();
   }
 
-  /** Fails a claimed row immediately on a permanent error (§7.2), without waiting on attempts. */
+  /** Fails a claimed row immediately, without waiting on attempts (§7.2). */
   public void completeSummaryFailed(UUID documentId) {
     jdbc.sql(
             """
@@ -165,10 +156,7 @@ public class DocumentRepository {
         .update();
   }
 
-  /**
-   * Sweep step (§7.2): rows exhausted by transient errors — attempts at the limit and their lease
-   * expired — move to {@code failed}. A human retry is the only way back to {@code pending}.
-   */
+  /** Sweep step: exhausted rows move to {@code failed} (§7.2). */
   public int markExhaustedAsFailed() {
     return jdbc.sql(
             """

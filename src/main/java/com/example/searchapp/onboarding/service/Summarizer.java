@@ -4,12 +4,9 @@ import com.example.searchapp.onboarding.exception.PermanentSummarizationExceptio
 import com.example.searchapp.onboarding.exception.TransientSummarizationException;
 
 /**
- * Produces a short summary of a document's content (§7.4). The only production implementation is
- * {@code GeminiSummarizer} (ticket 11); {@link DisabledSummarizer} stands in until that lands, and
- * tests supply their own double.
- *
- * <p>A call either returns a summary or throws {@link TransientSummarizationException} / {@link
- * PermanentSummarizationException} — {@link SummaryWorker} decides how to react to each.
+ * {@code GeminiSummarizer} (ticket 11) is the only production implementation; {@link
+ * DisabledSummarizer} stands in until then, and tests supply their own double. Throws {@link
+ * TransientSummarizationException} or {@link PermanentSummarizationException} on failure.
  */
 public interface Summarizer {
   String summarize(String title, String content);

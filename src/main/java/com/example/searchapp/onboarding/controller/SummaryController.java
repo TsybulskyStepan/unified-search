@@ -11,11 +11,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-/**
- * {@code POST …/summary} (§4.1, §7.2): {@code 202} while the document ends this call {@code
- * pending} (newly requested, or already in flight), {@code 200} once it is {@code ready} — the
- * request never blocks on the model call itself.
- */
+/** {@code POST …/summary} (§4.1, §7.2): {@code 202} pending, {@code 200} ready. */
 @RestController
 @RequestMapping("/clients/{id}/documents/{documentId}/summary")
 public class SummaryController {

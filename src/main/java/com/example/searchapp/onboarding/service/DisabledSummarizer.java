@@ -4,11 +4,8 @@ import com.example.searchapp.onboarding.exception.PermanentSummarizationExceptio
 import org.springframework.stereotype.Component;
 
 /**
- * The only {@link Summarizer} bean until ticket 11 adds {@code GeminiSummarizer}. It fails every
- * call permanently, so a requested summary reaches {@code failed} within one nudge instead of the
- * worker having no summarizer bean to inject at all (§15: every ticket leaves a runnable system).
- * This is deliberately the same shape {@code GeminiSummarizer} will use for its own "no API key"
- * path (§7.3) — ticket 11 replaces this class rather than adding a parallel one.
+ * The only {@link Summarizer} bean until ticket 11's {@code GeminiSummarizer} replaces it — keeps
+ * the app runnable in the meantime (§15).
  */
 @Component
 class DisabledSummarizer implements Summarizer {
