@@ -85,7 +85,8 @@ com.example.searchapp
 └── shared/
     ├── embedding/        Embedder — wraps the ONNX model; one bean, warmed at startup
     └── web/              ApiKeyFilter, ApiKeyProperties, RequestIdFilter,
-                           GlobalExceptionHandler (ProblemDetail mapping), OpenApiConfiguration
+                           GlobalExceptionHandler (ProblemDetail mapping), ProblemDetails
+                           (the shape both build), OpenApiConfiguration
 ```
 
 There is no separate `security/` package. `ApiKeyFilter` sits beside `RequestIdFilter` and
