@@ -13,7 +13,7 @@ creation latency is embedding plus two inserts, with no LLM anywhere in the budg
 
 **Blocked by:** 03 — Embedding and chunking spike; 04 — Create and fetch clients.
 
-**Status:** ready-for-agent
+**Status:** complete
 
 - [x] Creating a document returns 201 with a location header and the document, its summary status showing that none was requested
 - [x] The document row and every one of its chunks commit in a single transaction; a failure part-way leaves neither behind

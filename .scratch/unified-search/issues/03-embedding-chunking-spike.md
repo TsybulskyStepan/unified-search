@@ -17,7 +17,7 @@ continuing — tickets 05 through 08 all rest on this working.
 
 **Blocked by:** 01 — Walking skeleton.
 
-**Status:** ready-for-agent
+**Status:** complete
 
 - [x] The embedder loads in-process with no network access at first use, warms during startup, and exposes its model identifier
 - [x] The chunker splits on the §5.3 geometry, preserves code-point offsets, yields a single chunk for short content, and handles surrogate pairs correctly

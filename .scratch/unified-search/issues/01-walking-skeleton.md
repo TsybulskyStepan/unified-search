@@ -13,7 +13,7 @@ image exists. Building it first keeps that command green for every ticket after 
 
 **Blocked by:** None — can start immediately.
 
-**Status:** ready-for-agent
+**Status:** complete
 
 - [x] `docker compose up` from a clean clone yields a healthy app and database, the app waiting on the database healthcheck
 - [x] Flyway applies the §3.1 schema; the three extensions and three tables exist, with `embedding_model` part of the chunk primary key

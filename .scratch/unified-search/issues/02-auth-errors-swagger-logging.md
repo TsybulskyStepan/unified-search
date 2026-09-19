@@ -12,7 +12,7 @@ back out on the response, which is the foundation the audit line in ticket 12 bu
 
 **Blocked by:** 01 — Walking skeleton.
 
-**Status:** ready-for-agent
+**Status:** complete
 
 - [x] A missing, wrong or malformed key returns 401 as `application/problem+json`, and the comparison is constant-time
 - [x] Startup fails with a clear message when the configured key is unset or shorter than 32 characters
