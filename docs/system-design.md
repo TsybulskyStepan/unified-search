@@ -136,7 +136,9 @@ The by-id `GET`s belong to `onboarding`. They read back what `onboarding` just w
 | UI | None. Swagger UI is the interactive surface | The brief asks for API documentation, not a frontend (§10) | React SPA: the largest unrequested item in the build (PRD §8.3) |
 | Tests | JUnit 6, Testcontainers (`pgvector/pgvector:pg17`), ArchUnit (module boundary) | Real Postgres extensions; trigram/vector behaviour can't be mocked meaningfully | H2: has none of the three extensions |
 
-**Library risk:** the LangChain4j embeddings module is still versioned `-beta` (latest published to Maven Central: `1.0.0-beta5`, May 2025 — no newer release exists as of this writing, likely because the artifact is just a static ONNX model plus tokenizer with little reason to churn). It is pinned, and `Embedder` is the only class that imports it. Swapping to DJL touches one file.
+**Library risk:** the LangChain4j embeddings module is still versioned `-beta` (latest: `1.20.0-beta30`). It is pinned, and `Embedder` is the only class that imports it. Swapping to DJL touches one file.
+
+*Verification note:* an earlier draft of this line cited `1.0.0-beta5` as the latest release, sourced from `search.maven.org`'s Solr search API. That index is stale for this artifact by roughly 80 releases — the authoritative source is the repository's own `maven-metadata.xml` (`repo1.maven.org/maven2/.../maven-metadata.xml`), which lists `1.20.0-beta30` as `<release>`/`<latest>`. Re-pinned to the real latest version and re-ran the full suite against it: `all-minilm-l6-v2-tokenizer.json` is byte-identical to the `1.0.0-beta5` jar's copy, and every measured number in this document (the 126 word-piece ceiling, the 0.17 semantic floor) reproduced exactly, so the model itself is unchanged between these releases — only the dependency coordinate was wrong.
 
 ---
 

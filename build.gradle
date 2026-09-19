@@ -28,8 +28,8 @@ dependencies {
     implementation 'org.flywaydb:flyway-core'
     implementation 'org.flywaydb:flyway-database-postgresql'
     // In-process MiniLM embedding model (§1.4): the model and tokenizer ship inside this jar,
-    // so nothing downloads at first use. Still versioned -beta (latest published: 1.0.0-beta5).
-    implementation 'dev.langchain4j:langchain4j-embeddings-all-minilm-l6-v2:1.0.0-beta5'
+    // so nothing downloads at first use. Still versioned -beta (latest: 1.20.0-beta30).
+    implementation 'dev.langchain4j:langchain4j-embeddings-all-minilm-l6-v2:1.20.0-beta30'
 
     runtimeOnly 'org.postgresql:postgresql'
 
