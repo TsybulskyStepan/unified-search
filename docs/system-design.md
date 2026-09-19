@@ -78,6 +78,7 @@ com.example.searchapp
 │   ├── client/           ClientController, ClientRepository, Client (record), CreateClientRequest
 │   ├── document/         DocumentController, DocumentService, DocumentRepository, Chunker, Document
 │   ├── summary/          SummaryController, SummaryWorker, Summarizer (interface), GeminiSummarizer
+│   ├── exception/        Onboarding exceptions shared across write-side features
 │   └── seed/             DemoSeeder — seeds through DocumentService, not SQL
 ├── search/               READ side
 │   └── SearchController, SearchService, LexicalRetriever, SemanticRetriever,
@@ -93,7 +94,7 @@ There is no `ClientService`. Client creation is validate → insert → map the 
 
 ### 1.3 Read/write separation
 
-PRD §4 requires writes to be decoupled from reads and to scale independently. That is a **module boundary inside one deployable**, enforced by test. The runtime machinery for actually running them apart is deliberately *not* built: nothing is deployed (§11.5), so a role switch would be configuration serving a mode that can never be exercised. What is kept is the part that would be expensive to retrofit — the boundary itself.
+PRD §4 requires writes to be decoupled from reads and to scale independently. That is a **module boundary inside one deployable**. The runtime machinery for actually running them apart is deliberately *not* built: nothing is deployed (§11.5), so a role switch would be configuration serving a mode that can never be exercised. The package structure makes the boundary clear, but it is not enforced by an architectural test.
 
 | Module | Owns | Endpoints |
 |---|---|---|
@@ -105,7 +106,7 @@ The by-id `GET`s belong to `onboarding`. They read back what `onboarding` just w
 
 **Boundary rules**
 
-- `onboarding` and `search` never import each other. An ArchUnit test fails the build otherwise (§12.1).
+- `onboarding` and `search` should not import each other.
 - **`search` reads `client`, `document` and `document_chunk` with its own SQL and its own result types.** It does not reuse `onboarding` repositories or records; the duplicated row mapping is the accepted price of the boundary being real rather than nominal.
 - Nothing crosses the boundary in memory: no shared caches and no application events. The summary nudge starts and ends inside `onboarding` (§7.2).
 
@@ -114,7 +115,7 @@ The by-id `GET`s belong to `onboarding`. They read back what `onboarding` just w
 1. **The schema** — explicit, versioned by Flyway, and visible to both sides.
 2. **The vector space** — which model produced the stored embeddings. `Embedder` lives in `shared` precisely because query vectors and document vectors are comparable only when they come from the same model. This contract has no compiler and no ArchUnit rule behind it, and violating it produces no error at all: a same-dimension model swap leaves `<=>` computing happily over incompatible vectors. That is why it is made explicit in the data instead — `document_chunk.embedding_model`, filtered on at query time (§3.1).
 
-**No role switch.** There is one process and one component scan; Flyway, the `SummaryWorker` schedule and `DemoSeeder` always run. Splitting into two services later means adding role-conditional wiring and routing — real work, but bounded and mechanical, because the import boundary that would have made it a rewrite is already enforced.
+**No role switch.** There is one process and one component scan; Flyway, the `SummaryWorker` schedule and `DemoSeeder` always run. Splitting into two services later means adding role-conditional wiring and routing — real work, but bounded and mechanical, because the package boundary makes the ownership explicit.
 
 ### 1.4 Technology choices
 
@@ -128,7 +129,7 @@ The by-id `GET`s belong to `onboarding`. They read back what `onboarding` just w
 | Summaries | `com.google.genai:google-genai` (Gemini API mode, API key) | Official Google Gen AI SDK. A single `GEMINI_API_KEY` is something a reviewer can supply in seconds; Vertex + ADC would need a GCP project and service account, which — with no deployment (PRD §7) — would leave the feature unreachable for everyone who runs this | Vertex mode + ADC: right for Cloud Run, pure friction locally. Spring AI: extra abstraction for one call |
 | API docs | springdoc-openapi 3.x (code-first) | `/v3/api-docs` + Swagger UI generated from the controllers that actually serve traffic; no drift | Design-first `api.yaml` + generator: two sources of truth, generator friction with snake_case and records |
 | UI | None. Swagger UI is the interactive surface | The brief asks for API documentation, not a frontend (§10) | React SPA: the largest unrequested item in the build (PRD §8.3) |
-| Tests | JUnit 6, Testcontainers (`pgvector/pgvector:pg17`), ArchUnit (module boundary) | Real Postgres extensions; trigram/vector behaviour can't be mocked meaningfully | H2: has none of the three extensions |
+| Tests | JUnit 6, Testcontainers (`pgvector/pgvector:pg17`) | Real Postgres extensions; trigram/vector behaviour can't be mocked meaningfully | H2: has none of the three extensions |
 
 **Library risk:** the LangChain4j embeddings module is still versioned `-beta` (latest `1.20.0-beta30`). It is pinned, and `Embedder` is the only class that imports it. Swapping to DJL touches one file.
 
@@ -265,7 +266,7 @@ Strings are trimmed before validation, and "required" means non-blank after trim
 | `limit` | 1–50, default 20 |
 | `offset` | ≥ 0, default 0 |
 
-Request bodies over 256 KB are rejected with `413` before JSON binding.
+Requests declaring a `Content-Length` over 256 KB are rejected with `413` before JSON binding. This is a soft check to keep request handling simple without buffering the body: requests without the header (including chunked requests) bypass it. Counting actual body bytes to enforce a hard limit is deferred until needed.
 
 ### 4.3 Response schemas
 
@@ -685,7 +686,7 @@ The key itself is never served to the browser — it is typed into Authorize and
 
 | Signal | What |
 |---|---|
-| Logs | Spring Boot structured JSON logging to stdout (Cloud Logging ingests it). Every request carries a `request_id` (from `X-Cloud-Trace-Context` or generated), echoed in `X-Request-Id` |
+| Logs | Spring Boot structured JSON logging to stdout (Cloud Logging ingests it). Every request carries a `request_id` (from `X-Cloud-Trace-Context` or generated), echoed in `X-Request-Id`. Unexpected exceptions include their stack traces for diagnosis. |
 | Search audit line | `request_id`, `query_length`, `lexical_hits`, `semantic_hits`, `returned`, per-stage timings. **The query text is never logged** (it is routinely a client name or email, i.e. PII) |
 | Write log lines | IDs, chunk count, embed time. Never names, emails, titles or content |
 | Summary worker | `document_id`, attempt, outcome, error class, latency |
@@ -774,7 +775,6 @@ Flyway runs on startup in roles that include `onboarding`. With more than one in
 - `Chunker`: offsets, overlap, single-chunk content, surrogate pairs, word-piece bound under 256 using the model tokenizer.
 - Request validation: each rule in §4.2, including `javascript:` social links and whitespace-only strings.
 - `ApiKeyFilter`: allowlist paths pass, missing and wrong keys → `401`.
-- Module boundary (ArchUnit): `onboarding` and `search` never depend on each other; both may depend on `shared`.
 
 ### 12.2 Integration (Testcontainers `pgvector/pgvector:pg17`, full Spring context, real model)
 
@@ -895,7 +895,7 @@ The PRD defines behaviour and success criteria; this section owns the non-functi
 | | Secrets from env, never baked into the image and never served to a client | §8.3, §8.4 |
 | | Errors never expose stack traces, SQL or constraint names | §8.2 |
 | Observability | Structured JSON logs with a per-request `request_id` | §9 |
-| | **No PII in logs**: query text, names, emails, titles and content are never logged. Search activity is audit-relevant, so it is logged by shape (lengths, hit counts, timings) | §9 |
+| | Query text, names, emails, titles and content are not included in normal request or audit logs. Unexpected-exception stack traces are retained for diagnosis and can include exception-message data. Search activity is audit-relevant, so it is logged by shape (lengths, hit counts, timings) | §9 |
 | | Per-stage latency timers for search, embedding and summaries; summary outcome counter | §9 |
 | | Readiness implies DB connectivity and a warmed embedding model | §9 |
 | Testability | Pure functions (`ResultOrdering`, `Chunker`) unit-tested without containers | §12.1 |
@@ -923,7 +923,7 @@ The PRD defines behaviour and success criteria; this section owns the non-functi
 
 Ordered so the highest-risk assumption is tested first and every step leaves a runnable system.
 
-1. **Skeleton.** Spring Boot 4 on the existing Gradle build, Flyway V1, compose with pgvector and a two-stage Dockerfile, `onboarding` / `search` / `shared` packages with the ArchUnit boundary test, `/health`, and a Testcontainers base test. The container image is here because the first ticket verifies `docker compose up` end to end.
+1. **Skeleton.** Spring Boot 4 on the existing Gradle build, Flyway V1, compose with pgvector and a two-stage Dockerfile, `onboarding` / `search` / `shared` packages, `/health`, and a Testcontainers base test. The container image is here because the first ticket verifies `docker compose up` end to end.
 2. **API boundary.** `ApiKeyFilter`, the springdoc `X-API-Key` scheme, ProblemDetail handler, request IDs, and structured request logging.
 3. **Embedding spike + eval set.** `Embedder`, `Chunker`, `corpus.json`, `queries.json`, and a test computing similarities directly. **Gate:** positives and negatives separate. Pick the floor.
 4. **Clients.** `POST`/`GET`, validation, `409`.
