@@ -69,20 +69,25 @@ There is exactly one deployable today. Its internal boundaries are modules rathe
 
 ### 1.2 Package layout
 
-Two sibling modules plus shared code, package-by-layer inside each, under the existing `com.example.searchapp`:
+Two sibling modules plus shared code, under the existing `com.example.searchapp`. `search` is
+package-by-layer; `onboarding` is package-by-feature — one package per concept, plus the pieces
+genuinely shared by more than one of its controllers:
 
 ```
 com.example.searchapp
 ├── (application class)
 ├── onboarding/           WRITE side
-│   ├── controller/       ClientController, DocumentController, SummaryController
-│   ├── dto/              CreateClientRequest, CreateDocumentRequest, Document response types
-│   ├── entity/           Client, Document
-│   ├── repository/       ClientRepository, DocumentRepository
-│   ├── service/          DocumentService, SummaryWorker, Summarizer, GeminiSummarizer
-│   ├── exception/        Onboarding exceptions
+│   ├── client/           Client, CreateClientRequest, ClientController, ClientRepository,
+│   │                     ClientNotFoundException, ClientValidationException,
+│   │                     DuplicateClientEmailException
+│   ├── document/         Document, CreateDocumentRequest, DocumentController, DocumentRepository,
+│   │                     DocumentService, Chunk, Chunker, EmbeddedChunk — and, later, the summary
+│   │                     pieces (§10/§11): SummaryController, SummaryWorker, Summarizer,
+│   │                     GeminiSummarizer
+│   ├── exception/        OnboardingExceptionHandler ("not found" — raised by both controllers),
+│   │                     DocumentNotFoundException
 │   └── seed/             DemoSeeder — seeds through DocumentService, not SQL
-├── search/               READ side
+├── search/               READ side, package-by-layer
 │   ├── controller/       SearchController
 │   ├── dto/              SearchRequest, SearchResult, match types
 │   ├── entity/           SearchClient and document search row types
@@ -96,7 +101,18 @@ com.example.searchapp
                            (the shape both build), OpenApiConfiguration
 ```
 
-There is no `ClientService`. Client creation is validate → insert → map the unique violation to `409`, which the controller and repository cover without a pass-through layer. `DocumentService` exists because document creation has real logic: chunk, embed outside the transaction, then write atomically.
+`onboarding` is package-by-feature rather than package-by-layer: `Client` and `Document` are each
+small enough that a `controller/dto/entity/repository/exception` split per concept scatters one
+concept across five packages for no offsetting benefit — reading "how is a client created and
+validated" meant opening five folders instead of one, and un-splitting it loses nothing. `search`
+stays package-by-layer: it carries more files per layer (two retrievers, ordering, several dto and
+match types) and exists specifically to signal the read/write architectural split, which
+package-by-layer earns its keep for here.
+
+There is no `ClientService`. Client creation is validate → insert → map the unique violation to
+`409`, which the controller and repository cover without a pass-through layer. `DocumentService`
+exists because document creation has real logic: chunk, embed outside the transaction, then write
+atomically.
 
 ### 1.3 Read/write separation
 

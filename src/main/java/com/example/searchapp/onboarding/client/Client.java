@@ -1,4 +1,4 @@
-package com.example.searchapp.onboarding.entity;
+package com.example.searchapp.onboarding.client;
 
 import java.time.Instant;
 import java.util.List;

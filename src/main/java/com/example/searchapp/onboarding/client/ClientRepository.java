@@ -1,8 +1,5 @@
-package com.example.searchapp.onboarding.repository;
+package com.example.searchapp.onboarding.client;
 
-import com.example.searchapp.onboarding.dto.CreateClientRequest;
-import com.example.searchapp.onboarding.entity.Client;
-import com.example.searchapp.onboarding.exception.DuplicateClientEmailException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;

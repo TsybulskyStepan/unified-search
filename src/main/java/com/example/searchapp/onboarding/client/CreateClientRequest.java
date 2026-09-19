@@ -1,4 +1,4 @@
-package com.example.searchapp.onboarding.dto;
+package com.example.searchapp.onboarding.client;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;

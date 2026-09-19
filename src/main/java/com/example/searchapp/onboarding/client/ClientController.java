@@ -1,11 +1,5 @@
-package com.example.searchapp.onboarding.controller;
+package com.example.searchapp.onboarding.client;
 
-import com.example.searchapp.onboarding.dto.CreateClientRequest;
-import com.example.searchapp.onboarding.entity.Client;
-import com.example.searchapp.onboarding.exception.ClientNotFoundException;
-import com.example.searchapp.onboarding.exception.ClientValidationException;
-import com.example.searchapp.onboarding.exception.DuplicateClientEmailException;
-import com.example.searchapp.onboarding.repository.ClientRepository;
 import com.example.searchapp.shared.web.ProblemDetails;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;

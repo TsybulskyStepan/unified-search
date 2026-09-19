@@ -1,3 +1,3 @@
-package com.example.searchapp.onboarding.exception;
+package com.example.searchapp.onboarding.client;
 
 public class DuplicateClientEmailException extends RuntimeException {}
