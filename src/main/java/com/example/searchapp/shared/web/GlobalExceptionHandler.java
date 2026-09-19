@@ -29,11 +29,11 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
   @ExceptionHandler(Exception.class)
   ProblemDetail handleUnexpectedException(Exception exception, WebRequest request) {
     log.error("Unhandled exception class={}", exception.getClass().getName(), exception);
-    ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.INTERNAL_SERVER_ERROR);
-    problem.setTitle("Internal server error");
-    problem.setDetail("The request could not be completed");
-    problem.setInstance(instanceUri(request));
-    return problem;
+    return ProblemDetails.of(
+        HttpStatus.INTERNAL_SERVER_ERROR,
+        "Internal server error",
+        "The request could not be completed",
+        instanceUri(request));
   }
 
   @Override

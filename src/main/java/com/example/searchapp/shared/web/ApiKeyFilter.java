@@ -5,6 +5,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import org.springframework.core.Ordered;
@@ -55,9 +56,12 @@ public class ApiKeyFilter extends OncePerRequestFilter {
     if (suppliedKey == null
         || suppliedKey.isBlank()
         || !MessageDigest.isEqual(expectedKey, suppliedBytes)) {
-      ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.UNAUTHORIZED);
-      problem.setTitle("Unauthorized");
-      problem.setDetail("A valid API key is required");
+      ProblemDetail problem =
+          ProblemDetails.of(
+              HttpStatus.UNAUTHORIZED,
+              "Unauthorized",
+              "A valid API key is required",
+              URI.create(request.getRequestURI()));
       response.setStatus(HttpStatus.UNAUTHORIZED.value());
       response.setContentType(MediaType.APPLICATION_PROBLEM_JSON_VALUE);
       objectMapper.writeValue(response.getOutputStream(), problem);
