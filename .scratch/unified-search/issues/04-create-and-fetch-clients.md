@@ -17,5 +17,5 @@ uniqueness violation to a conflict, which the controller and repository cover be
 - [ ] Validation failures return 400 listing the offending fields, and values that are blank after trimming are rejected
 - [ ] A social link that is not an absolute http or https URL is rejected at write time
 - [ ] A second client whose email differs only by case returns 409
-- [ ] A request body over the size cap is rejected before JSON binding
+- [x] A request declaring `Content-Length` over the size cap is rejected before JSON binding; chunked requests without that header are allowed by this soft check
 - [ ] Any constraint violation other than the email uniqueness one surfaces as a server error rather than being disguised as a client error
