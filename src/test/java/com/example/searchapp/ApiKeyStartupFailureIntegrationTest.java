@@ -36,12 +36,11 @@ class ApiKeyStartupFailureIntegrationTest {
             () ->
                 new SpringApplicationBuilder(SearchApplication.class)
                     .web(WebApplicationType.NONE)
-                    .properties(
-                        "app.api-key=too-short",
-                        "spring.datasource.url=" + database.getJdbcUrl(),
-                        "spring.datasource.username=" + database.getUsername(),
-                        "spring.datasource.password=" + database.getPassword())
-                    .run())
+                    .run(
+                        "--app.api-key=too-short",
+                        "--spring.datasource.url=" + database.getJdbcUrl(),
+                        "--spring.datasource.username=" + database.getUsername(),
+                        "--spring.datasource.password=" + database.getPassword()))
         .rootCause()
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("32 characters");
