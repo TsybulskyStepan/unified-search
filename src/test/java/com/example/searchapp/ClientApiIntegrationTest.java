@@ -79,30 +79,17 @@ class ClientApiIntegrationTest extends IntegrationTest {
     assertThat(publisher.contentLength()).isEqualTo(-1);
 
     var response =
-        send(
-            HttpRequest.newBuilder(URI.create("http://localhost:" + port + "/clients"))
-                .version(HttpClient.Version.HTTP_1_1)
-                .header("X-API-Key", API_KEY)
-                .header("Content-Type", "application/json")
-                .POST(publisher));
+        HttpClient.newHttpClient()
+            .send(
+                HttpRequest.newBuilder(URI.create("http://localhost:" + port + "/clients"))
+                    .version(HttpClient.Version.HTTP_1_1)
+                    .header("X-API-Key", TEST_API_KEY)
+                    .header("Content-Type", "application/json")
+                    .POST(publisher)
+                    .build(),
+                HttpResponse.BodyHandlers.ofString());
 
     assertThat(response.statusCode()).isEqualTo(201);
     assertThat(response.body()).contains("\"email\":\"chunked@example.com\"");
-  }
-
-  private HttpRequest.Builder request(String method, String path, String body) {
-    return request(method, URI.create("http://localhost:" + port + path), body);
-  }
-
-  private HttpRequest.Builder request(String method, URI uri, String body) {
-    var builder = HttpRequest.newBuilder(uri).header("X-API-Key", API_KEY);
-    if ("POST".equals(method)) {
-      builder
-          .header("Content-Type", "application/json")
-          .POST(HttpRequest.BodyPublishers.ofString(body));
-    } else {
-      builder.GET();
-    }
-    return builder;
   }
 }
