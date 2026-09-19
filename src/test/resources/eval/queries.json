@@ -1,0 +1,71 @@
+{
+  "positives": [
+    {
+      "query": "proof of address",
+      "clientEmail": "john.doe@neviswealth.com",
+      "documentTitle": "2024 Utility Bill"
+    },
+    {
+      "query": "proof of address",
+      "clientEmail": "bill.carter@example.com",
+      "documentTitle": "Current Account Statement"
+    },
+    {
+      "query": "proof of address",
+      "clientEmail": "mary.henderson@example.com",
+      "documentTitle": "Council Tax Bill 2024/25"
+    },
+    {
+      "query": "proof of identity",
+      "clientEmail": "robert.nguyen@example.com",
+      "documentTitle": "Passport Bio-Data Summary"
+    },
+    {
+      "query": "proof of identity",
+      "clientEmail": "elena.petrova@example.com",
+      "documentTitle": "Driving Licence Summary"
+    },
+    {
+      "query": "source of funds",
+      "clientEmail": "elena.petrova@example.com",
+      "documentTitle": "Property Sale Completion Statement"
+    },
+    {
+      "query": "tax residency",
+      "clientEmail": "mary.henderson@example.com",
+      "documentTitle": "W-9 Request for Taxpayer Identification"
+    },
+    {
+      "query": "tax residency",
+      "clientEmail": "bill.carter@example.com",
+      "documentTitle": "2023 Self Assessment Tax Return Summary"
+    },
+    {
+      "query": "trust restructuring",
+      "clientEmail": "robert.nguyen@example.com",
+      "documentTitle": "Trust Deed Amendment"
+    },
+    {
+      "query": "advisory fees",
+      "clientEmail": "john.doe@neviswealth.com",
+      "documentTitle": "Advisory Engagement Letter"
+    },
+    {
+      "query": "risk tolerance",
+      "clientEmail": "priya.shah@example.com",
+      "documentTitle": "Investment Policy Statement"
+    },
+    {
+      "query": "W-9",
+      "clientEmail": "mary.henderson@example.com",
+      "documentTitle": "W-9 Request for Taxpayer Identification"
+    }
+  ],
+  "negatives": [
+    "best pizza recipes in Naples",
+    "weather forecast for the weekend",
+    "how to train a puppy to sit",
+    "tips for growing tomatoes at home",
+    "recommend a good sci-fi movie"
+  ]
+}

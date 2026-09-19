@@ -1,0 +1,143 @@
+{
+  "clients": [
+    {
+      "firstName": "John",
+      "lastName": "Doe",
+      "email": "john.doe@neviswealth.com",
+      "description": "Long-standing private client, onboarded through the NevisWealth referral programme. Discretionary portfolio with a moderate growth mandate, reviewed twice yearly with his relationship manager.",
+      "socialLinks": [
+        "https://www.linkedin.com/in/john-doe-nevis",
+        "https://www.linkedin.com/company/neviswealth"
+      ],
+      "documents": [
+        {
+          "title": "2024 Utility Bill",
+          "content": "Account number 8827-4491-002 held with Thameswater Utilities Ltd for the billing period 01/03/2024 to 31/05/2024. Closing balance of GBP 184.62 including VAT at 20%. Previous meter reading 48213 kWh, current reading 49876 kWh, estimated usage 1,663 kWh at GBP 0.2841 per unit plus a standing charge of GBP 0.4521 per day, totalling GBP 221.90 before the direct debit credit of GBP 150.00 applied on 12/04/2024, reference DD-2024-0417-JD. Payment is due by 15/06/2024 to sort code 40-12-09, account 00281774, or online at pay.thameswater-utilities.example using customer reference TWU-JD-5521. Registered supply address: Flat 4, 22 Willowmead Crescent, Reading, RG1 4PQ, United Kingdom. Contact the helpline on 0345 900 0800 for meter disputes or tariff queries. Retain this statement; it is issued in the account holder's name and confirms occupancy at the registered address for the period shown above."
+        },
+        {
+          "title": "Advisory Engagement Letter",
+          "content": "This letter confirms the terms on which NevisWealth Asset Management will act on behalf of the client named above. Our remit covers discretionary management of the portfolio held in custody with our nominated depositary, quarterly performance reporting, and an annual suitability review. Charges are calculated as a percentage of assets under management, billed quarterly in arrears and deducted directly from the account: 0.85% per annum on the first GBP 500,000, tapering to 0.55% thereafter, plus underlying fund costs disclosed separately in the cost and charges statement. A one-off setup charge of GBP 250 applies to new mandates. Either party may terminate this arrangement in writing with thirty days' notice, at which point any accrued but unbilled amount becomes payable immediately. This engagement is governed by the firm's standard terms of business, a copy of which has been provided separately, and by the regulatory disclosures required under the firm's licence."
+        }
+      ]
+    },
+    {
+      "firstName": "Mary",
+      "lastName": "Henderson",
+      "email": "mary.henderson@example.com",
+      "description": "Recently retired schoolteacher consolidating two workplace pensions into a single drawdown arrangement. Cautious risk profile, prioritises capital preservation over growth.",
+      "socialLinks": ["https://www.linkedin.com/in/mary-henderson-retired"],
+      "documents": [
+        {
+          "title": "Council Tax Bill 2024/25",
+          "content": "Council Tax demand notice confirming liability and residency at the property shown below for the year 1 April 2024 to 31 March 2025. This notice is addressed to the person registered as living at, and solely occupying, 14 Elmfield Road, Weststead, WS3 7TN, confirming this as the household where they reside and are liable to pay. Borough of Weststead, property reference 9012-33-771, valuation band D. Annual charge of GBP 2,148.36, payable in ten monthly instalments of GBP 214.83 commencing 1 May 2024, collected by direct debit on the 1st of each month. A single-person discount of 25% has been applied, reducing the charge from GBP 2,864.48, on the basis that only one adult resides at this home. Queries about banding should be directed to the Valuation Office Agency; queries about instalments or discounts should be directed to Weststead Borough Council's revenues team on 01925 555 210 or via the online account portal, reference WBC-CT-771902."
+        },
+        {
+          "title": "W-9 Request for Taxpayer Identification",
+          "content": "Form completed to certify taxpayer identification number and status for a US brokerage sub-account linked to an inherited IRA rollover. Name as shown on income tax return: Mary A Henderson. Business name, if different: not applicable. Federal tax classification: individual. Exemptions: none apply. Address: 14 Elmfield Road, Weststead, WS3 7TN, United Kingdom, treated as a US resident alien for the purposes of this certification. Taxpayer identification number provided under penalties of perjury as correct, and the signer certifies she is not subject to backup withholding, is a US person for federal tax purposes, and the FATCA exemption code, where applicable, is left blank as not applicable to this account type. Signed and dated for submission to the custodian alongside the account opening pack."
+        }
+      ]
+    },
+    {
+      "firstName": "Bill",
+      "lastName": "Carter",
+      "email": "bill.carter@example.com",
+      "description": "Small business owner, sole trader in commercial landscaping, building up a personal pension alongside irregular business income.",
+      "socialLinks": ["https://www.linkedin.com/in/bill-carter-landscaping"],
+      "documents": [
+        {
+          "title": "Current Account Statement",
+          "content": "Statement for current account ending 4471, covering transactions from 1 January 2024 to 31 January 2024. Opening balance GBP 3,214.09. Salary credit GBP 2,850.00 received 28/01/2024 from CARTER LANDSCAPING LTD. Standing order GBP 620.00 to Weststead Mortgage Services on 03/01/2024. Direct debit GBP 89.40 to Northgate Insurance on 05/01/2024. Card payments totalling GBP 512.77 across eleven transactions at builders' merchants and fuel retailers. Closing balance GBP 4,841.92 as at 31 January 2024. This statement is issued by Ridgeway Bank plc, sort code 20-33-14, account number 41552290, and is provided for the account holder's records; it may be used to evidence residency at 7 Hollyhock Lane, Merrowfield, MR2 9DX, the address to which correspondence for this account is registered."
+        },
+        {
+          "title": "2023 Self Assessment Tax Return Summary",
+          "content": "Summary of self assessment submission for the year ending 5 April 2023, unique taxpayer reference 4471 992 015. Self-employment income from landscaping trade: turnover GBP 68,420, allowable expenses GBP 22,150, net profit GBP 46,270. Class 4 national insurance contributions calculated at GBP 3,481. Personal allowance applied in full. Total income tax and national insurance liability for the year: GBP 12,904, of which GBP 6,452 was paid on account in January 2023 and the balance falls due by 31 January 2024, with a further payment on account for the following year due the same date. Declared domicile: United Kingdom throughout the year, with no overseas income or gains to report. Filed online via the self assessment portal on 9 December 2023."
+        }
+      ]
+    },
+    {
+      "firstName": "Priya",
+      "lastName": "Shah",
+      "email": "priya.shah@example.com",
+      "description": "Mid-career software engineer building a growth-focused ISA and pension alongside a first-time buy-to-let purchase.",
+      "socialLinks": ["https://www.linkedin.com/in/priya-shah-eng"],
+      "documents": [
+        {
+          "title": "Assured Shorthold Tenancy Agreement",
+          "content": "Agreement made between the landlord, Oakridge Lettings Ltd, and the tenant named above, for the letting of Flat 2, 88 Birchgrove Terrace, Camden, London, NW3 5RE, for a fixed term of twelve months commencing 1 June 2024 and ending 31 May 2025. Monthly rent of GBP 1,950 payable in advance on the first day of each month by standing order to the landlord's designated client account. A deposit of GBP 2,250, equivalent to five weeks' rent, has been registered with the Deposit Protection Service, certificate reference DPS-2024-661820. The tenant is named as the sole occupier for the purposes of this agreement and confirms this address as their principal residence for the duration of the term. Break clause permits either party to terminate after month six with two months' written notice. Gas safety certificate and energy performance certificate have been provided prior to the tenant taking occupation."
+        },
+        {
+          "title": "Investment Policy Statement",
+          "content": "This statement records the agreed investment objectives and constraints for the client's discretionary mandate, to be reviewed annually or on material change of circumstance. Time horizon: long-term, in excess of fifteen years, consistent with retirement planning needs. Capacity for loss: high, given stable employment income and limited reliance on portfolio drawdowns in the near term. Willingness to accept short-term fluctuation in portfolio value in pursuit of higher long-term returns: high, evidenced through the risk questionnaire completed at onboarding, scoring within the upper quartile for growth-oriented investors. Target strategic asset allocation: 80% global equities, 15% fixed income, 5% alternatives, with a permitted deviation band of plus or minus 10% around each target before rebalancing is triggered. Ethical screening: exclude thermal coal and controversial weapons manufacturers. Benchmark: a composite of global equity and bond indices weighted to the target allocation."
+        }
+      ]
+    },
+    {
+      "firstName": "Robert",
+      "lastName": "Nguyen",
+      "email": "robert.nguyen@example.com",
+      "description": "Family office client managing a multi-generational trust structure alongside personal investments; works closely with the firm's trust and estate planning team.",
+      "socialLinks": ["https://www.linkedin.com/in/robert-nguyen-familyoffice"],
+      "documents": [
+        {
+          "title": "Passport Bio-Data Summary",
+          "content": "Bio-data page details recorded for client verification purposes. Document type: passport, issuing authority: HM Passport Office. Given names: Robert Anh. Surname: Nguyen. Date of birth: 14 September 1978. Place of birth: London, United Kingdom. Nationality: British citizen. Sex: M. Passport number: 934281776. Date of issue: 22 February 2021. Date of expiry: 22 February 2031. Place of issue: London. Machine-readable zone captured and cross-checked against the physical document by the onboarding team on 3 March 2024, with a certified true copy retained on file alongside the original sighted in person during the branch appointment. Photograph on file matches the individual presenting at appointment, verified by two members of staff, initials RB and KT, in accordance with the firm's identity verification procedure."
+        },
+        {
+          "title": "Trust Deed Amendment",
+          "content": "This deed of amendment varies the trust instrument dated 4 June 2009 establishing the Nguyen Family Settlement, a discretionary trust governed by the law of England and Wales. Clause 7 is amended to add a further class of discretionary beneficiary, namely the grandchildren of the settlor born after the date of the original deed, on the same terms as apply to the existing beneficiary class defined in Clause 4. Clause 11, governing the appointment and retirement of trustees, is amended to reduce the minimum number of trustees from three to two, provided that at least one trustee is a professional trustee regulated in the jurisdiction of administration. All other terms of the original trust instrument remain unaltered and continue in full force and effect. Executed as a deed by the existing trustees and witnessed in accordance with the formalities required for execution of a deed under the applicable law."
+        }
+      ]
+    },
+    {
+      "firstName": "Elena",
+      "lastName": "Petrova",
+      "email": "elena.petrova@example.com",
+      "description": "Recently sold a residential investment property and is redeploying the proceeds into a diversified portfolio; also completing routine identity refresh ahead of the new tax year.",
+      "socialLinks": ["https://www.linkedin.com/in/elena-petrova-invest"],
+      "documents": [
+        {
+          "title": "Driving Licence Summary",
+          "content": "Details extracted from the photocard driving licence presented for identity verification. Licence number PETRO901234EP9LK. Surname: Petrova. Forenames: Elena Mikhailovna. Date of birth: 2 January 1990. Issue date: 15 July 2019. Expiry date: 1 January 2029. Issuing authority: DVLA, Swansea. Address held on licence: 3 Riverside Court, Bristol, BS1 6QF. Licence categories held: B, full car and light vehicle entitlement, no restrictions or endorsements recorded at the time of the check. Verification performed against the DVLA share-driving-licence service using the code provided by the client, cross-referenced against the physical card presented at the branch, both showing a matching photograph and matching personal details, and recorded by the onboarding officer as a satisfactory identity check."
+        },
+        {
+          "title": "Property Sale Completion Statement",
+          "content": "This statement evidences where the money paid into the client's account originated: the sale proceeds of the client's former home, released on completion. Completion statement issued by Harrowgate Conveyancing LLP in respect of the sale of 9 Cedarwood Close, Bristol, BS7 8LN, which completed on 18 April 2024. Gross sale price: GBP 415,000. Less outstanding mortgage redemption to Ridgeway Bank plc: GBP 187,332.11. Less estate agent commission at 1.2% plus VAT: GBP 5,976.00. Less conveyancing fees and disbursements, including Land Registry and search fees: GBP 1,842.50. Less apportioned council tax and utility adjustments to completion date: GBP 214.66. Net proceeds due to the seller: GBP 219,634.73, transferred by same-day CHAPS payment to the client's nominated current account on the completion date, reference HGC-SALE-2024-0418. This statement forms part of the conveyancing file and confirms the source and amount of funds released to the client following completion."
+        }
+      ]
+    },
+    {
+      "firstName": "Samuel",
+      "lastName": "Okafor",
+      "email": "samuel.okafor@example.com",
+      "description": "Recently relocated for work and setting up UK banking and investment relationships for the first time; documentation reflects a new address and new employment.",
+      "socialLinks": ["https://www.linkedin.com/in/samuel-okafor-eng"],
+      "documents": [
+        {
+          "title": "2024 Utility Bill",
+          "content": "Northgate Energy supply statement for account 5541-8820-119, covering the period 01/04/2024 to 30/06/2024, for the property at 12 Fenwick House, Manchester, M4 2QT. Electricity usage of 812 kWh at GBP 0.2914 per unit and gas usage of 1,940 kWh at GBP 0.0721 per unit, plus combined standing charges of GBP 0.6890 per day across both fuels, produce a combined charge of GBP 402.18 including VAT. A prior credit balance of GBP 40.00 has been carried forward, leaving GBP 362.18 due by 20/07/2024. Payment can be made by direct debit, reference NE-SO-88201, or by card via the Northgate Energy app. This account was opened on 2 April 2024 following the customer's move to the registered supply address shown above, confirmed by the meter point reference MPAN 1900045882771."
+        },
+        {
+          "title": "Current Account Statement",
+          "content": "Statement for current account ending 7723, covering transactions from 1 May 2024 to 31 May 2024, issued by Meridian Bank plc, sort code 30-11-02, account number 88671403. Opening balance GBP 1,105.40. Salary credit GBP 3,620.00 received 30/05/2024 from CASCADE SYSTEMS UK LTD. Standing order GBP 950.00 to Fenwick House Lettings on 01/05/2024. Direct debits totalling GBP 214.33 for mobile, broadband and insurance. Card payments totalling GBP 687.02 across the month at supermarkets and transport operators. Closing balance GBP 2,874.05 as at 31 May 2024. This statement is provided for the account holder's records and evidences the transaction history for the residential address at 12 Fenwick House, Manchester, M4 2QT to which correspondence for this account is registered."
+        }
+      ]
+    },
+    {
+      "firstName": "Grace",
+      "lastName": "Kim",
+      "email": "grace.kim@example.com",
+      "description": "Established client with a well-diversified portfolio, currently focused on inheritance tax planning and updating advisory arrangements ahead of retirement in three years.",
+      "socialLinks": ["https://www.linkedin.com/in/grace-kim-planning"],
+      "documents": [
+        {
+          "title": "Council Tax Bill 2024/25",
+          "content": "Council Tax demand notice confirming liability and residency at the property shown below for the year 1 April 2024 to 31 March 2025. This notice is addressed to the household registered as living at 41 Meadowgate Rise, Ashfold, AF6 2LP, confirming this as the home where the liable residents reside. Borough of Ashfold, property reference 2274-19-005, valuation band F. Annual charge of GBP 2,981.14, payable in ten monthly instalments of GBP 298.11 commencing 1 April 2024, collected by direct debit on the 1st of each month. No discounts or exemptions apply; the property is occupied by two liable adults living together at this address. Queries about the valuation band should be directed to the Valuation Office Agency; queries about instalments should be directed to Ashfold Borough Council's revenues team on 01793 660 441 or via reference ABC-CT-005274."
+        },
+        {
+          "title": "Advisory Engagement Letter",
+          "content": "This letter confirms the renewed terms on which the firm will continue to act as investment adviser following the client's periodic review. Scope covers ongoing discretionary management, an annual face-to-face review, and ad hoc telephone support during market hours. Charges remain unchanged from the prior arrangement: 0.75% per annum on the first GBP 1,000,000 of assets under management, tapering to 0.45% thereafter, calculated quarterly and deducted from the account, with underlying fund charges disclosed separately in the annual costs and charges statement. No setup charge applies on renewal. Either party may terminate this arrangement in writing with thirty days' notice. This engagement continues to be governed by the firm's standard terms of business and the regulatory disclosures previously provided, which remain unchanged and in effect."
+        }
+      ]
+    }
+  ]
+}

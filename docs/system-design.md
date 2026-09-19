@@ -125,13 +125,15 @@ The by-id `GET`s belong to `onboarding`. They read back what `onboarding` just w
 | Framework | Spring Boot 4.1.x | PRD vocabulary (Flyway, Swagger UI, AppCDS) assumes it; virtual threads, ProblemDetail, Actuator built in | Quarkus/Micronaut: no requirement they serve better |
 | Data access | Spring `JdbcClient` + `com.pgvector:pgvector` type | Every interesting query is native SQL (trigram, vector, `DISTINCT ON`); JPA would be bypassed for all of them | JPA/Hibernate: adds mapping config for no query we'd use it for |
 | Migrations | Flyway | PRD §7 | `ddl-auto` (PRD forbids) |
-| Embeddings | `dev.langchain4j:langchain4j-embeddings-all-minilm-l6-v2` (quantized MiniLM + ONNX Runtime, model inside the jar) | The model ships in the artifact, so nothing downloads at first request (PRD §7). Only this module is used, not the LangChain4j framework | DJL + HF tokenizer: more glue code for the same model. Spring AI Transformers: downloads the model at runtime by default |
+| Embeddings | `dev.langchain4j:langchain4j-embeddings-all-minilm-l6-v2` (MiniLM + ONNX Runtime, model inside the jar) | The model ships in the artifact, so nothing downloads at first request (PRD §7). Only this module is used, not the LangChain4j framework | DJL + HF tokenizer: more glue code for the same model. Spring AI Transformers: downloads the model at runtime by default. The `-q` (quantized) variant of this same artifact was also considered; the non-quantized one was kept for accuracy, since latency was not the bottleneck (§13.2) |
 | Summaries | `com.google.genai:google-genai` (Gemini API mode, API key) | Official Google Gen AI SDK. A single `GEMINI_API_KEY` is something a reviewer can supply in seconds; Vertex + ADC would need a GCP project and service account, which — with no deployment (PRD §7) — would leave the feature unreachable for everyone who runs this | Vertex mode + ADC: right for Cloud Run, pure friction locally. Spring AI: extra abstraction for one call |
 | API docs | springdoc-openapi 3.x (code-first) | `/v3/api-docs` + Swagger UI generated from the controllers that actually serve traffic; no drift | Design-first `api.yaml` + generator: two sources of truth, generator friction with snake_case and records |
 | UI | None. Swagger UI is the interactive surface | The brief asks for API documentation, not a frontend (§10) | React SPA: the largest unrequested item in the build (PRD §8.3) |
 | Tests | JUnit 6, Testcontainers (`pgvector/pgvector:pg17`) | Real Postgres extensions; trigram/vector behaviour can't be mocked meaningfully | H2: has none of the three extensions |
 
-**Library risk:** the LangChain4j embeddings module is still versioned `-beta` (latest `1.20.0-beta30`). It is pinned, and `Embedder` is the only class that imports it. Swapping to DJL touches one file.
+**Library risk:** the LangChain4j embeddings module is still versioned `-beta` (latest: `1.20.0-beta30`). It is pinned, and `Embedder` is the only class that imports it. Swapping to DJL touches one file.
+
+*Verification note:* an earlier draft of this line cited `1.0.0-beta5` as the latest release, sourced from `search.maven.org`'s Solr search API. That index is stale for this artifact by roughly 80 releases — the authoritative source is the repository's own `maven-metadata.xml` (`repo1.maven.org/maven2/.../maven-metadata.xml`), which lists `1.20.0-beta30` as `<release>`/`<latest>`. Re-pinned to the real latest version and re-ran the full suite against it: `all-minilm-l6-v2-tokenizer.json` is byte-identical to the `1.0.0-beta5` jar's copy, and every measured number in this document (the 126 word-piece ceiling, the 0.17 semantic floor) reproduced exactly, so the model itself is unchanged between these releases — only the dependency coordinate was wrong.
 
 ---
 
@@ -221,7 +223,7 @@ Seed clients and documents are **not** SQL (§11.3), because their embeddings ha
 ### 3.3 Refinements to PRD §5.1
 
 - **Chunks store offsets, not text.** PRD §5.1 models a chunk as carrying its own `text`. Storing `start_offset`/`end_offset` into `document.content` instead avoids duplicating the entire corpus, and the passage is extracted in SQL at hydration time (§6.6). Behaviour is identical; the PRD's requirement is that a passage exists, not that it is stored twice. Offsets are code points on both sides, so Java and Postgres agree on non-BMP text.
-- **Chunk geometry is fixed here, not in the PRD.** 150-word windows on a 120-word stride, title prefixed to each — sized against the model's 256-word-piece limit (§5.3). This resolves PRD OQ 3.
+- **Chunk geometry is fixed here, not in the PRD.** 50-word windows on a 40-word stride, title prefixed to each — sized against the *measured* word-piece ceiling of the model actually shipped, not the 256 figure generally quoted for all-MiniLM-L6-v2 (§5.3). This resolves PRD OQ 3.
 - **`social_links` is `NOT NULL DEFAULT '{}'`** rather than nullable. The API returns `[]` instead of `null`, which leaves one representation of "none".
 - **`summary_status` is `text` + `CHECK`** rather than a Postgres enum, which avoids JDBC casts. Same closed set, now four values with `none` as the default (PRD §5.7).
 - **`embedding_model` on every chunk.** Not in the PRD, which treats "one model per corpus" as a rule to follow (PRD §8.1). Rules followed by hand fail silently here: `pgvector` cannot tell two 384-dimension vector spaces apart, and a plausible fallback model (`bge-small-en-v1.5`) is also 384-dimensional, so swapping it without re-indexing would leave every search quietly wrong. Recording the model turns an invisible corruption into an empty result set, and makes a staged re-index possible.
@@ -359,10 +361,11 @@ sequenceDiagram
 ### 5.3 Chunker
 
 - Tokenise content on whitespace, preserving code-point offsets.
-- Window of **150 words**, stride **120** (30-word overlap). English averages ~1.3 word pieces per word, so 150 words plus a title stays under 256 word pieces with margin.
+- Window of **50 words**, stride **40** (10-word overlap).
+- **The commonly quoted 256 word-piece limit for all-MiniLM-L6-v2 does not hold for the model this project actually ships.** The bundled tokenizer inside `langchain4j-embeddings-all-minilm-l6-v2` truncates silently — no exception — at **126 word pieces**, measured directly with `Embedder`'s own token-count method (ticket 03's `EmbeddingWordPieceBoundTest`), not assumed from the model card. Dense KYC prose (account numbers, currency, dates, reference codes) measured at up to **~2 word pieces per word**, well above the ~1.3 quoted for general English, and it is exactly this kind of text that fills these documents. 150-word windows would silently truncate on realistic content; 50 words, title included, measured at up to 112 of the 126-piece ceiling across the seed/eval corpus (§12.3) — comfortable margin against both plain narrative and dense figures.
 - Each chunk's embedding input is `title + "\n\n" + chunk text`. The title is repeated so every chunk carries it (PRD §5.3 "embedding input is title + content").
-- A document of ≤ 150 words is one chunk.
-- `Chunker` is a pure function with unit tests: boundary offsets, overlap, single-word content, Unicode (surrogate pairs), and the ≤ 256 word-piece bound checked with the model's tokenizer in a test.
+- A document of ≤ 50 words is one chunk.
+- `Chunker` is a pure function with unit tests: boundary offsets, overlap, single-word content, Unicode (surrogate pairs), and the word-piece bound checked with the model's own tokenizer, not an estimate, in a test.
 
 ---
 
@@ -517,7 +520,7 @@ LIMIT 200;
 - **Document score is its best chunk's score** (max-pooling), and that chunk's offsets become `match.passage`. Averaging across chunks would penalise long documents that contain one highly relevant section.
 - **Query embedding** uses the same `Embedder` as writes, on raw `q` with no title prefix. Vectors are L2-normalised, so cosine distance `<=>` is correct.
 - **`embedding_model` is bound from the live `Embedder`, not from configuration**. The query therefore compares only against vectors produced by the model that is actually running. If the model changes without a re-index, the predicate matches nothing and documents disappear from results — loudly wrong, and caught by the J2 test, instead of silently wrong (§3.3).
-- **Relevance floor.** `semanticFloor` is a property with a starting value of **0.30**. That number is a placeholder, not a claim. It is set by running the eval set (§12.3) in both directions: every expected pair must clear it, and the unrelated-query set must not.
+- **Relevance floor.** `semanticFloor` is a property, currently **0.17**. It is set by running the eval set (§12.3) in both directions: every expected pair must clear it, and the unrelated-query set must not. Ticket 03 measured this from raw cosine scores over the seed/eval corpus (`SemanticFloorEvalTest`): lowest positive-pair score 0.2163, highest negative-query score 0.1308, midpoint 0.17. Ticket 08 re-derives it against the live `/search` endpoint instead of raw scores, which is the number that should be trusted once it exists.
 
 **Future path (not built):** when the exact scan measurably exceeds budget, add `HNSW (embedding vector_cosine_ops)`. The `DISTINCT ON` plus threshold shape then needs rewriting as an ordered top-K over chunks with pgvector's iterative index scan, followed by grouping in the application. Named here so the rewrite is expected work rather than a surprise.
 
@@ -772,9 +775,10 @@ Flyway runs on startup in roles that include `onboarding`. With more than one in
 - `ResultOrdering`, default branch: clients precede documents regardless of relative score, within-type order preserved, either list empty, both empty, slicing beyond total.
 - `ResultOrdering`, compound branch: the named client's documents lead, that client follows them, others follow in type order; the branch is not taken when there is no residual, when two clients are mentioned, or when the named client has no above-floor document.
 - Query tokenizer: whitespace splitting, tokens under three characters discarded, empty and whitespace-only queries yield no tokens.
-- `Chunker`: offsets, overlap, single-chunk content, surrogate pairs, word-piece bound under 256 using the model tokenizer.
+- `Chunker`: offsets, overlap, single-chunk content, surrogate pairs — pure, genuinely millisecond-scale, no model involved.
 - Request validation: each rule in §4.2, including `javascript:` social links and whitespace-only strings.
 - `ApiKeyFilter`: allowlist paths pass, missing and wrong keys → `401`.
+- **Embedding-backed checks are the one exception to "milliseconds" in this tier**: `EmbeddingWordPieceBoundTest` (word-piece bound, checked with the model's own tokenizer, not an estimate) and `SemanticFloorEvalTest` (§12.3's raw-score gap) construct a real `Embedder`. Still no containers, still deterministic — but the ONNX model load is a one-time few-second cost per test JVM (the model is a `static final` field, so every `Embedder` instance in the same run shares one load; it is not paid per class).
 
 ### 12.2 Integration (Testcontainers `pgvector/pgvector:pg17`, full Spring context, real model)
 
@@ -854,9 +858,9 @@ PRD §6 states the latency figures as design targets and says plainly that they 
 
 A typical KYC text document (≤ 300 words, 1–3 chunks) costs 10–45 ms to embed plus ~5 ms of transaction.
 
-**Cost is linear in document length**, which is why PRD §6 sets the creation target at **1 s** rather than the search-sized budget. The §4.2 cap of 64 000 characters is roughly 10 600 words, or about 88 chunks at a 120-word stride. The 5–15 ms per chunk quoted above is the *single-call* figure; `DocumentService` calls `embedAll`, and batched ONNX inference amortises per-call overhead substantially, which is what the 1 s target relies on. That reliance is an assumption, not a measurement (§12.4) — the largest document is the case most likely to miss.
+**Cost is linear in document length**, which is why PRD §6 sets the creation target at **1 s** rather than the search-sized budget. The §4.2 cap of 64 000 characters is roughly 10 600 words, or about **265 chunks at the 40-word stride actually used** (§5.3) — revised up from an earlier estimate of ~88 chunks at a since-corrected 120-word stride. The 5–15 ms per chunk quoted above is the *single-call* figure; `DocumentService` calls `embedAll`, and batched ONNX inference amortises per-call overhead substantially, which is what the 1 s target relies on. That reliance is an assumption, not a measurement (§12.4) — the largest document is the case most likely to miss, and it is now a ~3× larger chunk count than originally assumed, so it is the figure most worth measuring first once `DocumentService` exists (ticket 05).
 
-The cap and the target are two expressions of one constraint: 64 000 characters ↔ ~88 chunks ↔ ~1 s. Raising the cap means raising the target, or changing the consistency contract. Moving large-document embedding off the request path would break "searchable on `201`", which is why the escape hatch is a *different ingestion mode* rather than a tweak (§13.3).
+The cap and the target are two expressions of one constraint: 64 000 characters ↔ ~265 chunks ↔ ~1 s. Raising the cap means raising the target, or changing the consistency contract. Moving large-document embedding off the request path would break "searchable on `201`", which is why the escape hatch is a *different ingestion mode* rather than a tweak (§13.3).
 
 ### 13.3 What changes at larger scale
 
