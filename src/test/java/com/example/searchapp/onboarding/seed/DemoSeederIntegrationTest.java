@@ -4,12 +4,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.example.searchapp.SearchApplication;
-import com.example.searchapp.search.dto.SearchRequest;
-import com.example.searchapp.search.service.SearchService;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.Statement;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -46,48 +49,47 @@ class DemoSeederIntegrationTest {
   @BeforeAll
   static void migrateSchemaOnce() {
     // A throwaway boot so Flyway creates the schema before the first @BeforeEach truncates it.
-    boot(false).close();
+    boot(false, false).close();
   }
 
   @BeforeEach
   void emptyTheClientTable() throws Exception {
-    try (Connection connection = jdbcConnection();
-        Statement statement = connection.createStatement()) {
-      statement.execute("TRUNCATE client CASCADE");
-    }
+    truncateClientTable();
   }
 
   @Test
   void seedsTheCorpusOnAnEmptyDatabaseAndSearchFindsIt() throws Exception {
-    try (ConfigurableApplicationContext context = boot(true)) {
+    try (ConfigurableApplicationContext context = boot(true, true)) {
       assertThat(countClients()).isEqualTo(8);
 
-      SearchService search = context.getBean(SearchService.class);
-      SearchService.SearchPage page = search.search(SearchRequest.of("NevisWealth", null, null));
+      int port = Integer.parseInt(context.getEnvironment().getProperty("local.server.port"));
+      HttpResponse<String> response = searchViaHttp(port, "NevisWealth");
 
-      assertThat(page.results()).isNotEmpty();
-      assertThat(page.results().get(0).client().email()).isEqualTo("john.doe@neviswealth.com");
+      assertThat(response.statusCode()).isEqualTo(200);
+      assertThat(response.body())
+          .contains("\"type\":\"client\"")
+          .contains("\"email\":\"john.doe@neviswealth.com\"");
     }
   }
 
   @Test
   void doesNotSeedAgainOnASecondStartupOnceClientsExist() throws Exception {
     int corpusSize;
-    try (ConfigurableApplicationContext first = boot(true)) {
+    try (ConfigurableApplicationContext first = boot(true, false)) {
       corpusSize = countClients();
       assertThat(corpusSize).isPositive();
     }
 
     // DemoSeeder runs again automatically during this second boot's startup; the table is no
     // longer empty, so it must skip rather than re-seed or fail on duplicate emails.
-    try (ConfigurableApplicationContext ignored = boot(true)) {
+    try (ConfigurableApplicationContext ignored = boot(true, false)) {
       assertThat(countClients()).isEqualTo(corpusSize);
     }
   }
 
   @Test
   void seedingCanBeTurnedOffByConfiguration() throws Exception {
-    try (ConfigurableApplicationContext context = boot(false)) {
+    try (ConfigurableApplicationContext context = boot(false, false)) {
       assertThatThrownBy(() -> context.getBean(DemoSeeder.class))
           .isInstanceOf(NoSuchBeanDefinitionException.class);
       assertThat(countClients()).isZero();
@@ -105,13 +107,10 @@ class DemoSeederIntegrationTest {
             List.of(),
             List.of(new DemoCorpus.DemoDocument("Note", "A short note for the race test.")));
 
-    try (ConfigurableApplicationContext context = boot(true)) {
+    try (ConfigurableApplicationContext context = boot(true, false)) {
       // The startup seed already ran; empty the table again so both threads race to insert the
       // *same* client from a clean slate, as two instances starting at once would.
-      try (Connection connection = jdbcConnection();
-          Statement statement = connection.createStatement()) {
-        statement.execute("TRUNCATE client CASCADE");
-      }
+      truncateClientTable();
       DemoSeeder seeder = context.getBean(DemoSeeder.class);
 
       ExecutorService pool = Executors.newFixedThreadPool(2);
@@ -147,15 +146,38 @@ class DemoSeederIntegrationTest {
     return seeder.seedClient(client);
   }
 
-  private static ConfigurableApplicationContext boot(boolean seedEnabled) {
+  private static ConfigurableApplicationContext boot(boolean seedEnabled, boolean withWeb) {
+    List<String> args =
+        new ArrayList<>(
+            List.of(
+                "--app.api-key=" + TEST_API_KEY,
+                "--app.seed.enabled=" + seedEnabled,
+                "--spring.datasource.url=" + database.getJdbcUrl(),
+                "--spring.datasource.username=" + database.getUsername(),
+                "--spring.datasource.password=" + database.getPassword()));
+    if (withWeb) {
+      args.add("--server.port=0");
+    }
     return new SpringApplicationBuilder(SearchApplication.class)
-        .web(WebApplicationType.NONE)
-        .run(
-            "--app.api-key=" + TEST_API_KEY,
-            "--app.seed.enabled=" + seedEnabled,
-            "--spring.datasource.url=" + database.getJdbcUrl(),
-            "--spring.datasource.username=" + database.getUsername(),
-            "--spring.datasource.password=" + database.getPassword());
+        .web(withWeb ? WebApplicationType.SERVLET : WebApplicationType.NONE)
+        .run(args.toArray(String[]::new));
+  }
+
+  /** Matches {@code IntegrationTest.get}: the real endpoint, not the {@code SearchService} bean. */
+  private static HttpResponse<String> searchViaHttp(int port, String query) throws Exception {
+    var request =
+        HttpRequest.newBuilder(URI.create("http://localhost:" + port + "/search?q=" + query))
+            .header("X-API-Key", TEST_API_KEY)
+            .GET()
+            .build();
+    return HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString());
+  }
+
+  private static void truncateClientTable() throws Exception {
+    try (Connection connection = jdbcConnection();
+        Statement statement = connection.createStatement()) {
+      statement.execute("TRUNCATE client CASCADE");
+    }
   }
 
   private static int countClients() throws Exception {
