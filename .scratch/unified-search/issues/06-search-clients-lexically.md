@@ -14,12 +14,12 @@ that falls out of the same mechanism.
 
 **Blocked by:** 04 — Create and fetch clients.
 
-**Status:** ready-for-agent
+**Status:** complete
 
-- [ ] Searching for a firm name returns the client whose email carries that domain, first, reporting the email as the matched field
-- [ ] The same query also matches a client through a company URL in their social links
-- [ ] A misspelled surname returns the right client first
-- [ ] Matches below the lexical floor are excluded, and an unrelated query returns 200 with an empty array and a zero total — never 404
-- [ ] Limit and offset are validated per §4.2; pages are disjoint and cover the list; an offset beyond the total returns an empty array
-- [ ] The total count header reports the size of the above-floor candidate list
-- [ ] The query string reaches SQL only as a bound parameter
+- [x] Searching for a firm name returns the client whose email carries that domain, first, reporting the email as the matched field
+- [x] The same query also matches a client through a company URL in their social links
+- [x] A misspelled surname returns the right client first
+- [x] Matches below the lexical floor are excluded, and an unrelated query returns 200 with an empty array and a zero total — never 404
+- [x] Limit and offset are validated per §4.2; pages are disjoint and cover the list; an offset beyond the total returns an empty array
+- [x] The total count header reports the size of the above-floor candidate list
+- [x] The query string reaches SQL only as a bound parameter

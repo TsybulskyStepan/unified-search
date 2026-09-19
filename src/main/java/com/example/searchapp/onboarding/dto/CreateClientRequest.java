@@ -1,4 +1,4 @@
-package com.example.searchapp.onboarding.client;
+package com.example.searchapp.onboarding.dto;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -28,7 +28,7 @@ public record CreateClientRequest(
     socialLinks = normalizeLinks(socialLinks);
   }
 
-  Map<String, String> validationErrors() {
+  public Map<String, String> validationErrors() {
     Map<String, String> errors = new LinkedHashMap<>();
     for (int i = 0; i < socialLinks.size(); i++) {
       String link = socialLinks.get(i);
