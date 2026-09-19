@@ -30,6 +30,8 @@ dependencies {
     // In-process MiniLM embedding model (§1.4): the model and tokenizer ship inside this jar,
     // so nothing downloads at first use. Still versioned -beta (latest published: 1.0.0-beta5).
     implementation 'dev.langchain4j:langchain4j-embeddings-all-minilm-l6-v2:1.0.0-beta5'
+    // Binds float[] to the pgvector `vector` column type (§1.4).
+    implementation 'com.pgvector:pgvector:0.1.6'
 
     runtimeOnly 'org.postgresql:postgresql'
 

@@ -48,4 +48,16 @@ public abstract class IntegrationTest {
     }
     return HttpClient.newHttpClient().send(builder.build(), HttpResponse.BodyHandlers.ofString());
   }
+
+  static HttpResponse<String> post(int port, String path, String apiKey, String body)
+      throws IOException, InterruptedException {
+    var builder =
+        HttpRequest.newBuilder(URI.create("http://localhost:" + port + path))
+            .header("Content-Type", "application/json")
+            .POST(HttpRequest.BodyPublishers.ofString(body));
+    if (apiKey != null) {
+      builder.header("X-API-Key", apiKey);
+    }
+    return HttpClient.newHttpClient().send(builder.build(), HttpResponse.BodyHandlers.ofString());
+  }
 }

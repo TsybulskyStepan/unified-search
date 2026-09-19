@@ -43,15 +43,6 @@ public class ClientController {
     return clients.findById(id).orElseThrow(ClientNotFoundException::new);
   }
 
-  @ExceptionHandler(ClientNotFoundException.class)
-  ProblemDetail handleNotFound(ClientNotFoundException exception, HttpServletRequest request) {
-    return ProblemDetails.of(
-        HttpStatus.NOT_FOUND,
-        "Not found",
-        "The requested client was not found",
-        URI.create(request.getRequestURI()));
-  }
-
   @ExceptionHandler(DuplicateClientEmailException.class)
   ProblemDetail handleDuplicateEmail(
       DuplicateClientEmailException exception, HttpServletRequest request) {

@@ -53,6 +53,17 @@ public class ClientRepository {
         .optional();
   }
 
+  /**
+   * Existence check for callers that don't need the row (§5.2: {@code SELECT 1 ... WHERE id=?}).
+   */
+  public boolean existsById(UUID id) {
+    return jdbc.sql("SELECT 1 FROM client WHERE id = :id")
+        .param("id", id)
+        .query(Integer.class)
+        .optional()
+        .isPresent();
+  }
+
   private static Client map(ResultSet resultSet, int rowNumber) throws SQLException {
     String[] socialLinks =
         resultSet.getArray("social_links") == null
