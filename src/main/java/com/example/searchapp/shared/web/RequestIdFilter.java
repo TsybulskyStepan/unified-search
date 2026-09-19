@@ -37,12 +37,20 @@ public class RequestIdFilter extends OncePerRequestFilter {
     }
   }
 
+  /**
+   * The header's real form is {@code TRACE_ID/SPAN_ID;o=TRACE_TRUE} (Google Cloud's trace context),
+   * so only the segment before the first {@code /} is the trace id — the rest is per-request span
+   * data that would make every request on the same trace look like a different one. A header with
+   * no {@code /} (as sent directly by a caller, not a proxy) is the trace id in full.
+   */
   private static String requestId(String traceHeader) {
-    if (traceHeader != null
-        && traceHeader.length() <= 128
-        && traceHeader.matches("[A-Za-z0-9._;=/-]+")) {
-      return traceHeader;
+    if (traceHeader == null
+        || traceHeader.length() > 128
+        || !traceHeader.matches("[A-Za-z0-9._;=/-]+")) {
+      return UUID.randomUUID().toString();
     }
-    return UUID.randomUUID().toString();
+    int slash = traceHeader.indexOf('/');
+    String traceId = slash < 0 ? traceHeader : traceHeader.substring(0, slash);
+    return traceId.isEmpty() ? UUID.randomUUID().toString() : traceId;
   }
 }

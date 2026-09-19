@@ -43,3 +43,6 @@ bin/
 
 ### Claude Code (personal overrides) ###
 .claude/settings.local.json
+
+### Codex (per-machine tooling — never commit, see .claude/hooks for the tracked equivalent) ###
+.codex/
