@@ -41,4 +41,14 @@ class ModuleBoundaryTest {
           .resideInAPackage("..onboarding..")
           .should()
           .resideInAPackage("..onboarding.exception");
+
+  @ArchTest
+  static final ArchRule onlyEmbedderImportsLangChain4j =
+      noClasses()
+          .that()
+          .doNotHaveFullyQualifiedName("com.example.searchapp.shared.embedding.Embedder")
+          .should()
+          .dependOnClassesThat()
+          .resideInAPackage("dev.langchain4j..")
+          .allowEmptyShould(true);
 }
