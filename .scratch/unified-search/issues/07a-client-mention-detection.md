@@ -27,17 +27,17 @@ all three need tests, not just code:
 
 **Blocked by:** 07 — Add documents to search.
 
-**Status:** ready-for-agent
+**Status:** complete
 
-- [ ] A query naming a client plus a category returns that client's matching document first and the client second
-- [ ] Other clients' documents of the same type still appear, below those
-- [ ] A query that is only a client name is unaffected: the client is first, as it is today
-- [ ] A query naming no client is unaffected
-- [ ] A query naming two clients promotes neither one's documents
-- [ ] A named client with no above-floor documents falls back to client-first
-- [ ] A misspelled client name still scopes, so the feature is not limited to advisors who type accurately
-- [ ] A category term that happens to be someone's first name does not remove or hide any document — at worst it reorders documents that already qualified
-- [ ] Scoping never changes which documents are returned, only their order
-- [ ] Ordering is unit-testable from plain lists, with both branches and all three fallbacks covered
-- [ ] Paging a compound query stays consistent: the branch is decided once per query, not per page
-- [ ] No schema change
+- [x] A query naming a client plus a category returns that client's matching document first and the client second
+- [x] Other clients' documents of the same type still appear, below those
+- [x] A query that is only a client name is unaffected: the client is first, as it is today
+- [x] A query naming no client is unaffected
+- [x] A query naming two clients promotes neither one's documents
+- [x] A named client with no above-floor documents falls back to client-first
+- [x] A misspelled client name still scopes, so the feature is not limited to advisors who type accurately
+- [x] A category term that happens to be someone's first name does not remove or hide any document — at worst it reorders documents that already qualified
+- [x] Scoping never changes which documents are returned, only their order
+- [x] Ordering is unit-testable from plain lists, with both branches and all three fallbacks covered
+- [x] Paging a compound query stays consistent: the branch is decided once per query, not per page
+- [x] No schema change
