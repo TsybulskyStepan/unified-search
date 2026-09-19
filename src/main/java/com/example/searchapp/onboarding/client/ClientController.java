@@ -1,6 +1,7 @@
 package com.example.searchapp.onboarding.client;
 
 import com.example.searchapp.shared.web.ProblemDetails;
+import com.example.searchapp.shared.web.RequestValidationException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import java.net.URI;
@@ -28,7 +29,7 @@ public class ClientController {
   @PostMapping
   ResponseEntity<Client> create(@Valid @RequestBody CreateClientRequest request) {
     if (!request.validationErrors().isEmpty()) {
-      throw new ClientValidationException(request.validationErrors());
+      throw new RequestValidationException(request.validationErrors());
     }
     Client client = clients.insert(request);
     URI location = URI.create("/clients/" + client.id());
@@ -48,17 +49,5 @@ public class ClientController {
         "Conflict",
         "A client with this email already exists",
         URI.create(request.getRequestURI()));
-  }
-
-  @ExceptionHandler(ClientValidationException.class)
-  ProblemDetail handleValidation(ClientValidationException exception, HttpServletRequest request) {
-    ProblemDetail problem =
-        ProblemDetails.of(
-            HttpStatus.BAD_REQUEST,
-            "Validation failed",
-            "One or more fields are invalid",
-            URI.create(request.getRequestURI()));
-    problem.setProperty("errors", exception.errors());
-    return problem;
   }
 }

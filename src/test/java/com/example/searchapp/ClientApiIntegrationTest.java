@@ -59,6 +59,23 @@ class ClientApiIntegrationTest extends IntegrationTest {
   }
 
   @Test
+  void reportsHandRolledValidationFailuresInTheSameShapeAsBeanValidation() throws Exception {
+    var response =
+        post(
+            port,
+            "/clients",
+            TEST_API_KEY,
+            "{\"first_name\":\"John\",\"last_name\":\"Doe\",\"email\":\"john@localhost\","
+                + "\"social_links\":[\"ftp://example.com\"]}");
+
+    assertThat(response.statusCode()).isEqualTo(400);
+    assertThat(response.body())
+        .contains("\"errors\"")
+        .contains("\"email\":\"must have a dotted domain\"")
+        .contains("\"social_links[0]\":\"must be an absolute http or https URL\"");
+  }
+
+  @Test
   void rejectsBodyLargerThanTheRequestCap() throws Exception {
     String body =
         "{\"first_name\":\"John\",\"last_name\":\"Doe\",\"email\":\"john-"

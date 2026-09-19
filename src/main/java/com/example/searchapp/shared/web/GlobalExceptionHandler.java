@@ -31,6 +31,18 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
 public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
   private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
+  @ExceptionHandler(RequestValidationException.class)
+  ProblemDetail handleRequestValidation(RequestValidationException exception, WebRequest request) {
+    ProblemDetail problem =
+        ProblemDetails.of(
+            HttpStatus.BAD_REQUEST,
+            "Validation failed",
+            "One or more fields are invalid",
+            instanceUri(request));
+    problem.setProperty("errors", exception.errors());
+    return problem;
+  }
+
   @ExceptionHandler(Exception.class)
   ProblemDetail handleUnexpectedException(Exception exception, WebRequest request) {
     log.error("Unhandled exception class={}", exception.getClass().getName(), exception);

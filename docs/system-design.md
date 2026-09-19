@@ -78,8 +78,7 @@ com.example.searchapp
 ├── (application class)
 ├── onboarding/           WRITE side
 │   ├── client/           Client, CreateClientRequest, ClientController, ClientRepository,
-│   │                     ClientNotFoundException, ClientValidationException,
-│   │                     DuplicateClientEmailException
+│   │                     ClientNotFoundException, DuplicateClientEmailException
 │   ├── document/         Document, CreateDocumentRequest, DocumentController, DocumentRepository,
 │   │                     DocumentService, Chunk, Chunker, EmbeddedChunk — and, later, the summary
 │   │                     pieces (§10/§11): SummaryController, SummaryWorker, Summarizer,
@@ -92,14 +91,20 @@ com.example.searchapp
 │   ├── dto/              SearchRequest, SearchResult, match types
 │   ├── entity/           SearchClient and document search row types
 │   ├── repository/       LexicalRetriever, SemanticRetriever and their query projections
-│   ├── service/          SearchService, ResultOrdering (pure function)
-│   └── exception/        Search exceptions
+│   └── service/          SearchService, ResultOrdering (pure function)
 └── shared/
     ├── embedding/        Embedder — wraps the ONNX model; one bean, warmed at startup
     └── web/              ApiKeyFilter, ApiKeyProperties, RequestIdFilter,
-                           GlobalExceptionHandler (ProblemDetail mapping), ProblemDetails
-                           (the shape both build), OpenApiConfiguration
+                           GlobalExceptionHandler (ProblemDetail mapping),
+                           RequestValidationException (validation the DTOs can't express in bean
+                           annotations — the one exception type onboarding and search share),
+                           ProblemDetails (the shape both build), OpenApiConfiguration
 ```
+
+`search` has no exception types of its own: it never 404s (§4.1), and its hand-rolled validation in
+`SearchRequest` raises `RequestValidationException` alongside `onboarding`'s `CreateClientRequest` —
+one type, mapped once in `GlobalExceptionHandler`, instead of a near-identical exception class and
+controller-local handler duplicated per module.
 
 `onboarding` is package-by-feature rather than package-by-layer: `Client` and `Document` are each
 small enough that a `controller/dto/entity/repository/exception` split per concept scatters one

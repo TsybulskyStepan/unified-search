@@ -15,11 +15,12 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
  * GlobalExceptionHandler}: these exception types belong to this module, and {@code shared} must not
  * depend on it (§1.3 module boundary).
  *
- * <p>Validation and conflict exceptions ({@code onboarding.client.ClientValidationException},
- * {@code onboarding.client.DuplicateClientEmailException}) stay local to {@code ClientController},
- * the only place that raises them. "Not found" is raised by more than one controller — {@code
- * ClientController} and {@code DocumentController} both look up a client — which is why it is
- * centralized here instead.
+ * <p>{@code onboarding.client.DuplicateClientEmailException} stays local to {@code
+ * ClientController}, the only place that raises it. Validation failures no longer have an
+ * onboarding-specific type at all — {@link
+ * com.example.searchapp.shared.web.RequestValidationException} covers every module. "Not found" is
+ * raised by more than one controller — {@code ClientController} and {@code DocumentController} both
+ * look up a client — which is why it is centralized here instead.
  */
 @RestControllerAdvice(basePackages = "com.example.searchapp.onboarding")
 public class OnboardingExceptionHandler {

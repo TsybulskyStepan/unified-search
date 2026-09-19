@@ -1,6 +1,6 @@
 package com.example.searchapp.search.dto;
 
-import com.example.searchapp.search.exception.SearchValidationException;
+import com.example.searchapp.shared.web.RequestValidationException;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -22,7 +22,7 @@ public record SearchRequest(String query, int limit, int offset) {
       errors.put("offset", "must be greater than or equal to 0");
     }
     if (!errors.isEmpty()) {
-      throw new SearchValidationException(errors);
+      throw new RequestValidationException(errors);
     }
     return new SearchRequest(trimmedQuery, resolvedLimit, resolvedOffset);
   }

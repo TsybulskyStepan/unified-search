@@ -41,6 +41,21 @@ class GlobalExceptionHandlerTest {
         .containsEntry("errors", Map.of("preferred_contact_method", "must not be blank"));
   }
 
+  @Test
+  void reportsHandRolledValidationErrorsInTheSameShapeAsBeanValidation() {
+    var request = new MockHttpServletRequest("GET", "/search");
+
+    var problem =
+        new GlobalExceptionHandler()
+            .handleRequestValidation(
+                new RequestValidationException(Map.of("q", "must be between 1 and 200 characters")),
+                new ServletWebRequest(request));
+
+    assertThat(problem.getStatus()).isEqualTo(HttpStatus.BAD_REQUEST.value());
+    assertThat(problem.getProperties())
+        .containsEntry("errors", Map.of("q", "must be between 1 and 200 characters"));
+  }
+
   @SuppressWarnings("unused")
   private void validationTarget(Object request) {}
 }
