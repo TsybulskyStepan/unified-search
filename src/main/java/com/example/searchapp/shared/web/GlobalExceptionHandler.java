@@ -32,7 +32,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
   @ExceptionHandler(Exception.class)
   ProblemDetail handleUnexpectedException(Exception exception, WebRequest request) {
-    log.error("Unhandled exception class={}", exception.getClass().getName());
+    log.error("Unhandled exception class={}", exception.getClass().getName(), exception);
     return ProblemDetails.of(
         HttpStatus.INTERNAL_SERVER_ERROR,
         "Internal server error",
