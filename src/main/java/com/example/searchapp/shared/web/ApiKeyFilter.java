@@ -17,6 +17,9 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import tools.jackson.databind.ObjectMapper;
 
 @Component
+// Runs after RequestIdFilter (HIGHEST_PRECEDENCE), so X-Request-Id is set on every response
+// including a 401. The -100 offset, rather than exactly LOWEST_PRECEDENCE, leaves headroom for a
+// filter that must run after auth but still ahead of the servlet dispatch.
 @Order(Ordered.LOWEST_PRECEDENCE - 100)
 public class ApiKeyFilter extends OncePerRequestFilter {
   private static final String API_KEY_HEADER = "X-API-Key";
@@ -31,8 +34,9 @@ public class ApiKeyFilter extends OncePerRequestFilter {
   @Override
   protected boolean shouldNotFilter(HttpServletRequest request) {
     String path = request.getRequestURI();
-    return ("GET".equals(request.getMethod()) && "/health".equals(path))
-        || "/".equals(path)
+    boolean isGet = "GET".equals(request.getMethod());
+    return (isGet && "/health".equals(path))
+        || (isGet && "/".equals(path))
         || path.equals("/v3/api-docs")
         || path.startsWith("/v3/api-docs/")
         || path.equals("/swagger-ui.html")
