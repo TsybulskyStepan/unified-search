@@ -7,7 +7,7 @@ input=$(cat)
 # Already continuing because of this hook: let it stop rather than loop.
 [[ $(jq -r '.stop_hook_active // false' <<<"$input") == true ]] && exit 0
 
-cd "$CLAUDE_PROJECT_DIR"
+cd "$(git rev-parse --show-toplevel)"
 # Nothing build-relevant changed since the last commit.
 [[ -z $(git status --porcelain -- src build.gradle settings.gradle 2>/dev/null) ]] && exit 0
 
