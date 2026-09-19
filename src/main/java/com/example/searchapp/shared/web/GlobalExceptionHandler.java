@@ -1,5 +1,6 @@
 package com.example.searchapp.shared.web;
 
+import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import java.net.URI;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -118,9 +119,6 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
   }
 
   private static String jsonFieldName(String field) {
-    return field
-        .replace("firstName", "first_name")
-        .replace("lastName", "last_name")
-        .replace("socialLinks", "social_links");
+    return PropertyNamingStrategies.SnakeCaseStrategy.INSTANCE.translate(field);
   }
 }
