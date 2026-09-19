@@ -15,8 +15,7 @@ app:
   search:
     # §6.4. Measured by SemanticFloorEvalTest (ticket 03) over the seed/eval corpus (§12.3): lowest
     # positive-pair cosine score 0.2163, highest negative-query score 0.1308, midpoint 0.17.
-    # Ticket 08 re-derives this against the live /search endpoint; that number should be trusted
-    # once it exists. Not yet consumed — SemanticRetriever lands in ticket 07.
+    # The live /search integration tests guard the same floor at the API boundary.
     semantic-floor: 0.17
 springdoc:
   swagger-ui:

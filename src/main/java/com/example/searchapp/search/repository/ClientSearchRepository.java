@@ -45,6 +45,9 @@ public class ClientSearchRepository {
   }
 
   public List<SearchClient> findByIds(List<UUID> ids) {
+    if (ids.isEmpty()) {
+      return List.of();
+    }
     return jdbc.sql(
             """
             SELECT id, first_name, last_name, email, description, social_links, created_at
@@ -53,6 +56,42 @@ public class ClientSearchRepository {
             """)
         .param("ids", ids)
         .query(ClientSearchRepository::mapClient)
+        .list();
+  }
+
+  public List<ClientMention> findMentions(List<String> tokens) {
+    if (tokens.isEmpty()) {
+      return List.of();
+    }
+    String[] distinctTokens = tokens.stream().distinct().toArray(String[]::new);
+    return jdbc.sql(
+            """
+            WITH token_scores AS (
+                SELECT c.id, token, field, word_similarity(token, value) AS score
+                FROM client c
+                CROSS JOIN unnest(CAST(:tokens AS text[])) AS query_tokens(token)
+                CROSS JOIN LATERAL (VALUES
+                    ('name', c.first_name || ' ' || c.last_name),
+                    ('email', c.email::text)
+                ) AS fields(field, value)
+            ), token_matches AS (
+                SELECT DISTINCT ON (id, token) id, token, field, score
+                FROM token_scores
+                WHERE score >= :mention_floor
+                ORDER BY id, token, score DESC, field
+            )
+            SELECT id,
+                   (array_agg(field ORDER BY score DESC, field))[1] AS field,
+                   max(score) AS score,
+                   count(*) AS matched_token_count
+            FROM token_matches
+            GROUP BY id
+            ORDER BY max(score) DESC, id
+            LIMIT 2
+            """)
+        .param("tokens", distinctTokens)
+        .param("mention_floor", 0.7)
+        .query((resultSet, rowNumber) -> mapMention(resultSet, distinctTokens.length))
         .list();
   }
 
@@ -76,5 +115,13 @@ public class ClientSearchRepository {
         resultSet.getString("description"),
         List.of(socialLinks),
         resultSet.getTimestamp("created_at").toInstant());
+  }
+
+  private static ClientMention mapMention(ResultSet resultSet, int tokenCount) throws SQLException {
+    return new ClientMention(
+        resultSet.getObject("id", UUID.class),
+        resultSet.getString("field"),
+        resultSet.getDouble("score"),
+        resultSet.getInt("matched_token_count") < tokenCount);
   }
 }
