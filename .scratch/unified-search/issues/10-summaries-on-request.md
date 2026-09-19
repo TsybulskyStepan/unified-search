@@ -18,14 +18,14 @@ Build this against a test double. The real model arrives in ticket 11.
 
 **Blocked by:** 05 — Create and fetch documents.
 
-**Status:** ready-for-agent
+**Status:** complete
 
-- [ ] Requesting a summary for a document that has none returns 202 and moves it to pending
-- [ ] A second request while pending returns 202 and causes no additional generation call
-- [ ] A request for a document that is already summarised returns 200 and causes no call
-- [ ] Reading a document repeatedly leaves its state untouched and never calls the summarizer
-- [ ] A claimed row carries a lease and an incremented attempt count, and two concurrent claims never return the same row
-- [ ] A row whose lease expires becomes claimable again
-- [ ] Transient failures are retried until the attempt limit is reached, after which the row is marked failed
-- [ ] Requesting again after a failure returns the row to pending with attempts reset, and it can then succeed
-- [ ] The document remains searchable throughout every one of these states
+- [x] Requesting a summary for a document that has none returns 202 and moves it to pending
+- [x] A second request while pending returns 202 and causes no additional generation call
+- [x] A request for a document that is already summarised returns 200 and causes no call
+- [x] Reading a document repeatedly leaves its state untouched and never calls the summarizer
+- [x] A claimed row carries a lease and an incremented attempt count, and two concurrent claims never return the same row
+- [x] A row whose lease expires becomes claimable again
+- [x] Transient failures are retried until the attempt limit is reached, after which the row is marked failed
+- [x] Requesting again after a failure returns the row to pending with attempts reset, and it can then succeed
+- [x] The document remains searchable throughout every one of these states
