@@ -19,9 +19,9 @@ continuing — tickets 05 through 08 all rest on this working.
 
 **Status:** ready-for-agent
 
-- [ ] The embedder loads in-process with no network access at first use, warms during startup, and exposes its model identifier
-- [ ] The chunker splits on the §5.3 geometry, preserves code-point offsets, yields a single chunk for short content, and handles surrogate pairs correctly
-- [ ] A test asserts every chunk's embedding input stays under the model's word-piece limit, using the model's own tokenizer rather than an estimate
-- [ ] The corpus covers the §12.3 document set across roughly eight clients, with the profile descriptions and social links the client cases need
-- [ ] A test embeds the corpus, scores the positive pairs and the negative queries, logs the gap, and fails if the two sets overlap
-- [ ] The chosen semantic floor is recorded in configuration with the measured gap stated alongside it
+- [x] The embedder loads in-process with no network access at first use, warms during startup, and exposes its model identifier
+- [x] The chunker splits on the §5.3 geometry, preserves code-point offsets, yields a single chunk for short content, and handles surrogate pairs correctly
+- [x] A test asserts every chunk's embedding input stays under the model's word-piece limit, using the model's own tokenizer rather than an estimate
+- [x] The corpus covers the §12.3 document set across roughly eight clients, with the profile descriptions and social links the client cases need
+- [x] A test embeds the corpus, scores the positive pairs and the negative queries, logs the gap, and fails if the two sets overlap
+- [x] The chosen semantic floor is recorded in configuration with the measured gap stated alongside it
