@@ -68,14 +68,34 @@ paths:
           required: true
           schema:
             type: string
+            minLength: 1
+            maxLength: 200
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 20
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
       responses:
         "200":
+          headers:
+            X-Total-Count:
+              schema:
+                type: integer
+                minimum: 0
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  type: object
+                  $ref: "#/components/schemas/ClientSearchResult"
 
 components:
   schemas:
@@ -112,3 +132,23 @@ components:
         created_at:
           type: string
           format: date-time
+
+    ClientSearchResult:
+      type: object
+      required: [type, score, match, client]
+      properties:
+        type:
+          type: string
+          enum: [client]
+        score:
+          type: number
+          format: double
+        match:
+          type: object
+          required: [field]
+          properties:
+            field:
+              type: string
+              enum: [name, email, description, social_links]
+        client:
+          $ref: "#/components/schemas/Client"
