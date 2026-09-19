@@ -22,12 +22,17 @@ public class DocumentService {
   private final ClientRepository clients;
   private final DocumentRepository documents;
   private final Embedder embedder;
+  private final SummaryWorker summaryWorker;
 
   public DocumentService(
-      ClientRepository clients, DocumentRepository documents, Embedder embedder) {
+      ClientRepository clients,
+      DocumentRepository documents,
+      Embedder embedder,
+      SummaryWorker summaryWorker) {
     this.clients = clients;
     this.documents = documents;
     this.embedder = embedder;
+    this.summaryWorker = summaryWorker;
   }
 
   public Document create(UUID clientId, CreateDocumentRequest request) {
@@ -60,5 +65,23 @@ public class DocumentService {
 
   public Document find(UUID clientId, UUID documentId) {
     return documents.findById(clientId, documentId).orElseThrow(DocumentNotFoundException::new);
+  }
+
+  /**
+   * Requests a summary (§7.2). {@code none}/{@code failed} transitions to {@code pending} and
+   * nudges the worker; already {@code pending} or {@code ready} is a no-op that returns the current
+   * row unchanged — repeating the request can neither double-enqueue nor reset a job already in
+   * flight.
+   */
+  public Document requestSummary(UUID clientId, UUID documentId) {
+    Document current = find(clientId, documentId);
+    return documents
+        .requestSummary(clientId, documentId)
+        .map(
+            pending -> {
+              summaryWorker.nudge();
+              return pending;
+            })
+        .orElse(current);
   }
 }
