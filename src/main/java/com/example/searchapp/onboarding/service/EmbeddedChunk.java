@@ -1,4 +1,4 @@
-package com.example.searchapp.onboarding.document;
+package com.example.searchapp.onboarding.service;
 
 /**
  * A chunk paired with its embedding, so the two never travel as separate parallel lists that could

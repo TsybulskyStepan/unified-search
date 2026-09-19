@@ -1,4 +1,4 @@
-package com.example.searchapp.onboarding.document;
+package com.example.searchapp.onboarding.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;

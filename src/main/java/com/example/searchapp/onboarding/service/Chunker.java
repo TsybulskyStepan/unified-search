@@ -1,4 +1,4 @@
-package com.example.searchapp.onboarding.document;
+package com.example.searchapp.onboarding.service;
 
 import java.util.ArrayList;
 import java.util.List;

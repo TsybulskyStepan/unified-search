@@ -1,4 +1,4 @@
-package com.example.searchapp.onboarding.document;
+package com.example.searchapp.onboarding.entity;
 
 import java.time.Instant;
 import java.util.UUID;

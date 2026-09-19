@@ -1,7 +1,5 @@
 package com.example.searchapp.onboarding.exception;
 
-import com.example.searchapp.onboarding.client.ClientNotFoundException;
-import com.example.searchapp.onboarding.client.DuplicateClientEmailException;
 import com.example.searchapp.shared.web.ProblemDetails;
 import jakarta.servlet.http.HttpServletRequest;
 import java.net.URI;

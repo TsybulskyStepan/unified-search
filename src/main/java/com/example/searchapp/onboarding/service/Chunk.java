@@ -1,4 +1,4 @@
-package com.example.searchapp.onboarding.document;
+package com.example.searchapp.onboarding.service;
 
 /**
  * One window produced by {@link Chunker}. Carries code-point offsets into the document's content

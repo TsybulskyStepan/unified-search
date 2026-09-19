@@ -1,5 +1,8 @@
-package com.example.searchapp.onboarding.document;
+package com.example.searchapp.onboarding.repository;
 
+import com.example.searchapp.onboarding.entity.Document;
+import com.example.searchapp.onboarding.service.Chunk;
+import com.example.searchapp.onboarding.service.EmbeddedChunk;
 import com.pgvector.PGvector;
 import java.sql.ResultSet;
 import java.sql.SQLException;

@@ -2,8 +2,8 @@ package com.example.searchapp.eval;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.example.searchapp.onboarding.document.Chunk;
-import com.example.searchapp.onboarding.document.Chunker;
+import com.example.searchapp.onboarding.service.Chunk;
+import com.example.searchapp.onboarding.service.Chunker;
 import com.example.searchapp.shared.embedding.Cosine;
 import com.example.searchapp.shared.embedding.Embedder;
 import java.util.ArrayList;

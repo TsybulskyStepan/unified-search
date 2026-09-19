@@ -1,5 +1,8 @@
-package com.example.searchapp.onboarding.document;
+package com.example.searchapp.onboarding.controller;
 
+import com.example.searchapp.onboarding.dto.CreateDocumentRequest;
+import com.example.searchapp.onboarding.entity.Document;
+import com.example.searchapp.onboarding.service.DocumentService;
 import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.UUID;

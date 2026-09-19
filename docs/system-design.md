@@ -69,24 +69,24 @@ There is exactly one deployable today. Its internal boundaries are modules rathe
 
 ### 1.2 Package layout
 
-Two sibling modules plus shared code, under the existing `com.example.searchapp`. `search` is
-package-by-layer; `onboarding` is package-by-feature — one package per concept, plus the pieces
-genuinely shared by more than one of its controllers:
+Two sibling modules plus shared code, package-by-layer inside each, under the existing
+`com.example.searchapp`:
 
 ```
 com.example.searchapp
 ├── (application class)
 ├── onboarding/           WRITE side
-│   ├── client/           Client, CreateClientRequest, ClientController, ClientRepository,
-│   │                     ClientNotFoundException, DuplicateClientEmailException
-│   ├── document/         Document, CreateDocumentRequest, DocumentController, DocumentRepository,
-│   │                     DocumentService, Chunk, Chunker, EmbeddedChunk — and, later, the summary
-│   │                     pieces (§10/§11): SummaryController, SummaryWorker, Summarizer,
-│   │                     GeminiSummarizer
-│   ├── exception/        OnboardingExceptionHandler ("not found" — raised by both controllers),
-│   │                     DocumentNotFoundException
+│   ├── controller/       ClientController, DocumentController
+│   ├── dto/              CreateClientRequest, CreateDocumentRequest
+│   ├── entity/           Client, Document
+│   ├── repository/       ClientRepository, DocumentRepository
+│   ├── service/          DocumentService, Chunk, Chunker, EmbeddedChunk — and, later, the summary
+│   │                     pieces (§10/§11): SummaryWorker, Summarizer, GeminiSummarizer
+│   ├── exception/        OnboardingExceptionHandler (every exception onboarding's controllers
+│   │                     raise), ClientNotFoundException, DocumentNotFoundException,
+│   │                     DuplicateClientEmailException
 │   └── seed/             DemoSeeder — seeds through DocumentService, not SQL
-├── search/               READ side, package-by-layer
+├── search/               READ side
 │   ├── controller/       SearchController
 │   ├── dto/              SearchRequest, SearchResult, match types
 │   ├── entity/           SearchClient and document search row types
@@ -106,13 +106,10 @@ com.example.searchapp
 one type, mapped once in `GlobalExceptionHandler`, instead of a near-identical exception class and
 controller-local handler duplicated per module.
 
-`onboarding` is package-by-feature rather than package-by-layer: `Client` and `Document` are each
-small enough that a `controller/dto/entity/repository/exception` split per concept scatters one
-concept across five packages for no offsetting benefit — reading "how is a client created and
-validated" meant opening five folders instead of one, and un-splitting it loses nothing. `search`
-stays package-by-layer: it carries more files per layer (two retrievers, ordering, several dto and
-match types) and exists specifically to signal the read/write architectural split, which
-package-by-layer earns its keep for here.
+This package-by-layer split was briefly reverted for `Client` alone — a `controller/dto/entity/
+repository/exception` split scatters that one concept across five packages, and `Document` sat at
+the same size in one package instead. Reinstated, and extended to `Document` too, on the reviewer's
+explicit direction: consistency of layout across the module outweighs that argument here.
 
 There is no `ClientService`. Client creation is validate → insert → map the unique violation to
 `409`, which the controller and repository cover without a pass-through layer. `DocumentService`

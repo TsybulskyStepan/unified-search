@@ -1,5 +1,9 @@
-package com.example.searchapp.onboarding.client;
+package com.example.searchapp.onboarding.controller;
 
+import com.example.searchapp.onboarding.dto.CreateClientRequest;
+import com.example.searchapp.onboarding.entity.Client;
+import com.example.searchapp.onboarding.exception.ClientNotFoundException;
+import com.example.searchapp.onboarding.repository.ClientRepository;
 import com.example.searchapp.shared.web.RequestValidationException;
 import jakarta.validation.Valid;
 import java.net.URI;

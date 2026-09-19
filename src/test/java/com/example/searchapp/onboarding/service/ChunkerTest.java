@@ -1,4 +1,4 @@
-package com.example.searchapp.onboarding.document;
+package com.example.searchapp.onboarding.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

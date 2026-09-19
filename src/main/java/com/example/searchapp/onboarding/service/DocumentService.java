@@ -1,8 +1,11 @@
-package com.example.searchapp.onboarding.document;
+package com.example.searchapp.onboarding.service;
 
-import com.example.searchapp.onboarding.client.ClientNotFoundException;
-import com.example.searchapp.onboarding.client.ClientRepository;
+import com.example.searchapp.onboarding.dto.CreateDocumentRequest;
+import com.example.searchapp.onboarding.entity.Document;
+import com.example.searchapp.onboarding.exception.ClientNotFoundException;
 import com.example.searchapp.onboarding.exception.DocumentNotFoundException;
+import com.example.searchapp.onboarding.repository.ClientRepository;
+import com.example.searchapp.onboarding.repository.DocumentRepository;
 import com.example.searchapp.shared.embedding.Embedder;
 import java.util.List;
 import java.util.UUID;

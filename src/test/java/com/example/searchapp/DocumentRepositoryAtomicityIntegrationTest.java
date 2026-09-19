@@ -3,11 +3,11 @@ package com.example.searchapp;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.example.searchapp.onboarding.client.ClientRepository;
-import com.example.searchapp.onboarding.client.CreateClientRequest;
-import com.example.searchapp.onboarding.document.Chunk;
-import com.example.searchapp.onboarding.document.DocumentRepository;
-import com.example.searchapp.onboarding.document.EmbeddedChunk;
+import com.example.searchapp.onboarding.dto.CreateClientRequest;
+import com.example.searchapp.onboarding.repository.ClientRepository;
+import com.example.searchapp.onboarding.repository.DocumentRepository;
+import com.example.searchapp.onboarding.service.Chunk;
+import com.example.searchapp.onboarding.service.EmbeddedChunk;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
