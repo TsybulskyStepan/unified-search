@@ -84,9 +84,14 @@ com.example.searchapp
 │       ResultOrdering (pure function), SearchResult
 └── shared/
     ├── embedding/        Embedder — wraps the ONNX model; one bean, warmed at startup
-    ├── security/         ApiKeyFilter
-    └── web/              ProblemDetail exception handler, OpenAPI security scheme
+    └── web/              ApiKeyFilter, ApiKeyProperties, RequestIdFilter,
+                           GlobalExceptionHandler (ProblemDetail mapping), OpenApiConfiguration
 ```
+
+There is no separate `security/` package. `ApiKeyFilter` sits beside `RequestIdFilter` and
+`GlobalExceptionHandler` in `web/` because all three are the same kind of concern — request-level
+HTTP cross-cutting behaviour — and splitting the auth filter out on its own would separate it from
+the error shaping and request-id plumbing it's tightest with, for no boundary that matters here.
 
 There is no `ClientService`. Client creation is validate → insert → map the unique violation to `409`, which the controller and repository cover without a pass-through layer. `DocumentService` exists because document creation has real logic: chunk, embed outside the transaction, then write atomically.
 
