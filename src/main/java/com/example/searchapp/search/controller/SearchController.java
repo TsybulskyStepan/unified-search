@@ -1,5 +1,9 @@
-package com.example.searchapp.search;
+package com.example.searchapp.search.controller;
 
+import com.example.searchapp.search.dto.SearchRequest;
+import com.example.searchapp.search.dto.SearchResult;
+import com.example.searchapp.search.exception.SearchValidationException;
+import com.example.searchapp.search.service.SearchService;
 import com.example.searchapp.shared.web.ProblemDetails;
 import jakarta.servlet.http.HttpServletRequest;
 import java.net.URI;
@@ -15,15 +19,15 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/search")
-class SearchController {
+public class SearchController {
   private final SearchService search;
 
-  SearchController(SearchService search) {
+  public SearchController(SearchService search) {
     this.search = search;
   }
 
   @GetMapping
-  ResponseEntity<List<SearchResult>> search(
+  public ResponseEntity<List<SearchResult>> search(
       @RequestParam(required = false, name = "q") String query,
       @RequestParam(required = false) Integer limit,
       @RequestParam(required = false) Integer offset) {
@@ -34,7 +38,8 @@ class SearchController {
   }
 
   @ExceptionHandler(SearchValidationException.class)
-  ProblemDetail handleValidation(SearchValidationException exception, HttpServletRequest request) {
+  public ProblemDetail handleValidation(
+      SearchValidationException exception, HttpServletRequest request) {
     ProblemDetail problem =
         ProblemDetails.of(
             HttpStatus.BAD_REQUEST,

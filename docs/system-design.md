@@ -69,20 +69,26 @@ There is exactly one deployable today. Its internal boundaries are modules rathe
 
 ### 1.2 Package layout
 
-Two sibling modules plus shared code, package-by-feature inside each, under the existing `com.example.searchapp`:
+Two sibling modules plus shared code, package-by-layer inside each, under the existing `com.example.searchapp`:
 
 ```
 com.example.searchapp
 ├── (application class)
 ├── onboarding/           WRITE side
-│   ├── client/           ClientController, ClientRepository, Client (record), CreateClientRequest
-│   ├── document/         DocumentController, DocumentService, DocumentRepository, Chunker, Document
-│   ├── summary/          SummaryController, SummaryWorker, Summarizer (interface), GeminiSummarizer
-│   ├── exception/        Onboarding exceptions shared across write-side features
+│   ├── controller/       ClientController, DocumentController, SummaryController
+│   ├── dto/              CreateClientRequest, CreateDocumentRequest, Document response types
+│   ├── entity/           Client, Document
+│   ├── repository/       ClientRepository, DocumentRepository
+│   ├── service/          DocumentService, SummaryWorker, Summarizer, GeminiSummarizer
+│   ├── exception/        Onboarding exceptions
 │   └── seed/             DemoSeeder — seeds through DocumentService, not SQL
 ├── search/               READ side
-│   └── SearchController, SearchService, LexicalRetriever, SemanticRetriever,
-│       ResultOrdering (pure function), SearchResult
+│   ├── controller/       SearchController
+│   ├── dto/              SearchRequest, SearchResult, match types
+│   ├── entity/           SearchClient and document search row types
+│   ├── repository/       LexicalRetriever, SemanticRetriever and their query projections
+│   ├── service/          SearchService, ResultOrdering (pure function)
+│   └── exception/        Search exceptions
 └── shared/
     ├── embedding/        Embedder — wraps the ONNX model; one bean, warmed at startup
     └── web/              ApiKeyFilter, ApiKeyProperties, RequestIdFilter,

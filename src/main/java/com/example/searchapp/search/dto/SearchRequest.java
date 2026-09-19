@@ -1,12 +1,13 @@
-package com.example.searchapp.search;
+package com.example.searchapp.search.dto;
 
+import com.example.searchapp.search.exception.SearchValidationException;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-record SearchRequest(String query, int limit, int offset) {
+public record SearchRequest(String query, int limit, int offset) {
   private static final int DEFAULT_LIMIT = 20;
 
-  static SearchRequest of(String query, Integer limit, Integer offset) {
+  public static SearchRequest of(String query, Integer limit, Integer offset) {
     String trimmedQuery = query == null ? null : query.trim();
     int resolvedLimit = limit == null ? DEFAULT_LIMIT : limit;
     int resolvedOffset = offset == null ? 0 : offset;

@@ -1,5 +1,6 @@
-package com.example.searchapp.search;
+package com.example.searchapp.search.repository;
 
+import com.example.searchapp.search.entity.SearchClient;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
@@ -8,16 +9,16 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 
 @Repository
-class ClientSearchRepository {
+public class ClientSearchRepository {
   private static final double LEXICAL_FLOOR = 0.6;
 
   private final JdbcClient jdbc;
 
-  ClientSearchRepository(JdbcClient jdbc) {
+  public ClientSearchRepository(JdbcClient jdbc) {
     this.jdbc = jdbc;
   }
 
-  List<ClientMatch> findMatches(String query) {
+  public List<ClientMatch> findMatches(String query) {
     return jdbc.sql(
             """
             SELECT c.id, best.field, best.score
@@ -43,7 +44,7 @@ class ClientSearchRepository {
         .list();
   }
 
-  List<SearchClient> findByIds(List<UUID> ids) {
+  public List<SearchClient> findByIds(List<UUID> ids) {
     return jdbc.sql(
             """
             SELECT id, first_name, last_name, email, description, social_links, created_at

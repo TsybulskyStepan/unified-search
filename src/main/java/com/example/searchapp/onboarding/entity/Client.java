@@ -1,10 +1,10 @@
-package com.example.searchapp.search;
+package com.example.searchapp.onboarding.entity;
 
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
-record SearchClient(
+public record Client(
     UUID id,
     String firstName,
     String lastName,
