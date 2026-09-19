@@ -1,5 +1,9 @@
 package com.example.searchapp.onboarding.client;
 
+import com.example.searchapp.onboarding.exception.ClientNotFoundException;
+import com.example.searchapp.onboarding.exception.ClientValidationException;
+import com.example.searchapp.onboarding.exception.DuplicateClientEmailException;
+import com.example.searchapp.shared.web.ProblemDetails;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import java.net.URI;
@@ -41,32 +45,32 @@ public class ClientController {
 
   @ExceptionHandler(ClientNotFoundException.class)
   ProblemDetail handleNotFound(ClientNotFoundException exception, HttpServletRequest request) {
-    return problem(
-        HttpStatus.NOT_FOUND, "Not found", "The requested client was not found", request);
+    return ProblemDetails.of(
+        HttpStatus.NOT_FOUND,
+        "Not found",
+        "The requested client was not found",
+        URI.create(request.getRequestURI()));
   }
 
   @ExceptionHandler(DuplicateClientEmailException.class)
   ProblemDetail handleDuplicateEmail(
       DuplicateClientEmailException exception, HttpServletRequest request) {
-    return problem(
-        HttpStatus.CONFLICT, "Conflict", "A client with this email already exists", request);
+    return ProblemDetails.of(
+        HttpStatus.CONFLICT,
+        "Conflict",
+        "A client with this email already exists",
+        URI.create(request.getRequestURI()));
   }
 
   @ExceptionHandler(ClientValidationException.class)
   ProblemDetail handleValidation(ClientValidationException exception, HttpServletRequest request) {
     ProblemDetail problem =
-        problem(
-            HttpStatus.BAD_REQUEST, "Validation failed", "One or more fields are invalid", request);
+        ProblemDetails.of(
+            HttpStatus.BAD_REQUEST,
+            "Validation failed",
+            "One or more fields are invalid",
+            URI.create(request.getRequestURI()));
     problem.setProperty("errors", exception.errors());
-    return problem;
-  }
-
-  private static ProblemDetail problem(
-      HttpStatus status, String title, String detail, HttpServletRequest request) {
-    ProblemDetail problem = ProblemDetail.forStatus(status);
-    problem.setTitle(title);
-    problem.setDetail(detail);
-    problem.setInstance(URI.create(request.getRequestURI()));
     return problem;
   }
 }

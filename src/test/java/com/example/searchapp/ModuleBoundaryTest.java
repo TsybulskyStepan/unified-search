@@ -1,5 +1,6 @@
 package com.example.searchapp;
 
+import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 
 import com.tngtech.archunit.core.importer.ImportOption;
@@ -30,4 +31,14 @@ class ModuleBoundaryTest {
           .dependOnClassesThat()
           .resideInAPackage("..onboarding..")
           .allowEmptyShould(true);
+
+  @ArchTest
+  static final ArchRule onboardingExceptionsLiveAtTheModuleRoot =
+      classes()
+          .that()
+          .areAssignableTo(RuntimeException.class)
+          .and()
+          .resideInAPackage("..onboarding..")
+          .should()
+          .resideInAPackage("..onboarding.exception");
 }

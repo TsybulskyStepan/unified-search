@@ -11,6 +11,7 @@ import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.net.URI;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import org.springframework.core.Ordered;
@@ -38,10 +39,12 @@ public class RequestBodySizeFilter extends OncePerRequestFilter {
       throws ServletException, IOException {
     byte[] body = request.getInputStream().readNBytes((int) MAX_BODY_BYTES + 1);
     if (body.length > MAX_BODY_BYTES) {
-      ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.PAYLOAD_TOO_LARGE);
-      problem.setTitle("Payload too large");
-      problem.setDetail("The request body exceeds the 256 KB limit");
-      problem.setInstance(java.net.URI.create(request.getRequestURI()));
+      ProblemDetail problem =
+          ProblemDetails.of(
+              HttpStatus.PAYLOAD_TOO_LARGE,
+              "Payload too large",
+              "The request body exceeds the 256 KB limit",
+              URI.create(request.getRequestURI()));
       response.setStatus(HttpStatus.PAYLOAD_TOO_LARGE.value());
       response.setContentType(MediaType.APPLICATION_PROBLEM_JSON_VALUE);
       objectMapper.writeValue(response.getOutputStream(), problem);

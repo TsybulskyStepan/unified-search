@@ -1,4 +1,4 @@
-package com.example.searchapp.onboarding.client;
+package com.example.searchapp.onboarding.exception;
 
 import java.util.Map;
 

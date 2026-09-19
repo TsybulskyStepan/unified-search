@@ -1,5 +1,6 @@
 package com.example.searchapp.onboarding.client;
 
+import com.example.searchapp.onboarding.exception.DuplicateClientEmailException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;

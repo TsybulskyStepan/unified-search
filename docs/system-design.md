@@ -78,6 +78,7 @@ com.example.searchapp
 │   ├── client/           ClientController, ClientRepository, Client (record), CreateClientRequest
 │   ├── document/         DocumentController, DocumentService, DocumentRepository, Chunker, Document
 │   ├── summary/          SummaryController, SummaryWorker, Summarizer (interface), GeminiSummarizer
+│   ├── exception/        Onboarding exceptions shared across write-side features
 │   └── seed/             DemoSeeder — seeds through DocumentService, not SQL
 ├── search/               READ side
 │   └── SearchController, SearchService, LexicalRetriever, SemanticRetriever,
