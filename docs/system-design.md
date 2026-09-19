@@ -8,7 +8,7 @@ A single Spring Boot service on Java 25, backed by one PostgreSQL 17 database wi
 
 - **Clients** are matched lexically with `pg_trgm` `word_similarity` over name, email, description and social links. Trigram extraction splits on non-alphanumerics, which satisfies J1 (`"NevisWealth"` → `john.doe@neviswealth.com`) without a custom tokenizer. Verified: score `1.0` (§6.2).
 - **Documents** are split into overlapping word windows, embedded in-process with all-MiniLM-L6-v2 (ONNX), and ranked by exact cosine scan in `pgvector`. A document's score is its best chunk's score, and that chunk is returned as the match passage.
-- **Ordering** is deterministic and by provenance: each retriever applies its own floor, then clients rank above documents (PRD §5.4). When a query *names* a client and asks for something else besides, that client's documents lead and the client follows (§6.3). No fusion — the corpora are disjoint, so there is no evidence to fuse.
+- **Ordering** is deterministic and by provenance: each retriever applies its own floor, then clients rank above documents (PRD §5.4). No fusion — the corpora are disjoint, so there is no evidence to fuse.
 - **Writes** are searchable on `201`: the document row and all chunk embeddings commit in one transaction.
 - **Summaries** are generated **on explicit request** (`POST …/summary`) by a DB-backed worker, using Gemini through a plain API key. Failure never touches search.
 - **Writes and reads are separate modules**, `onboarding` and `search`, sharing only the embedding model, auth and the database schema. They run in one process, and the boundary is enforced by test so that splitting them later is a deployment change rather than a rewrite (§1.3).
@@ -87,7 +87,7 @@ com.example.searchapp
 │   ├── dto/              SearchRequest, SearchResult, match types
 │   ├── entity/           SearchClient and document search row types
 │   ├── repository/       LexicalRetriever, SemanticRetriever and their query projections
-│   ├── service/          SearchService, ResultOrdering (pure function)
+│   ├── service/          SearchService
 │   └── exception/        Search exceptions
 └── shared/
     ├── embedding/        Embedder — wraps the ONNX model; one bean, warmed at startup
@@ -234,7 +234,6 @@ Seed clients and documents are **not** SQL (§11.3), because their embeddings ha
 - **`summary_status` is `text` + `CHECK`** rather than a Postgres enum, which avoids JDBC casts. Same closed set, now four values with `none` as the default (PRD §5.7).
 - **`embedding_model` on every chunk.** Not in the PRD, which treats "one model per corpus" as a rule to follow (PRD §8.1). Rules followed by hand fail silently here: `pgvector` cannot tell two 384-dimension vector spaces apart, and a plausible fallback model (`bge-small-en-v1.5`) is also 384-dimensional, so swapping it without re-indexing would leave every search quietly wrong. Recording the model turns an invisible corruption into an empty result set, and makes a staged re-index possible.
 - **Two worker columns, `summary_attempts` and `summary_lease_until`**, see §7.
-- **Client mention detection (§6.3) adds nothing here.** Scoping a document search to a named client reads `document.client_id`, which the foreign key above already provides, and matches against `client` columns that already exist. It is a query-planning change, not a data-model one — worth stating because a feature that connects two entities usually is not.
 - **`document_pending_idx` stays a partial index on `summary_status = 'pending'`.** With request-triggered summaries, `pending` rows are exactly the work queue and are normally few — which makes the partial index smaller and more useful than it was when every new document entered the queue.
 
 ---
@@ -319,7 +318,7 @@ The brief types the search response as `array`, and the implementation keeps tha
 
 `X-Total-Count` is the combined size of both floor-filtered lists. Each retriever returns at most **200** candidates (the fetch depth), so the total is exact below that and a lower bound at it. At this corpus size with relevance floors in place, reaching 200 above-floor matches means the query is too broad to be paging through anyway. `offset ≥ total` returns `[]`.
 
-Because ordering is a concatenation in both of its branches (§6.5), paging is a plain slice of the concatenated list — deep pages are stable and need no re-ranking. Mention detection runs once per request and partitions before the slice, so which branch applies cannot change between pages of the same query.
+Because ordering is a concatenation (§6.5), paging is a plain slice of the combined candidates — deep pages are stable and need no re-ranking.
 
 ---
 
@@ -384,18 +383,16 @@ flowchart LR
     Q["q, limit, offset"] --> V[validate + trim]
     V --> P{{parallel on virtual threads}}
     P --> LR["LexicalRetriever<br/>clients · word_similarity ≥ floor_lex<br/>≤ 200"]
-    P --> MD["MentionDetector<br/>tokens × identity ≥ floor_mention<br/>LIMIT 2"]
     P --> EQ[Embedder.embed q]
     EQ --> SR["SemanticRetriever<br/>best chunk per doc · cosine ≥ floor_sem<br/>≤ 200"]
-    LR --> F["ResultOrdering<br/>mention + residual ? scoped : clients ++ documents"]
-    MD --> F
+    LR --> F["clients ++ documents"]
     SR --> F
     F --> S[slice offset..offset+limit]
     S --> H["hydrate page<br/>clients by ids · documents by ids + passage"]
     H --> R["200 · SearchResult[] · X-Total-Count"]
 ```
 
-The lexical SQL and the mention query run on virtual threads while another embeds the query and then runs the vector SQL. The branches share nothing and are joined with `CompletableFuture` on a virtual-thread executor. `StructuredTaskScope` would be the cleaner fit, but it is still a preview API in Java 25. Mention detection reads only `client` and could be folded into the lexical query, but it is kept separate because it answers a different question with a different floor (§6.3), and merging them would hide that.
+The lexical query runs on a virtual thread while another embeds the query and then runs the vector SQL. The branches share nothing and are joined with `CompletableFuture` on a virtual-thread executor. `StructuredTaskScope` would be the cleaner fit, but it is still a preview API in Java 25.
 
 **If either branch fails, the request returns `500`.** Returning lexical-only results when the semantic branch throws would make documents vanish from results with nothing to show why — an empty list indistinguishable from "no such document". This implements PRD §5.4: one broken retriever takes search down rather than degrading it.
 
@@ -450,61 +447,6 @@ LIMIT 200;
 
 **Known limits:** transpositions in short names (`Jhon` → `John`, 0.200) and one- or two-character queries score poorly. A single-character substitution in a short name is the same class: `joe` against `John Doe` scores **0.500**, and no floor that J2 survives reaches it — trigram overlap collapses once the word is barely longer than a trigram itself. `fuzzystrmatch` Levenshtein is the follow-up and resolves both (`levenshtein('joe','doe') = 1`, `levenshtein('jhon','john') = 2`), at the cost of a second matching mechanism and a wider false-match surface. It waits until the eval set shows it matters.
 
-### 6.3 Client mention detection
-
-§6.2 answers *"is this query about this client?"*. A **compound query** — a client named alongside what the advisor wants from them, `"doe utility bill"` — asks a different question: *"is this client named **inside** this query?"* Nothing in the design answers it today, so such a query has no mechanism to connect its two halves; §6.5 deliberately leaves a client signal no route into document order.
-
-**The whole-query form cannot answer it.** `word_similarity(q, field)` requires *all* of `q`'s trigrams to be covered by one contiguous span of the field, so every additional word dilutes the score:
-
-| Query | Field | `word_similarity(q, field)` | Clears 0.6? |
-|---|---|---|---|
-| `john doe utility bill` | `John Doe` | 0.409 | ❌ |
-| `john doe utility bill` | `john.doe@neviswealth.com` | 0.409 | ❌ |
-| `doe utility bill` | `John Doe` | 0.235 | ❌ |
-| `hendersen utility bill` | `Mary Henderson` | 0.304 | ❌ |
-
-The client is not merely ranked low, it is **dropped** — the advisor gets every utility bill in the corpus with nothing to indicate the name was read at all. Swapping the arguments so the whole name is the needle improves matters but still dilutes across the unmatched half: `John Doe` in `doe utility bill` scores 0.444, `Mary Henderson` in `hendersen utility bill` 0.467. Both still miss.
-
-**Matching token by token does answer it.** A name token and a category token are then scored separately, and neither dilutes the other:
-
-| Query token | Client field | Score |
-|---|---|---|
-| `doe` | `John Doe` | **1.000** |
-| `john` | `John Doe` | 1.000 |
-| `joe` | `John Joe` | 1.000 |
-| `hendersen` | `Mary Henderson` | 0.700 — J3's typo tolerance, intact |
-| `utility` | `John Doe` | **0.000** |
-| `bill` | `John Doe` | **0.000** |
-
-Category words scoring exactly zero against a name is the property that makes this signal safe to act on.
-
-**Query:**
-
-```sql
-SELECT c.id, max(word_similarity(t.tok, f.val)) AS mention_score
-FROM client c
-CROSS JOIN unnest(:tokens::text[]) AS t(tok)
-CROSS JOIN LATERAL (VALUES (c.first_name), (c.last_name), (c.email::text)) AS f(val)
-GROUP BY c.id
-HAVING max(word_similarity(t.tok, f.val)) >= :mentionFloor
-ORDER BY mention_score DESC, c.id
-LIMIT 2;
-```
-
-- **`LIMIT 2` is deliberate.** The only fact that matters is whether *exactly one* client is named; a second row means the query is ambiguous and scoping is abandoned, so further rows would be wasted work.
-- **Tokens** are the query split on whitespace, discarding anything shorter than three characters — such a token carries no trigram signal (§6.2) and only invites false matches. `search` does not reuse `Chunker` for this; that would cross the module boundary in §1.3, and a local whitespace split is exactly the duplication that boundary accepts as its price.
-- **`mentionFloor` starts at 0.7** and is *guarded* by the eval set rather than derived from it, for the same reason as `lexicalFloor` (§12.3). `hendersen` → `Mary Henderson` lands exactly on 0.700, and the floor sits on that boundary on purpose: a misspelled name must still scope, or this feature would work only for advisors who type accurately.
-
-**Three rules keep this from breaking what already works.**
-
-1. **It partitions, it never filters.** Mention detection only reorders documents that already cleared `semanticFloor`. It cannot add a document and it cannot remove one, so a wrong mention costs ordering, never recall — and "exists but cannot be found" stays impossible.
-2. **One mention, or none.** Two or more matched clients means the query is ambiguous, and §6.5 falls back to its unchanged behaviour. Guessing which of two named clients was meant is worse than not scoping.
-3. **A residual is required** — at least one query token must *not* have matched the client.
-
-**Rule 3 is load-bearing, and the numbers say why.** `neviswealth` scores **1.000** against `john.doe@neviswealth.com`, so by this measure J1's query *names a client*. Without the residual requirement, any document of that client clearing `semanticFloor` would be promoted above the client itself, and J1 — "the first result is the client" — would fail. With it, `"NevisWealth"` has no token left over, so it is an identifier query and takes §6.5's unchanged path. `"Hendersen"` (J3) behaves identically. `"address proof"` (J2) names no client at all, scoring 0.000 against every name field. All three graded examples fall outside the compound path **by construction, not by luck** — which is the only acceptable way for a new ranking rule to coexist with them.
-
-**False positives are expected, and bounded.** A first name that is also a common word matches its own client perfectly: `bill` → `Bill Smith`, `mark` → `Mark Henderson`, `rose` → `Bill Rose`, all 1.000. A query of `"utility bill"` therefore names Bill Smith. Under rules 1–3 the entire consequence is that Bill Smith's *already-qualifying* utility bills sort first — and if he has none, nothing changes at all. §12.3 asserts this directly. Should it prove noisy against a real corpus, the correction is a stop-list derived from that corpus, not a floor change.
-
 ### 6.4 Semantic retriever (documents)
 
 ```sql
@@ -532,39 +474,18 @@ LIMIT 200;
 
 ### 6.5 Ordering
 
-`ResultOrdering` is a pure static function over the already-filtered, already-sorted lists plus the mention result from §6.3:
+The already-filtered lists are concatenated in one deterministic order:
 
 ```
-if exactly one client is mentioned
-   and some query token did not match that client          -- the residual guard
-   and that client has ≥ 1 document above semanticFloor:
-
-        that client's documents  (by cosine DESC, document_id)
-     ++ that client
-     ++ remaining clients        (by word_similarity DESC, last_name, id)
-     ++ remaining documents      (by cosine DESC, document_id)
-
-else:
-        clients                  (by word_similarity DESC, last_name, id)
-     ++ documents                (by cosine DESC, document_id)
+clients      (by word_similarity DESC, last_name, id)
+++ documents (by cosine DESC, document_id)
 ```
 
-There is still no fusion function, no `k`, and no score reconciliation. PRD §5.4 explains why that matters: the two retrievers cover **disjoint corpora**, so no item ever appears in both lists and there is no evidence to combine. Reciprocal Rank Fusion over disjoint inputs degenerates into round-robin interleaving with a tie at every position, which would have made an unspecified tie-break the real ranking rule while carrying a name that implies something more principled. Both branches above order by **provenance** — which retriever produced an item, and whether it belongs to the named client — and neither ever compares a `word_similarity` against a cosine.
+There is no fusion function, no `k`, and no score reconciliation. The two retrievers cover **disjoint corpora**, so no item ever appears in both lists and there is no evidence to combine. Reciprocal Rank Fusion over disjoint inputs degenerates into round-robin interleaving with a tie at every position; a normalized blend would compare incomparable trigram and cosine scores.
 
-**Why the compound branch inverts "clients first".** The default branch leads with clients because a lexical hit is the higher-precision signal (PRD §5.4). A mention plus a residual changes what the query *is*: the advisor has named someone and then said what they want from them, so the name is a **qualifier and the document is the target**. Asking for `"doe utility bill"` and receiving the profile of a client you just named by hand is answering a question nobody asked. The client still appears, directly beneath their own documents, because confirming *which* John the system picked is worth one row.
+Clients lead because a lexical hit is the higher-precision signal: an advisor typing a name, firm or email fragment is naming a specific record they already know exists. The lexical floor is load-bearing: a weak client match would otherwise outrank every document. The client-absence assertions in §12.3 guard that outcome. A query that contains both a name and a category remains unscoped; client-scoped compound retrieval is deliberately out of scope.
 
-When the name is the entire query there is no residual, the default branch applies, and the client leads exactly as before. The two readings never collide, because a query cannot simultaneously have and not have a leftover token.
-
-Four consequences worth stating plainly, because they are where this design can go wrong:
-
-1. **The floors carry *all* of the cross-type relevance judgement.** Nothing downstream can rescue a bad floor: in the default branch a client that clears `lexicalFloor` is placed above every document, however good those documents are. This is why §12.3 tunes both floors against positives *and* negatives and fails the build when the gap closes.
-2. **J2 depends on the lexical floor, not the semantic one.** `"address proof"` must match **zero** clients; if it matches one weakly, that client takes position 1 and the utility bill drops below it. The eval set asserts this directly (§12.3).
-3. **J1 and J3 depend on the residual guard.** `"NevisWealth"` names a client by §6.3's measure (1.000 against the email), so without the guard a document of that client could take position 1 and fail the brief's first example. §12.3 asserts that a query with no residual never scopes.
-4. **Ordering is total and deterministic** in both branches, so it is unit-testable with plain lists and no fixture corpus, and pagination is a slice rather than a re-rank (§4.4).
-
-**Considered and not built: a lexical retriever over document titles.** It would help identifier-like document queries (`"W-9"`) and would make documents findable by firm name. Under the old RRF design it was rejected because a title carrying a client name ("2024 Utility Bill — Henderson") would have pushed that document above the client Henderson and broken J3. Type ordering removes that objection — clients lead regardless — so the reason is now simply scope: the brief assigns documents to similarity matching and clients to lexical matching, and following it exactly is worth more than a superset (PRD §8.3). If it is added later, documents would need a stated rule for combining two signals, and *that* is where RRF would finally be doing real work. The eval set keeps a `"W-9"` query to measure whether the embedding alone handles such identifiers adequately.
-
-**It would also not have solved the compound query, which is the reason §6.3 exists instead.** The obvious form — match the query against the client name concatenated with the document title — was measured and does not discriminate: `"doe utility bill"` scores **0.773** against `John Doe 2024 Utility Bill` and **0.765** against `Mary Henderson 2024 Utility Bill`. The category words dominate the trigram mass, so the right client and the wrong one are separated by 0.008, which is noise. Any single similarity number over a concatenated field has this problem. The two signals have to be computed and applied separately, which is what §6.3 does.
+Ordering is total and deterministic, so pagination is a slice rather than a re-rank (§4.4).
 
 ### 6.6 Hydration
 
@@ -741,7 +662,7 @@ There is no `node` stage and no static assets, since there is no frontend (§10)
 | `SUMMARY_MODEL` | current Gemini Flash model id | Model ids are retired on Google's schedule, so this is config, not code |
 | `SEED_ENABLED` | `true` | Seed the demo corpus if there are no clients |
 
-The relevance floors (`search.lexical-floor`, `search.semantic-floor`, `search.mention-floor`) and fetch depth live in `application.yaml` as tuned constants. They are not deployment knobs, although Spring's relaxed binding allows overriding them during tuning.
+`semanticFloor` lives in `application.yaml`; `lexicalFloor` is the fixed `0.6` pg_trgm default in `ClientSearchRepository`. Neither is a deployment knob.
 
 ### 11.3 Seeding
 
@@ -778,9 +699,7 @@ Flyway runs on startup in roles that include `onboarding`. With more than one in
 
 ### 12.1 Unit (no containers, milliseconds)
 
-- `ResultOrdering`, default branch: clients precede documents regardless of relative score, within-type order preserved, either list empty, both empty, slicing beyond total.
-- `ResultOrdering`, compound branch: the named client's documents lead, that client follows them, others follow in type order; the branch is not taken when there is no residual, when two clients are mentioned, or when the named client has no above-floor document.
-- Query tokenizer: whitespace splitting, tokens under three characters discarded, empty and whitespace-only queries yield no tokens.
+- Search ordering: clients precede documents regardless of relative score, within-type order preserved, either list empty, both empty, slicing beyond total.
 - `Chunker`: offsets, overlap, single-chunk content, surrogate pairs — pure, genuinely millisecond-scale, no model involved.
 - Request validation: each rule in §4.2, including `javascript:` social links and whitespace-only strings.
 - `ApiKeyFilter`: allowlist paths pass, missing and wrong keys → `401`.
@@ -794,16 +713,15 @@ Flyway runs on startup in roles that include `onboarding`. With more than one in
 | **J2** | `GET /search?q=address proof` → the utility-bill document is in the results, above the floor, with a passage — **and zero client results**, since any client would outrank it (§6.5) |
 | J3 | `Hendersen` → Henderson client first |
 | Type ordering | A query matching both a client and a document returns the client first even when the document's cosine exceeds the client's `word_similarity` |
-| **Compound query** | `GET /search?q=<surname> utility bill` → that client's utility bill is first, that client is second, other clients' utility bills follow (§6.5) |
-| Mention without residual | A query that is only a client name does **not** scope: the client is first and its documents follow in the default order. This is the J1 and J3 guard (§6.3 rule 3) |
-| Ambiguous mention | A query naming two clients falls back to the default branch — neither client's documents are promoted |
-| Mention with no documents | A named client whose documents are all below `semanticFloor` falls back to the default branch, client first |
+| Best chunk | A document with two controlled chunk scores returns the passage from its highest-scoring chunk |
+| Semantic floor | A document whose best chunk is below `semanticFloor` is absent from the response |
 | Social links | `neviswealth` also matches through a LinkedIn company URL |
 | Searchable on 201 | Create a document, then search immediately with no wait or retry, and it is found |
 | Long documents | Content whose relevant sentence is at word ~1 000 is found (guards the chunk geometry in §5.3) |
 | Empty result | Unrelated query → `200 []`, `X-Total-Count: 0` |
 | Contract | `201` + `Location`; `409` on duplicate email that differs only by case; `404` on unknown or malformed client; `400` on blank `q`, `limit=51`, bad email |
 | Model guard | A chunk written under a different `embedding_model` is invisible to search; the document returns no semantic hit rather than a wrong one (guards the `embedding_model` filter in §6.4) |
+| Retriever failure | A failing semantic retriever makes `GET /search` return RFC 9457 `500`, never partial lexical results |
 | Pagination | Pages are disjoint and cover the ordered list; `offset ≥ total` → `[]` |
 | Summary not auto-started | A created document is `none`; `GET`ting it repeatedly leaves it `none` and never calls the `Summarizer` (guards the "`GET` must not spend money" rule, PRD §5.7) |
 | Summary request | `POST …/summary` → `202`, status `pending`, then `ready` with a test double. A second `POST` while `pending` → `202` and no second `Summarizer` call. `POST` when `ready` → `200`, no call |
@@ -816,20 +734,16 @@ Flyway runs on startup in roles that include `onboarding`. With more than one in
 
 `src/test/resources/eval/` holds `corpus.json` (also the seed corpus, so demo and eval stay identical) and `queries.json`.
 
-- **Corpus:** a realistic KYC and onboarding set across ~8 clients. Utility bill, bank statement, council tax bill, tenancy agreement, passport summary, driver's licence summary, W-9, tax return, property sale completion statement, engagement letter, investment policy statement, trust deed amendment. Plus client-profile descriptions and social links for J1 and J3. At least two clients own the same artifact type, so a compound query has something to discriminate *between*, and at least one client's first name is an ordinary English word, so the false-positive case in §6.3 is exercised rather than assumed.
+- **Corpus:** a realistic KYC and onboarding set across ~8 clients. Utility bill, bank statement, council tax bill, tenancy agreement, passport summary, driver's licence summary, W-9, tax return, property sale completion statement, engagement letter, investment policy statement, trust deed amendment. It includes client-profile descriptions and social links for J1 and J3.
 - **Positive pairs (~10):** proof of address → utility bill / bank statement / council tax; proof of identity → passport / driver's licence; source of funds → property sale completion; tax residency → W-9 / tax return; trust restructuring → trust deed amendment; advisory fees → engagement letter; risk tolerance → investment policy statement; `W-9` (identifier probe, §6.5).
 - **Negative queries (~5):** out-of-domain phrases that must return no documents above the semantic floor.
 - **Client-absence assertions:** every *document* query — `"address proof"`, `"proof of identity"`, `"source of funds"` — must return **zero clients**. This is the J2 guard. Because clients are ordered above documents (§6.5), a single weak client match silently takes position 1 and demotes the expected document; presence-only assertions would still pass while the brief's second example broke. This is the specific regression the eval set exists to catch (PRD §6).
-- **Compound pairs (~4):** a client named alongside a category — `"<surname> proof of address"`, `"<surname> utility bill"` — where the expected first result is **that client's** document and the expected second is the client. The corpus carries at least two clients holding the *same* artifact type, or the assertion proves nothing: if only one client owns a utility bill, scoping and not scoping produce identical output.
-- **Mention-without-residual assertions:** every client query that is *only* a name — `"NevisWealth"`, `"Hendersen"` — must return the **client** first, not one of that client's documents. This is the J1 and J3 guard. `neviswealth` matches the email at 1.000 (§6.3), so these queries do reach mention detection and are stopped only by the residual rule; a regression there would flip the brief's first example without touching any floor.
-- **Ambiguity and no-scope assertions:** a query naming two clients does not promote either one's documents, and a generic category query (`"utility bill"`) does not reorder around a client whose first name happens to be a common word.
 - **Assertions:** every positive has an expected document in the top 3, and MRR is logged.
 
-**The three floors are handled differently, because the three questions are.**
+**The two floors are handled differently, because the two retrieval questions are.**
 
 - **`semanticFloor` is *set* by this test.** Cosine similarity has no principled default, so the only guidance is the data: take the midpoint of the gap between the lowest positive and the highest negative similarity, and fail the build if that gap closes.
 - **`lexicalFloor` is *guarded*, not derived.** It is fixed at **0.6**, pg_trgm's own `word_similarity_threshold`, verified against J1 and J3 in §6.2. The test asserts that every client positive clears it and every document query returns zero clients — failing the build in either direction. A midpoint rule would be actively wrong here: with positives bottoming out near 0.70 and negatives near 0.00, it would compute ≈0.35 and *lower* the floor, admitting weak client matches in exactly the direction that breaks J2 (§6.5). A wide gap is not a reason to move a threshold that already has a principled value.
-- **`mentionFloor` is *guarded* too, at 0.7** (§6.3). It is not derived, for the same reason: the interesting cases sit at known values rather than in a gap. `hendersen` → `Mary Henderson` scores exactly 0.700, so the test asserts that a misspelled name still scopes — the floor may not rise. Against it, the test asserts that no generic category query scopes and that no query without a residual scopes — the floor may not fall far enough to make a category word look like a name. A midpoint rule has nothing to work with here, because the false positives score 1.000 rather than something small: `bill` matches `Bill Smith` perfectly, and it is rules 1–3, not the floor, that make that harmless.
 
 ### 12.4 Performance — not measured
 
@@ -854,7 +768,6 @@ PRD §6 states the latency figures as design targets and says plainly that they 
 | Auth, validation | < 1 ms | |
 | Query embedding | 5–15 ms | Parallel with lexical |
 | Lexical SQL (10³ clients × 4 trigram comparisons) | 5–15 ms | Sequential scan |
-| Mention SQL (10³ clients × tokens × 3 identity fields) | 5–20 ms | Parallel with the above; same scan, scaling with query length rather than corpus size (§6.3) |
 | Semantic SQL (~3×10⁴ chunks exact) | 20–60 ms | Dominant term; CPU on the database |
 | Ordering + slice | < 1 ms | Concatenation, not fusion (§6.5) |
 | Hydration (2 queries) | 2–5 ms | |
@@ -908,7 +821,7 @@ The PRD defines behaviour and success criteria; this section owns the non-functi
 | | Query text, names, emails, titles and content are not included in normal request or audit logs. Unexpected-exception stack traces are retained for diagnosis and can include exception-message data. Search activity is audit-relevant, so it is logged by shape (lengths, hit counts, timings) | §9 |
 | | Per-stage latency timers for search, embedding and summaries; summary outcome counter | §9 |
 | | Readiness implies DB connectivity and a warmed embedding model | §9 |
-| Testability | Pure functions (`ResultOrdering`, `Chunker`) unit-tested without containers | §12.1 |
+| Testability | `Chunker` unit-tested without containers | §12.1 |
 | | Integration tests on real Postgres extensions and the real model; J1 and J2 are executable tests | §12.2 |
 | | Relevance eval set guards `lexicalFloor` and sets `semanticFloor`, failing the build if positives and negatives stop separating | §12.3 |
 | | Latency targets stated as estimates and labelled unverified; timers in place to measure them in operation | §12.4, §9 |
@@ -938,7 +851,7 @@ Ordered so the highest-risk assumption is tested first and every step leaves a r
 3. **Embedding spike + eval set.** `Embedder`, `Chunker`, `corpus.json`, `queries.json`, and a test computing similarities directly. **Gate:** positives and negatives separate. Pick the floor.
 4. **Clients.** `POST`/`GET`, validation, `409`.
 5. **Documents.** `DocumentService` transactional write, `POST`/`GET`, long-document test.
-6. **Search.** Both retrievers, `ResultOrdering`, pagination, hydration, J1/J2/J3 tests, eval test wired to the real endpoint — including the client-absence assertions that pin `lexicalFloor`.
+6. **Search.** Both retrievers, provenance ordering, pagination, hydration, J1/J2/J3 tests, eval test wired to the real endpoint — including the client-absence assertions that pin `lexicalFloor`.
 7. **Seeder.**
 8. **Summaries.** `POST …/summary`, worker, lease, `GeminiSummarizer`, retry-after-`failed` and degradation tests.
 9. **README** — setup, J1/J2/J3 example requests and responses, the summary state transition, the design decisions behind it, the Gemini egress note, and the latency estimates labelled as estimates.

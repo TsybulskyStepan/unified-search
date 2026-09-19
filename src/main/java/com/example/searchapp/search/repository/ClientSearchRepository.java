@@ -45,6 +45,9 @@ public class ClientSearchRepository {
   }
 
   public List<SearchClient> findByIds(List<UUID> ids) {
+    if (ids.isEmpty()) {
+      return List.of();
+    }
     return jdbc.sql(
             """
             SELECT id, first_name, last_name, email, description, social_links, created_at

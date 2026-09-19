@@ -27,8 +27,6 @@ The two things advisors search for have incompatible retrieval characteristics:
 - **Clients** are short, structured records. Queries are identifiers — names, emails, firm names. The *string itself* is the signal. Embeddings are actively bad at this: they encode meaning, not characters.
 - **Documents** are free text. Queries are categories and paraphrases — the advisor's words rarely appear in the document. Lexical matching is actively bad at this: there are no shared tokens between "address proof" and "utility bill".
 
-- **Compound queries are neither.** "John Doe's utility bill" names a person *and* a category, and neither retriever alone can serve it: lexical matching dilutes across the words it cannot explain, and the embedding treats the name as weak semantic noise. It is the most natural way an advisor phrases J2 — they almost always know whose document they want — and it needs a third step that recognises the name *inside* the query and scopes the document search to that client (§5.2, §5.4).
-
 Neither retrieval method subsumes the other. The system must run both and merge them into one ordering — which is the central design problem (§5.4).
 
 ---
@@ -44,9 +42,6 @@ Neither retrieval method subsumes the other. The system must run both and merge 
 | **J1 — Organizational lookup** | Meeting with a firm; an intro arrives from one | Every **contact** connected to that organization, found by firm name alone |
 | **J2 — Category-to-artifact retrieval** | Onboarding a client; KYC checklist item | The document satisfying a *regulatory category*, found without knowing the artifact's title |
 | **J3 — Fuzzy person lookup** | Half-remembered name, misspelling, partial email | The one right client, first result |
-| **J4 — Client-scoped category retrieval** | Working a KYC checklist for a client already in mind | *That client's* artifact first, not everyone's. The client follows it, confirming which one was matched |
-
-**J4 is J2 with the client named**, which is how the job actually arrives: an advisor collecting proof of address is collecting it *for someone*. It is listed separately because it needs a mechanism the other three do not — recognising a client named inside a longer query, rather than treating the whole query as being about one thing (§5.2).
 
 ---
 
@@ -68,6 +63,7 @@ Neither retrieval method subsumes the other. The system must run both and merge 
 |---|---|
 | Production deployment (GCP) | **Iteration 2, not built.** The graded deliverable runs locally; §7 records the shape it would take |
 | Lexical retrieval over documents | The brief scopes documents to similarity matching. Named as a cut, not an oversight (§8.3) |
+| Client-scoped compound retrieval | A longer query containing a client name is evaluated by the same independent lexical and semantic retrievers; it does not scope documents to that client. The assignment does not require this additional intent-detection path. |
 | Demo UI (React SPA) | Swagger UI and a seeded corpus make every endpoint executable. Planned as separate work (§8.3) |
 | Load testing | Latency is stated as reasoning and instrumented, not benchmarked (§6, §8.3) |
 | Multi-tenancy (firm isolation), advisor accounts, RBAC | Considered and deliberately excluded — see §8.3. A single shared API key and a single tenant are sufficient for the demo |
@@ -153,12 +149,6 @@ Matching must be case-insensitive and must match on partial tokens (`"Nevis"` al
 
 **A client relevance threshold is mandatory, and it is the highest-risk number in the system.** Because clients rank above documents (§5.4), a client that clears the threshold is promoted above *every* document — so the threshold alone decides both of the brief's examples, in opposite directions. Too loose and a faintly-matching client outranks the utility bill, failing J2. Too strict and `"Nevis"` returns nothing, failing J1. Matches below it are **dropped, not demoted**. It is tuned against the eval set, which asserts absence as well as presence (§6).
 
-**Client matching serves two distinct questions, and they need different thresholds.** The first is *"is this query about a client?"* — the J1 and J3 case, where the whole query is an identifier. The second is *"is a client named **inside** this query?"* — the J4 case, where a name sits alongside words describing something else entirely. The second cannot be answered by the first: a query carrying extra words scores far below any threshold J1 can tolerate, so the client is dropped and the advisor is left with an unscoped result list. Matching must therefore also compare the query's individual terms against client identity, and the threshold for *that* is its own number with its own risk profile.
-
-A client recognised this way is a **qualifier on the search, not necessarily its target** — see §5.4 for what that does to ordering.
-
-This is a lightweight instance of **entity resolution**. The full version is a studied problem; at 10³ clients, delimiter tokenization is the right-sized answer and a general resolution pipeline would be over-engineering.
-
 ### 5.3 Retrieval — documents (semantic)
 
 The query is embedded by the same model that embedded the documents (§8.1) and compared by cosine similarity against stored **chunk** embeddings. A document's score is its best-matching chunk's score, and that chunk is returned as the passage (§5.5).
@@ -175,12 +165,7 @@ The query is embedded by the same model that embedded the documents (§8.1) and 
 
 **Decision: deterministic ordering by provenance.** Each retriever applies its own relevance floor, then results are ordered by *where they came from* rather than by any score comparison across types. Below-floor matches are **dropped, not demoted**.
 
-Which provenance leads depends on what the query turns out to be:
-
-- **Identifier or category query** (J1, J2, J3) — clients rank above documents, clients by lexical score, documents by cosine.
-- **Compound query** (J4) — a client is named *and* the query says something else besides. That client's documents lead, the client itself follows them, then everything else in the default order.
-
-**A query counts as compound only when it contains both a term identifying a client and a term that does not.** That condition is what keeps the two branches from ever contending: a query that is only a name has nothing left over and takes the default branch, so J1 and J3 are unaffected by construction rather than by tuning. A query naming nobody — `"address proof"` — likewise. Where the named client turns out to have no matching documents, or where two clients are named and the intent is ambiguous, the default branch applies.
+Clients always lead documents: clients are ordered by lexical score and documents by cosine. A query that contains a client name and a document category is not interpreted as a scoped query; both retrievers still evaluate the whole query independently.
 
 **Why not Reciprocal Rank Fusion.** RRF is the standard answer when several retrievers rank *the same corpus*: an item appearing in multiple lists accumulates score, and that accumulation is the entire mechanism. Here the corpora are **disjoint** — clients come only from the lexical retriever, documents only from the vector retriever — so every item appears in exactly one list and the sum always has exactly one term:
 
@@ -195,28 +180,20 @@ The score is then monotonic in rank with nothing to accumulate, so `k` has no ef
 
 **Why clients first, by default.** A lexical hit is a high-precision signal: an advisor typing a name, firm or email fragment is naming a *specific record* they already know exists. A semantic hit is recall-oriented and inherently fuzzier. Precision before recall is the right default — and the floor in §5.2 is what keeps it safe, because a query with no genuine client match must yield *no* clients rather than weak ones promoted above good documents.
 
-**Why a compound query inverts that.** The same reasoning produces the opposite answer once a name appears beside other terms. There, the advisor is not looking for the client — they have just told us who the client is, which means they already know. The name is a **qualifier**; the thing being asked for is the document. Returning the profile of a person whose name you were just handed answers a question nobody asked. The client is still returned, immediately below their own documents, because confirming *which* client matched is worth one row — particularly where a surname is shared.
-
-Both branches are total and deterministic, so ordering is unit-testable without a fixture corpus, and pagination stays a slice of a concatenation rather than a re-fusion.
+The ordering is total and deterministic, and pagination is a slice of the concatenation rather than a re-fusion.
 
 ```mermaid
 flowchart LR
     Q[Query q] --> L[Lexical retriever<br/>clients]
-    Q --> M[Client mention<br/>per query term]
     Q --> E[Embed query]
     E --> S[Vector retriever<br/>document chunks]
     L --> LF{Lexical<br/>floor}
     S --> SF{Semantic<br/>floor}
-    M --> MF{Mention floor<br/>+ residual?}
     LF --> LR[Clients<br/>by lexical score]
     SF --> B[Best chunk<br/>per document] --> SR[Documents<br/>by cosine]
-    LR --> C{Compound?}
-    SR --> C
-    MF --> C
-    C -->|no| D[Clients, then documents]
-    C -->|yes| N[Named client's documents,<br/>that client, then the rest]
+    LR --> D[Clients, then documents]
+    SR --> D
     D --> P[Paginate] --> R[Typed results]
-    N --> P
 ```
 
 The two retrievers are independent and run concurrently. This is a real seam — different implementations, different failure modes — and it is what makes the ordering logic unit-testable in isolation.
@@ -225,7 +202,7 @@ The two retrievers are independent and run concurrently. This is a real seam —
 
 ### 5.5 Search results
 
-Each result identifies its type (client or document), carries the entity, its retriever's score, and why it matched — the matched field for a client, the best-matching chunk as a passage for a document. Scores are comparable *within* a type, not across types (§5.4). A result's **position** may therefore reflect its provenance rather than its score: in a compound query the named client's documents precede other documents that score higher, which is intended and is why scores are presented as an ordering key rather than a ranking anyone should read across types. A query with no matches above the relevance floors returns an empty list, not an error. Results are paginated, and the caller can tell how many matches exist in total.
+Each result identifies its type (client or document), carries the entity, its retriever's score, and why it matched — the matched field for a client, the best-matching chunk as a passage for a document. Scores are comparable *within* a type, not across types (§5.4). A result's **position** reflects provenance rather than score: every client precedes every document. A query with no matches above the relevance floors returns an empty list, not an error. Results are paginated, and the caller can tell how many matches exist in total.
 
 ### 5.6 Write path
 
@@ -271,9 +248,9 @@ No frontend is built (§8.3). The API is exercised through Swagger UI, served un
 
 **A relevance evaluation set of ~10 query→expected-result pairs runs as a test**, drawn from KYC vocabulary (proof of address → utility bill / bank statement; proof of identity → passport / driver's licence; source of funds → sale of property; etc.). This turns "semantic search works" from an assertion into evidence, and directly addresses the "correctness" axis the brief says it grades.
 
-**The eval set asserts absence as well as presence.** Every case states which results must *not* appear — `"address proof"` must return **zero clients**, `"NevisWealth"` must return exactly the one. Presence-only assertions cannot catch a too-loose client threshold, which is the specific way J2 breaks now that clients outrank documents (§5.2, §5.4). All three thresholds are tuned against this set, and a regression in any direction fails the build.
+**The eval set asserts absence as well as presence.** Every case states which results must *not* appear — `"address proof"` must return **zero clients**, `"NevisWealth"` must return exactly the one. Presence-only assertions cannot catch a too-loose client threshold, which is the specific way J2 breaks now that clients outrank documents (§5.2, §5.4). Both relevance floors are tuned against this set, and a regression in either direction fails the build.
 
-**The eval set also asserts ordering, not just membership.** J4 is only satisfied if the *named* client's document comes first, so a compound case states the expected first and second result, and the corpus holds the same artifact type for more than one client — otherwise scoping and not scoping look identical and the assertion proves nothing. Equally, every name-only query must still return the **client** first: a firm name matches a client's email exactly, so a rule that scoped on any name at all would quietly turn J1 into a document result. That is asserted directly, because no floor value would reveal it.
+**The eval set also asserts ordering, not just membership.** A client and document hit in the same response must retain the provenance order: the client first, regardless of their incomparable scores.
 
 **The seed corpus is a realistic KYC/onboarding document set** — utility bill, bank statement, passport summary, W-9, tax return, engagement letter — not a contrived synonym pair. It demonstrates the actual J2 workflow.
 
@@ -314,7 +291,7 @@ Two consequences follow, and both are load-bearing rather than incidental:
 
 See §5.4. RRF would have degenerated to round-robin interleaving over these disjoint corpora.
 
-Type is the default ordering key but not the only one: a query that names a client and asks for something else is asking about the *document*, and ordering follows that intent. This remains an ordering by provenance — which retriever produced an item, and whether it belongs to the client the query named — and never a comparison between a lexical score and a cosine one, so the argument against fusion and against a normalized blend is untouched. What changes is the reading of the query, not the arithmetic.
+Type is the ordering key: clients always precede documents, and scores are never compared across retrievers.
 
 ### 8.3 Cuts taken deliberately
 
@@ -322,7 +299,7 @@ Type is the default ordering key but not the only one: a query that names a clie
 - **Cross-encoder reranking** — real relevance gains in production stacks, but adds latency and a second hosted model for a corpus small enough that base retrievers are unlikely to need correcting. One README sentence as "what we'd add at 10× scale."
 - **ANN index (HNSW)** — deferred until exact scan measurably slows (§4).
 - **General entity resolution** — delimiter tokenization is the right-sized answer at 10³ clients (§5.2).
-- **Lexical retrieval over documents** — would make documents findable by firm name and give the ranking real multi-list evidence to fuse. Cut because the brief scopes documents to similarity matching, and following it exactly is worth more here than a superset nobody asked for. It is also not the answer to J4, which was the obvious hope: matching a query against the client name concatenated with the document title was measured and separates the right client from the wrong one by less than a hundredth of a point, because the category words dominate. Two signals have to be computed separately and applied separately, which is what §5.4 does instead.
+- **Lexical retrieval over documents** — would make documents findable by firm name and give the ranking real multi-list evidence to fuse. Cut because the brief scopes documents to similarity matching, and following it exactly is worth more here than a superset nobody asked for.
 - **Deployment** — the brief calls it a "plus", not a requirement. §7 records the shape; the hours go to the graded artifact instead. Named as a scoping decision, since the brief says it grades scoping.
 - **Demo UI** — a React SPA is the largest item the brief never asks for, and it competes with the eval set and the tests it does. Swagger UI plus a seeded corpus makes every endpoint executable in a browser. The cost is real and worth naming: the ranked mixed-type list, which is the product thesis in §1, is only ever visible as JSON. A frontend is planned as separate work against this API.
 - **Load testing** — the brief asks for tests of core logic and edge cases, not a benchmark harness. Latency is stated as reasoning with its assumptions exposed (§6), and instrumented so it can be measured in operation.
@@ -334,5 +311,3 @@ Type is the default ordering key but not the only one: a query that names a clie
 1. **Client threshold value.** Empirical, against the eval set's positive *and* negative cases (§5.2, §6). The riskiest number in the system.
 2. **Document relevance floor value.** Empirical, against the seed corpus (§5.3).
 3. **Chunk size and overlap.** Bounded above by the model's input limit (§5.1); the value within that bound is empirical and affects both passage quality and vector count.
-4. **Client-mention threshold.** Its own number, separate from the client threshold in §5.2 because it answers a different question (§5.2, §5.4). Guarded by the eval set from both sides: a misspelled name must still scope, and a category word must not.
-5. **What gets embedded for a compound query** — the whole query, or the residual after the client's name is removed. Removing it is clearly better for term matching; for the embedding it may simply shift the vector toward person-shaped content and help nothing. To be decided on eval evidence rather than argument.
