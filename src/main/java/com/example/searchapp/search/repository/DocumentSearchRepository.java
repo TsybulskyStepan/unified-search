@@ -24,14 +24,16 @@ public class DocumentSearchRepository {
   public List<DocumentMatch> findMatches(float[] queryVector, String embeddingModel) {
     return jdbc.sql(
             """
-            SELECT document_id, start_offset, end_offset, similarity
+            SELECT document_id, client_id, start_offset, end_offset, similarity
             FROM (
                 SELECT DISTINCT ON (document_id)
                     document_id,
+                    client_id,
                     start_offset,
                     end_offset,
                     1 - (embedding <=> :query_vector) AS similarity
-                FROM document_chunk
+                FROM document_chunk chunk
+                JOIN document ON document.id = chunk.document_id
                 WHERE embedding_model = :embedding_model
                 ORDER BY document_id, embedding <=> :query_vector
             ) AS best_chunk
@@ -83,6 +85,7 @@ public class DocumentSearchRepository {
   private static DocumentMatch mapMatch(ResultSet resultSet, int rowNumber) throws SQLException {
     return new DocumentMatch(
         resultSet.getObject("document_id", UUID.class),
+        resultSet.getObject("client_id", UUID.class),
         resultSet.getInt("start_offset"),
         resultSet.getInt("end_offset"),
         resultSet.getDouble("similarity"));

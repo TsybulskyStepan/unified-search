@@ -28,7 +28,7 @@ class SearchSemanticsApiIntegrationTest extends IntegrationTest {
     String query = "best chunk regression";
     String content = "decoy passage strongest passage";
     String documentId =
-        createDocument(createClient("best-chunk-owner@example.com"), "Evidence", content);
+        createDocument(createClient("passage-owner@example.com"), "Evidence", content);
     String bestPassage = "strongest passage";
 
     setOnlyChunkEmbedding(documentId, inverse(embedder.embed(query)));
@@ -70,6 +70,26 @@ class SearchSemanticsApiIntegrationTest extends IntegrationTest {
   }
 
   @Test
+  void promotesTheNamedClientsQualifiedDocumentForACompoundQuery() throws Exception {
+    String query = "John utility bill";
+    String johnId = createClient("John", "Doe", "john.doe@example.com");
+    String maryId = createClient("Mary", "Henderson", "mary.henderson@example.com");
+    String johnDocumentId = createDocument(johnId, "Utility Bill", "John's utility bill");
+    String maryDocumentId = createDocument(maryId, "Utility Bill", "Mary's utility bill");
+    float[] queryEmbedding = embedder.embed(query);
+    setOnlyChunkEmbedding(johnDocumentId, queryEmbedding);
+    setOnlyChunkEmbedding(maryDocumentId, queryEmbedding);
+
+    JsonNode results = search(query);
+
+    assertThat(results.get(0).path("type").asText()).isEqualTo("document");
+    assertThat(results.get(0).path("document").path("client_id").asText()).isEqualTo(johnId);
+    assertThat(results.get(1).path("type").asText()).isEqualTo("client");
+    assertThat(results.get(1).path("client").path("id").asText()).isEqualTo(johnId);
+    assertThat(results.toString()).contains(johnDocumentId, maryDocumentId);
+  }
+
+  @Test
   void excludesChunksProducedByAStaleEmbeddingModel() throws Exception {
     String query = "stale embedding model regression";
     String documentId =
@@ -105,13 +125,17 @@ class SearchSemanticsApiIntegrationTest extends IntegrationTest {
   }
 
   private String createClient(String email) throws Exception {
+    return createClient("Search", "Owner", email);
+  }
+
+  private String createClient(String firstName, String lastName, String email) throws Exception {
     var response =
         post(
             port,
             "/clients",
             TEST_API_KEY,
-            "{\"first_name\":\"Search\",\"last_name\":\"Owner\",\"email\":\"%s\"}"
-                .formatted(email));
+            "{\"first_name\":\"%s\",\"last_name\":\"%s\",\"email\":\"%s\"}"
+                .formatted(firstName, lastName, email));
     assertThat(response.statusCode()).isEqualTo(201);
     return extractId(response.body());
   }

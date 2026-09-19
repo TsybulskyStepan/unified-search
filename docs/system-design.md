@@ -383,16 +383,18 @@ flowchart LR
     Q["q, limit, offset"] --> V[validate + trim]
     V --> P{{parallel on virtual threads}}
     P --> LR["LexicalRetriever<br/>clients · word_similarity ≥ floor_lex<br/>≤ 200"]
+    P --> MR["ClientMentionRetriever<br/>identity tokens · ≤ 2"]
     P --> EQ[Embedder.embed q]
     EQ --> SR["SemanticRetriever<br/>best chunk per doc · cosine ≥ floor_sem<br/>≤ 200"]
-    LR --> F["clients ++ documents"]
+    LR --> F["default clients ++ documents<br/>or compound order"]
+    MR --> F
     SR --> F
     F --> S[slice offset..offset+limit]
     S --> H["hydrate page<br/>clients by ids · documents by ids + passage"]
     H --> R["200 · SearchResult[] · X-Total-Count"]
 ```
 
-The lexical query runs on a virtual thread while another embeds the query and then runs the vector SQL. The branches share nothing and are joined with `CompletableFuture` on a virtual-thread executor. `StructuredTaskScope` would be the cleaner fit, but it is still a preview API in Java 25.
+The lexical query, client-mention query, and embed-plus-vector query run on virtual threads and are joined with `CompletableFuture` on a virtual-thread executor. Mention detection is an ordering qualifier, not a third retriever: it can never add or remove a document. `StructuredTaskScope` would be the cleaner fit, but it is still a preview API in Java 25.
 
 **If either branch fails, the request returns `500`.** Returning lexical-only results when the semantic branch throws would make documents vanish from results with nothing to show why — an empty list indistinguishable from "no such document". This implements PRD §5.4: one broken retriever takes search down rather than degrading it.
 
@@ -447,6 +449,12 @@ LIMIT 200;
 
 **Known limits:** transpositions in short names (`Jhon` → `John`, 0.200) and one- or two-character queries score poorly. A single-character substitution in a short name is the same class: `joe` against `John Doe` scores **0.500**, and no floor that J2 survives reaches it — trigram overlap collapses once the word is barely longer than a trigram itself. `fuzzystrmatch` Levenshtein is the follow-up and resolves both (`levenshtein('joe','doe') = 1`, `levenshtein('jhon','john') = 2`), at the cost of a second matching mechanism and a wider false-match surface. It waits until the eval set shows it matters.
 
+### 6.3 Client mention detection
+
+Compound search answers a different question from lexical retrieval: whether a client name appears *inside* a longer query. The query is split on whitespace; tokens shorter than three characters are discarded and the remaining tokens are compared against each client's full name and email with `word_similarity`. At most two above-0.7 client mentions are returned, so one is actionable and two mean ambiguous.
+
+The mention records which tokens matched. The compound branch applies only when exactly one client is mentioned, at least one query token did not match that client (the residual guard), and at least one already-qualified semantic document belongs to that client. The residual guard prevents a name-only query from promoting the client's documents above the client; the qualified-document guard means a false positive changes nothing. A mention has no filtering authority: it only reorders document matches that already cleared `semanticFloor`.
+
 ### 6.4 Semantic retriever (documents)
 
 ```sql
@@ -474,16 +482,23 @@ LIMIT 200;
 
 ### 6.5 Ordering
 
-The already-filtered lists are concatenated in one deterministic order:
+`ResultOrdering` receives already-filtered, already-sorted lists and applies one of two deterministic orders:
 
 ```
-clients      (by word_similarity DESC, last_name, id)
-++ documents (by cosine DESC, document_id)
+if exactly one client mention has a residual
+   and that client has an above-floor document:
+        that client's documents
+     ++ that client
+     ++ remaining clients
+     ++ remaining documents
+else:
+        clients
+     ++ documents
 ```
 
-There is no fusion function, no `k`, and no score reconciliation. The two retrievers cover **disjoint corpora**, so no item ever appears in both lists and there is no evidence to combine. Reciprocal Rank Fusion over disjoint inputs degenerates into round-robin interleaving with a tie at every position; a normalized blend would compare incomparable trigram and cosine scores.
+The compound branch adds the mentioned client when the whole-query lexical retriever dropped it, because `"John utility bill"` is not an identifier query. It preserves every qualified document and every other client result. There is no fusion function, no `k`, and no score reconciliation: the two retrievers cover **disjoint corpora**, so no item ever appears in both lists and there is no evidence to combine. Reciprocal Rank Fusion over disjoint inputs degenerates into round-robin interleaving with a tie at every position; a normalized blend would compare incomparable trigram and cosine scores.
 
-Clients lead because a lexical hit is the higher-precision signal: an advisor typing a name, firm or email fragment is naming a specific record they already know exists. The lexical floor is load-bearing: a weak client match would otherwise outrank every document. The client-absence assertions in §12.3 guard that outcome. A query that contains both a name and a category remains unscoped; client-scoped compound retrieval is deliberately out of scope.
+Clients lead by default because a lexical hit is the higher-precision signal: an advisor typing a name, firm or email fragment is naming a specific record they already know exists. In a compound query the client is a qualifier and the document is the target, so qualified documents lead and the client follows to confirm which person was recognised. The lexical floor is load-bearing: a weak client match would otherwise outrank every document. The client-absence assertions in §12.3 guard that outcome.
 
 Ordering is total and deterministic, so pagination is a slice rather than a re-rank (§4.4).
 
@@ -699,7 +714,7 @@ Flyway runs on startup in roles that include `onboarding`. With more than one in
 
 ### 12.1 Unit (no containers, milliseconds)
 
-- Search ordering: clients precede documents regardless of relative score, within-type order preserved, either list empty, both empty, slicing beyond total.
+- `ResultOrdering`: default client-first order; compound order; no residual, ambiguous mention, and named client without qualified documents all fall back to default order; every qualified document is preserved.
 - `Chunker`: offsets, overlap, single-chunk content, surrogate pairs — pure, genuinely millisecond-scale, no model involved.
 - Request validation: each rule in §4.2, including `javascript:` social links and whitespace-only strings.
 - `ApiKeyFilter`: allowlist paths pass, missing and wrong keys → `401`.
@@ -713,6 +728,7 @@ Flyway runs on startup in roles that include `onboarding`. With more than one in
 | **J2** | `GET /search?q=address proof` → the utility-bill document is in the results, above the floor, with a passage — **and zero client results**, since any client would outrank it (§6.5) |
 | J3 | `Hendersen` → Henderson client first |
 | Type ordering | A query matching both a client and a document returns the client first even when the document's cosine exceeds the client's `word_similarity` |
+| Compound query | `GET /search?q=John utility bill` → John's qualified utility bill is first, John is second, and other qualified bills remain in the list |
 | Best chunk | A document with two controlled chunk scores returns the passage from its highest-scoring chunk |
 | Semantic floor | A document whose best chunk is below `semanticFloor` is absent from the response |
 | Social links | `neviswealth` also matches through a LinkedIn company URL |
