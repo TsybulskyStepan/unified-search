@@ -2,10 +2,12 @@ package com.example.searchapp;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.io.ByteArrayInputStream;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.web.server.LocalServerPort;
 
@@ -67,6 +69,28 @@ class ClientApiIntegrationTest extends IntegrationTest {
             + "@example.com\"}";
     var response = send(request("POST", "/clients", body));
     assertThat(response.statusCode()).isEqualTo(413);
+  }
+
+  @Test
+  void allowsBodyWithoutContentLengthBeyondTheSoftCap() throws Exception {
+    String body =
+        "{\"first_name\":\"John\",\"last_name\":\"Doe\",\"email\":\"chunked@example.com\"}"
+            + " ".repeat(263_000);
+    var publisher =
+        HttpRequest.BodyPublishers.ofInputStream(
+            () -> new ByteArrayInputStream(body.getBytes(StandardCharsets.UTF_8)));
+    assertThat(publisher.contentLength()).isEqualTo(-1);
+
+    var response =
+        send(
+            HttpRequest.newBuilder(URI.create("http://localhost:" + port + "/clients"))
+                .version(HttpClient.Version.HTTP_1_1)
+                .header("X-API-Key", API_KEY)
+                .header("Content-Type", "application/json")
+                .POST(publisher));
+
+    assertThat(response.statusCode()).isEqualTo(201);
+    assertThat(response.body()).contains("\"email\":\"chunked@example.com\"");
   }
 
   private HttpRequest.Builder request(String method, String path, String body) {

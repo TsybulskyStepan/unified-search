@@ -271,7 +271,7 @@ Strings are trimmed before validation, and "required" means non-blank after trim
 | `limit` | 1–50, default 20 |
 | `offset` | ≥ 0, default 0 |
 
-Request bodies over 256 KB are rejected with `413` before JSON binding.
+Requests declaring a `Content-Length` over 256 KB are rejected with `413` before JSON binding. This is a soft check to keep request handling simple without buffering the body: requests without the header (including chunked requests) bypass it. Counting actual body bytes to enforce a hard limit is deferred until needed.
 
 ### 4.3 Response schemas
 

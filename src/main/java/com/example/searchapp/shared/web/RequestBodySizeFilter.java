@@ -1,19 +1,11 @@
 package com.example.searchapp.shared.web;
 
 import jakarta.servlet.FilterChain;
-import jakarta.servlet.ReadListener;
 import jakarta.servlet.ServletException;
-import jakarta.servlet.ServletInputStream;
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletRequestWrapper;
 import jakarta.servlet.http.HttpServletResponse;
-import java.io.BufferedReader;
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.net.URI;
-import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
@@ -37,8 +29,7 @@ public class RequestBodySizeFilter extends OncePerRequestFilter {
   protected void doFilterInternal(
       HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
       throws ServletException, IOException {
-    byte[] body = request.getInputStream().readNBytes((int) MAX_BODY_BYTES + 1);
-    if (body.length > MAX_BODY_BYTES) {
+    if (request.getContentLengthLong() > MAX_BODY_BYTES) {
       ProblemDetail problem =
           ProblemDetails.of(
               HttpStatus.PAYLOAD_TOO_LARGE,
@@ -50,55 +41,8 @@ public class RequestBodySizeFilter extends OncePerRequestFilter {
       objectMapper.writeValue(response.getOutputStream(), problem);
       return;
     }
-    filterChain.doFilter(new CachedBodyRequest(request, body), response);
-  }
-
-  private static final class CachedBodyRequest extends HttpServletRequestWrapper {
-    private final byte[] body;
-
-    private CachedBodyRequest(HttpServletRequest request, byte[] body) {
-      super(request);
-      this.body = body;
-    }
-
-    @Override
-    public ServletInputStream getInputStream() {
-      ByteArrayInputStream input = new ByteArrayInputStream(body);
-      return new ServletInputStream() {
-        @Override
-        public int read() {
-          return input.read();
-        }
-
-        @Override
-        public int read(byte[] bytes, int offset, int length) {
-          return input.read(bytes, offset, length);
-        }
-
-        @Override
-        public boolean isFinished() {
-          return input.available() == 0;
-        }
-
-        @Override
-        public boolean isReady() {
-          return true;
-        }
-
-        @Override
-        public void setReadListener(ReadListener listener) {
-          throw new UnsupportedOperationException();
-        }
-      };
-    }
-
-    @Override
-    public BufferedReader getReader() throws IOException {
-      Charset charset =
-          getCharacterEncoding() == null
-              ? StandardCharsets.UTF_8
-              : Charset.forName(getCharacterEncoding());
-      return new BufferedReader(new InputStreamReader(getInputStream(), charset));
-    }
+    // This is a soft check: chunked requests without Content-Length bypass it. Add a hard byte
+    // limit only if that becomes necessary.
+    filterChain.doFilter(request, response);
   }
 }
