@@ -15,10 +15,10 @@ creation latency is embedding plus two inserts, with no LLM anywhere in the budg
 
 **Status:** ready-for-agent
 
-- [ ] Creating a document returns 201 with a location header and the document, its summary status showing that none was requested
-- [ ] The document row and every one of its chunks commit in a single transaction; a failure part-way leaves neither behind
-- [ ] Every chunk records the identifier of the embedder that is actually running
-- [ ] Embedding completes before the transaction opens
-- [ ] Fetching a document by id returns it; an unknown client or document returns 404
-- [ ] A document whose only relevant sentence sits around word 1000 produces chunks that cover it, so it is retrievable later
-- [ ] Creating a document never calls the summarizer
+- [x] Creating a document returns 201 with a location header and the document, its summary status showing that none was requested
+- [x] The document row and every one of its chunks commit in a single transaction; a failure part-way leaves neither behind
+- [x] Every chunk records the identifier of the embedder that is actually running
+- [x] Embedding completes before the transaction opens
+- [x] Fetching a document by id returns it; an unknown client or document returns 404
+- [x] A document whose only relevant sentence sits around word 1000 produces chunks that cover it, so it is retrievable later
+- [x] Creating a document never calls the summarizer

@@ -49,11 +49,16 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
       WebRequest request) {
     if (exception instanceof MethodArgumentTypeMismatchException argumentMismatch
         && argumentMismatch.getRequiredType() == UUID.class) {
+      // §4.1: "A 404 is returned for a missing ID and for a malformed UUID." Deliberately generic
+      // rather than naming an entity — this handler runs before any controller method, so it has
+      // no reliable way to know which resource a malformed id was meant to identify (§4.1 has
+      // several path variables named "id" alone), and guessing from the variable name would
+      // couple shared/web to onboarding's path-naming convention (§1.3).
       ProblemDetail problem =
           ProblemDetails.of(
               HttpStatus.NOT_FOUND,
               "Not found",
-              "The requested client was not found",
+              "The requested resource was not found",
               instanceUri(request));
       return handleExceptionInternal(exception, problem, headers, HttpStatus.NOT_FOUND, request);
     }
