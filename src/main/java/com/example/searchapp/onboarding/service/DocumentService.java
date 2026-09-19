@@ -22,12 +22,17 @@ public class DocumentService {
   private final ClientRepository clients;
   private final DocumentRepository documents;
   private final Embedder embedder;
+  private final SummaryWorker summaryWorker;
 
   public DocumentService(
-      ClientRepository clients, DocumentRepository documents, Embedder embedder) {
+      ClientRepository clients,
+      DocumentRepository documents,
+      Embedder embedder,
+      SummaryWorker summaryWorker) {
     this.clients = clients;
     this.documents = documents;
     this.embedder = embedder;
+    this.summaryWorker = summaryWorker;
   }
 
   public Document create(UUID clientId, CreateDocumentRequest request) {
@@ -60,5 +65,21 @@ public class DocumentService {
 
   public Document find(UUID clientId, UUID documentId) {
     return documents.findById(clientId, documentId).orElseThrow(DocumentNotFoundException::new);
+  }
+
+  /** Requests a summary (§7.2). */
+  public Document requestSummary(UUID clientId, UUID documentId) {
+    return documents
+        .requestSummary(clientId, documentId)
+        .map(
+            pending -> {
+              summaryWorker.nudge();
+              return pending;
+            })
+        // No row updated: not found, or a no-op (already pending/ready). Re-reading here rather
+        // than returning a snapshot taken before the update means a request that raced another
+        // one to the same none->pending transition still reports the row's real current state
+        // (e.g. pending, claimed by the request that won) instead of a stale "none".
+        .orElseGet(() -> find(clientId, documentId));
   }
 }
