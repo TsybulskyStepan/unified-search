@@ -1,0 +1,29 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$(git rev-parse --show-toplevel)/.codex/hooks/format-java.sh\"",
+            "timeout": 60,
+            "statusMessage": "Formatting Java"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$(git rev-parse --show-toplevel)/.codex/hooks/verify-build.sh\"",
+            "timeout": 180,
+            "statusMessage": "Verifying build"
+          }
+        ]
+      }
+    ]
+  }
+}
