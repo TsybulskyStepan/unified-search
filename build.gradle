@@ -110,3 +110,27 @@ tasks.register('composeRedeploy', Exec) {
     dependsOn('composeBuild')
     commandLine 'sh', '-c', 'docker compose up -d --force-recreate --wait'
 }
+
+/**
+ * Starts the dev overlay with hot reload.
+ *
+ * <p>After the containers are healthy:
+ * <ol>
+ *   <li>Open {@code http://localhost:5173} — Vite dev server with HMR
+ *   <li>Edit frontend files — changes appear instantly
+ *   <li>Run {@code ./gradlew compileJava} — Devtools restarts the backend in ~2s
+ * </ol>
+ */
+tasks.register('composeDev', Exec) {
+    group = 'docker'
+    commandLine 'sh', '-c', 'docker compose -f docker-compose.yaml -f docker-compose.dev.yaml up -d --build --force-recreate --wait'
+}
+
+/**
+ * Recompiles Java and triggers Devtools restart inside the running dev container.
+ * Run this after changing backend source code.
+ */
+tasks.register('devCompile', Exec) {
+    group = 'docker'
+    commandLine 'sh', '-c', './gradlew compileJava'
+}
