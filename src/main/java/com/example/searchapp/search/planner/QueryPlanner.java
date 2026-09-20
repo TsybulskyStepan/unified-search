@@ -23,8 +23,12 @@ public class QueryPlanner {
 
   private final List<IntentPhrase> intentPhrases;
   private final Set<String> singleTokenSynonyms;
+  private final Set<String> typeIds;
+  private final Set<String> purposeIds;
 
   public QueryPlanner(Taxonomy taxonomy) {
+    typeIds = Set.copyOf(taxonomy.types().keySet());
+    purposeIds = Set.copyOf(taxonomy.purposes().keySet());
     Map<List<String>, Set<String>> idsByPhrase = new LinkedHashMap<>();
     taxonomy.types().values().forEach(type -> addPhrases(idsByPhrase, type.id(), type.synonyms()));
     taxonomy
@@ -71,7 +75,13 @@ public class QueryPlanner {
             .map(NormalizedToken::text)
             .toList();
     String residual = String.join(" ", residualTokens);
-    return new QueryPlan(query.text(), mentions, residual, intents(residualTokens));
+    Set<String> intents = intents(residualTokens);
+    return new QueryPlan(
+        query.text(),
+        mentions,
+        residual,
+        intents.stream().filter(typeIds::contains).collect(Collectors.toUnmodifiableSet()),
+        intents.stream().filter(purposeIds::contains).collect(Collectors.toUnmodifiableSet()));
   }
 
   /** Every client tied on the longest leading run: one when the name is unique, more when not. */

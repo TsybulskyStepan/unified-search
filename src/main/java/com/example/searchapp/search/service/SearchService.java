@@ -18,7 +18,6 @@ import com.example.searchapp.search.repository.LabelDocumentMatch;
 import com.example.searchapp.search.repository.RankedDocumentMatch;
 import com.example.searchapp.shared.embedding.Embedder;
 import com.example.searchapp.shared.embedding.QueryEmbedding;
-import com.example.searchapp.shared.taxonomy.Taxonomy;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import jakarta.annotation.PreDestroy;
@@ -26,7 +25,6 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
@@ -47,7 +45,6 @@ public class SearchService {
   private final DocumentSearchRepository documents;
   private final Embedder embedder;
   private final QueryPlanner queryPlanner;
-  private final Taxonomy taxonomy;
   private final Timer planTimer;
   private final Timer clientTimer;
   private final Timer labelTimer;
@@ -62,13 +59,11 @@ public class SearchService {
       DocumentSearchRepository documents,
       Embedder embedder,
       QueryPlanner queryPlanner,
-      Taxonomy taxonomy,
       MeterRegistry meterRegistry) {
     this.clients = clients;
     this.documents = documents;
     this.embedder = embedder;
     this.queryPlanner = queryPlanner;
-    this.taxonomy = taxonomy;
     planTimer = meterRegistry.timer("search.plan");
     clientTimer = meterRegistry.timer("search.clients");
     labelTimer = meterRegistry.timer("search.label");
@@ -99,7 +94,7 @@ public class SearchService {
                 return queryPlanner.plan(normalizedQuery, mentionCandidates);
               });
       mentionPresent = !plan.mentions().isEmpty();
-      intentCount = plan.intents().size();
+      intentCount = plan.types().size() + plan.purposes().size();
       planShape = mentionPresent ? (plan.hasResidual() ? "compound" : "identity") : "document";
 
       CompletableFuture<List<ClientMatch>> clientMatches =
@@ -116,14 +111,13 @@ public class SearchService {
         clientMatches.join();
         documentResults = List.of();
       } else {
-        IntentGroups intents = groupIntents(plan.intents());
         CompletableFuture<List<LabelDocumentMatch>> labelMatches =
             CompletableFuture.supplyAsync(
                 () ->
                     time(
                         labelTimer,
                         timings::setLabelNanos,
-                        () -> documents.findLabelMatches(intents.types(), intents.purposes())),
+                        () -> documents.findLabelMatches(plan.types(), plan.purposes())),
                 searchExecutor);
         CompletableFuture<List<RankedDocumentMatch>> lexicalMatches =
             CompletableFuture.supplyAsync(
@@ -216,18 +210,6 @@ public class SearchService {
     }
   }
 
-  private IntentGroups groupIntents(Set<String> intents) {
-    Set<String> types =
-        intents.stream()
-            .filter(taxonomy.types()::containsKey)
-            .collect(Collectors.toUnmodifiableSet());
-    Set<String> purposes =
-        intents.stream()
-            .filter(taxonomy.purposes()::containsKey)
-            .collect(Collectors.toUnmodifiableSet());
-    return new IntentGroups(types, purposes);
-  }
-
   private static <T> T time(Timer timer, LongConsumer recordNanos, Supplier<T> operation) {
     long startNanos = System.nanoTime();
     try {
@@ -287,8 +269,6 @@ public class SearchService {
   void closeSearchExecutor() {
     searchExecutor.close();
   }
-
-  private record IntentGroups(Set<String> types, Set<String> purposes) {}
 
   private record PageMatches(List<UUID> clientIds, List<DocumentMatch> documentMatches) {}
 

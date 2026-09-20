@@ -52,7 +52,8 @@ class ResultOrderingTest {
             ResultOrdering.order(
                 clients,
                 documents,
-                new QueryPlan("john mary", List.of(), "john mary", java.util.Set.of())))
+                new QueryPlan(
+                    "john mary", List.of(), "john mary", java.util.Set.of(), java.util.Set.of())))
         .extracting(ResultOrdering.Candidate::id)
         .containsExactly(MARY, JOHN, MARYS_BILL);
     assertThat(ResultOrdering.order(clients, documents, plan(JOHN, "utility bill")))
@@ -93,7 +94,12 @@ class ResultOrderingTest {
         ResultOrdering.order(
             List.of(client(JOHN, "identity"), client(MARY, "context")),
             List.of(document(MARYS_BILL, MARY)),
-            new QueryPlan("advisory fees", List.of(), "advisory fees", java.util.Set.of()));
+            new QueryPlan(
+                "advisory fees",
+                List.of(),
+                "advisory fees",
+                java.util.Set.of(),
+                java.util.Set.of()));
 
     assertThat(candidates)
         .extracting(ResultOrdering.Candidate::id)
@@ -123,6 +129,7 @@ class ResultOrderingTest {
             .map(clientId -> new ClientMention(clientId, "name", 1.0))
             .toList(),
         residual,
+        java.util.Set.of(),
         java.util.Set.of());
   }
 
@@ -146,7 +153,8 @@ class ResultOrderingTest {
   void movesResultsWithoutDroppingOrDuplicatingAnyOfThemInEitherShape() {
     var clients = List.of(client(MARY, "context"), client(JOHN, "identity"));
     var documents = List.of(document(MARYS_BILL, MARY), document(JOHNS_BILL, JOHN));
-    var noMention = new QueryPlan("bill", List.of(), "bill", java.util.Set.of());
+    var noMention =
+        new QueryPlan("bill", List.of(), "bill", java.util.Set.of(), java.util.Set.of());
 
     for (QueryPlan plan : List.of(noMention, plan(JOHN, "bill"), tiedPlan("bill", JOHN, MARY))) {
       var candidates = ResultOrdering.order(clients, documents, plan);

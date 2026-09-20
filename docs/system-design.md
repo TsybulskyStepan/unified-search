@@ -436,8 +436,8 @@ If any retriever fails the request returns `500`. Partial results would make doc
 **Normalisation.** Lowercase, Unicode NFKC, strip possessives (`john's`, `john’s` → `john`), collapse whitespace, keep intra-token hyphens (`w-9`) and also index the de-hyphenated form (`w9`).
 
 **Plan.** `QueryPlanner.plan(q)` returns the normalised whole-query text, `mentions`, `residual`,
-and `intents`. The client retriever reads the whole query; every document retriever reads the
-residual.
+and the intents split into `types` and `purposes`, so no later stage reads the taxonomy. The client
+retriever reads the whole query; every document retriever reads the residual.
 
 - **Mention.** Tokens are compared in order against every client's `first_name || ' ' || last_name` and `email` with `word_similarity ≥ 0.69` (just under the measured `Hendersen → Henderson` 0.70). Only the leading contiguous run of matching tokens counts, so in `john utility bill` matching stops at `utility` and a later `bill` can never become a client named Bill. Tokens under three characters are skipped. The clients whose leading run is longest are the `mentions`: `john doe utility bill` names John Doe (two tokens) over John Smith (one), so `mentions` holds one client. Two or more clients tied on the longest run mean the name is ambiguous and `mentions` holds all of them (`john utility bill` mentions every John), because the query still names a small, known set of people and their documents are the likeliest answers. Tied mentions are ordered by how well the whole query matches each client's name or email, then by last name and id, so `grace ki` lists the Grace whose name best fits it first. Their tokens are consumed like any mention, so the residual is `utility bill`, not `john utility bill`.
 - **Ambiguity rule.** A single-token mention (unique or tied) whose token is also a taxonomy synonym (`bill`, `statement`, `trust`) counts as a mention only if the token was possessive (`bill's`) or a second token also matched the same client (`bill carter`). Otherwise the token is treated as category text.
