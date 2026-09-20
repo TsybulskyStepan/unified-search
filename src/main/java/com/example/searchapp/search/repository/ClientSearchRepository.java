@@ -90,8 +90,8 @@ public class ClientSearchRepository {
                 SELECT c.id,
                        coalesce(min(query_tokens.position), :token_count + 1) AS position
                 FROM client c
-                CROSS JOIN query_tokens
-                WHERE char_length(query_tokens.token) >= 3
+                LEFT JOIN query_tokens
+                  ON char_length(query_tokens.token) >= 3
                   AND NOT EXISTS (
                     SELECT 1
                     FROM token_matches
@@ -110,11 +110,18 @@ public class ClientSearchRepository {
                 WHERE token_matches.position < first_non_identity_token.position
                 GROUP BY token_matches.id
             )
-            SELECT id, field, score, matched_through_position
+            SELECT leading_runs.id, leading_runs.field, leading_runs.score,
+                   leading_runs.matched_through_position
             FROM leading_runs
+            JOIN client c ON c.id = leading_runs.id
             WHERE matched_through_position = (SELECT max(matched_through_position) FROM leading_runs)
-            ORDER BY score DESC, id
+            ORDER BY leading_runs.score DESC,
+                     greatest(
+                         word_similarity(:query, c.first_name || ' ' || c.last_name),
+                         word_similarity(:query, c.email::text)) DESC,
+                     c.last_name, c.id
             """)
+        .param("query", String.join(" ", tokens))
         .param("tokens", queryTokens)
         .param("mention_floor", MENTION_FLOOR)
         .param("token_count", queryTokens.length)

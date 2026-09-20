@@ -107,6 +107,48 @@ class SearchClientApiIntegrationTest extends IntegrationTest {
         .isEqualTo(400);
   }
 
+  @Test
+  void aFullNameRanksItsExactMatchAboveClientsSharingTheFirstName() throws Exception {
+    createSharedFirstNameClients("Wilhelmina");
+
+    var response = get(port, "/search?q=Wilhelmina%20Okafor", TEST_API_KEY);
+
+    assertThat(response.statusCode()).isEqualTo(200);
+    assertThat(firstEmail(response.body())).isEqualTo("wilhelmina.okafor@example.com");
+  }
+
+  @Test
+  void aPartialSurnameStillRanksTheBestMatchAboveClientsSharingTheFirstName() throws Exception {
+    createSharedFirstNameClients("Ottoline");
+
+    var response = get(port, "/search?q=Ottoline%20Ok", TEST_API_KEY);
+
+    assertThat(response.statusCode()).isEqualTo(200);
+    assertThat(firstEmail(response.body())).isEqualTo("ottoline.okafor@example.com");
+  }
+
+  private void createSharedFirstNameClients(String first) throws Exception {
+    for (String last :
+        new String[] {"Brandt", "Castellano", "Duvall", "Eriksen", "Fairbanks", "Okafor"}) {
+      createClient(
+          "{\"first_name\":\""
+              + first
+              + "\",\"last_name\":\""
+              + last
+              + "\",\"email\":\""
+              + first.toLowerCase()
+              + "."
+              + last.toLowerCase()
+              + "@example.com\"}");
+    }
+  }
+
+  private static String firstEmail(String body) {
+    var matcher = java.util.regex.Pattern.compile("\"email\":\"([^\"]+)\"").matcher(body);
+    assertThat(matcher.find()).isTrue();
+    return matcher.group(1);
+  }
+
   private void createClient(String body) throws Exception {
     var response =
         HTTP.send(
