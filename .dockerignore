@@ -2,3 +2,5 @@
 .gradle
 build
 .claude
+frontend/node_modules
+frontend/dist

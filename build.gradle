@@ -88,8 +88,22 @@ tasks.register('composeBuild', Exec) {
 }
 
 /**
- * Rebuilds the images, then recreates the containers and waits until they are healthy. The
- * database volume is kept, so data survives.
+ * Rebuilds the images (using layer cache), then recreates the containers and waits until they
+ * are healthy. The database volume is kept, so data survives.
+ *
+ * <p>Usage after changing source code (fast, layer-cached):
+ * {@code ./gradlew composeReup}
+ *
+ * <p>Usage after changing dependencies (slow, no cache):
+ * {@code ./gradlew composeBuild && ./gradlew composeReup}
+ */
+tasks.register('composeReup', Exec) {
+    group = 'docker'
+    commandLine 'docker', 'compose', 'up', '-d', '--build', '--force-recreate', '--wait'
+}
+
+/**
+ * Full from-scratch rebuild: no layer cache, fresh base images, then redeploy.
  */
 tasks.register('composeRedeploy', Exec) {
     group = 'docker'
