@@ -31,6 +31,10 @@ Content-Type: application/json
 GET {{baseUrl}}/clients/{{clientId}}
 X-API-Key: {{apiKey}}
 
+### List every client with its id, oldest first. Expect 200. A debugging aid; not paginated.
+GET {{baseUrl}}/clients
+X-API-Key: {{apiKey}}
+
 ### The new client is searchable by name.
 GET {{baseUrl}}/search?q=Lovelace
 X-API-Key: {{apiKey}}
