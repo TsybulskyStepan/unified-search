@@ -84,7 +84,7 @@ tasks.named('processResources') {
  */
 tasks.register('composeBuild', Exec) {
     group = 'docker'
-    commandLine 'docker', 'compose', 'build', '--no-cache', '--pull'
+    commandLine 'sh', '-c', 'docker compose build --no-cache --pull'
 }
 
 /**
@@ -99,7 +99,7 @@ tasks.register('composeBuild', Exec) {
  */
 tasks.register('composeReup', Exec) {
     group = 'docker'
-    commandLine 'docker', 'compose', 'up', '-d', '--build', '--force-recreate', '--wait'
+    commandLine 'sh', '-c', 'docker compose up -d --build --force-recreate --wait'
 }
 
 /**
@@ -108,5 +108,5 @@ tasks.register('composeReup', Exec) {
 tasks.register('composeRedeploy', Exec) {
     group = 'docker'
     dependsOn('composeBuild')
-    commandLine 'docker', 'compose', 'up', '-d', '--force-recreate', '--wait'
+    commandLine 'sh', '-c', 'docker compose up -d --force-recreate --wait'
 }
