@@ -461,7 +461,7 @@ LIMIT 200;
 
 ### 6.3 Document retrievers **(v2)**
 
-All three take `plan.residual`. When the residual is empty none of them runs and the result holds clients only.
+All three take `plan.residual`. When the residual is empty, or non-empty but reduces to an empty tsquery (stop words only, `the and`), none of them runs and the result holds clients only. An embedding of stop words would admit documents on noise, so the check is made once, before the fan-out, rather than per retriever.
 
 **Label.** Admits every document whose stored labels match a query intent. Wording-independent, which is what fixes `proof of address`.
 
@@ -483,7 +483,7 @@ ORDER BY score DESC, d.id
 LIMIT 200;
 ```
 
-Skipped when the residual reduces to an empty tsquery (stop words only). `websearch_to_tsquery` ANDs terms, which keeps precision. Recall comes from the other two signals.
+`websearch_to_tsquery` ANDs terms, which keeps precision. Recall comes from the other two signals.
 
 **Semantic.** Best chunk per document over label and body chunks, above the floor.
 
