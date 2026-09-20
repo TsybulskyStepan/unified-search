@@ -99,18 +99,21 @@ public class ClientSearchRepository {
                       AND token_matches.position = query_tokens.position
                 )
                 GROUP BY c.id
+            ), leading_runs AS (
+                SELECT token_matches.id,
+                       (array_agg(field ORDER BY score DESC, field))[1] AS field,
+                       max(score) AS score,
+                       max(token_matches.position) AS matched_through_position
+                FROM token_matches
+                JOIN first_non_identity_token
+                  ON first_non_identity_token.id = token_matches.id
+                WHERE token_matches.position < first_non_identity_token.position
+                GROUP BY token_matches.id
             )
-            SELECT token_matches.id,
-                   (array_agg(field ORDER BY score DESC, field))[1] AS field,
-                   max(score) AS score,
-                   max(token_matches.position) AS matched_through_position
-            FROM token_matches
-            JOIN first_non_identity_token
-              ON first_non_identity_token.id = token_matches.id
-            WHERE token_matches.position < first_non_identity_token.position
-            GROUP BY token_matches.id
-            ORDER BY max(score) DESC, id
-            LIMIT 2
+            SELECT id, field, score, matched_through_position
+            FROM leading_runs
+            WHERE matched_through_position = (SELECT max(matched_through_position) FROM leading_runs)
+            ORDER BY score DESC, id
             """)
         .param("tokens", queryTokens)
         .param("mention_floor", MENTION_FLOOR)

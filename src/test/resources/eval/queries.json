@@ -430,6 +430,44 @@
       ]
     },
     {
+      "query": "John utility bill",
+      "shape": "all_within",
+      "expected": [
+        {
+          "client": "john.doe@neviswealth.com",
+          "title": "2024 Utility Bill"
+        },
+        {
+          "client": "j.whitfield@whitfield-consulting.example",
+          "title": "Electricity Bill Oct to Dec 2026"
+        }
+      ]
+    },
+    {
+      "query": "John's bill",
+      "shape": "all_within",
+      "expected": [
+        {
+          "client": "john.doe@neviswealth.com",
+          "title": "2024 Utility Bill"
+        },
+        {
+          "client": "j.whitfield@whitfield-consulting.example",
+          "title": "Electricity Bill Oct to Dec 2026"
+        }
+      ]
+    },
+    {
+      "query": "Priya tenancy",
+      "shape": "first",
+      "expected": [
+        {
+          "client": "priya.shah@example.com",
+          "title": "Assured Shorthold Tenancy Agreement"
+        }
+      ]
+    },
+    {
       "query": "best pizza recipes in Naples",
       "shape": "none"
     },

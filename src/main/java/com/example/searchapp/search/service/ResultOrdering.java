@@ -6,43 +6,46 @@ import com.example.searchapp.search.repository.ClientMatch;
 import com.example.searchapp.search.repository.DocumentMatch;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 final class ResultOrdering {
   private ResultOrdering() {}
 
   static List<Candidate> order(
       List<ClientMatch> clients, List<DocumentMatch> documents, QueryPlan plan) {
-    if (plan.mention() == null) {
+    if (plan.mentions().isEmpty()) {
       return defaultOrder(clients, documents);
     }
 
-    ClientMention mention = plan.mention();
-    List<DocumentMatch> mentionedDocuments =
-        documents.stream()
-            .filter(document -> document.clientId().equals(mention.clientId()))
-            .toList();
-    List<Candidate> ordered = new ArrayList<>(clients.size() + documents.size() + 1);
-    mentionedDocuments.forEach(document -> ordered.add(new DocumentCandidate(document)));
-    ClientMatch mentionedClient =
-        clients.stream()
-            .filter(client -> client.clientId().equals(mention.clientId()))
-            .findFirst()
-            .orElse(
-                new ClientMatch(mention.clientId(), mention.field(), "identity", mention.score()));
-    ordered.add(new ClientCandidate(mentionedClient));
+    Set<UUID> mentionedIds =
+        plan.mentions().stream().map(ClientMention::clientId).collect(Collectors.toSet());
+    List<Candidate> ordered =
+        new ArrayList<>(clients.size() + documents.size() + mentionedIds.size());
     documents.stream()
-        .filter(document -> !document.clientId().equals(mention.clientId()))
+        .filter(document -> mentionedIds.contains(document.clientId()))
+        .forEach(document -> ordered.add(new DocumentCandidate(document)));
+    for (ClientMention mention : plan.mentions()) {
+      ClientMatch mentionedClient =
+          clients.stream()
+              .filter(client -> client.clientId().equals(mention.clientId()))
+              .findFirst()
+              .orElse(
+                  new ClientMatch(
+                      mention.clientId(), mention.field(), "identity", mention.score()));
+      ordered.add(new ClientCandidate(mentionedClient));
+    }
+    documents.stream()
+        .filter(document -> !mentionedIds.contains(document.clientId()))
         .forEach(document -> ordered.add(new DocumentCandidate(document)));
     clients.stream()
         .filter(
-            client ->
-                !client.clientId().equals(mention.clientId()) && client.tier().equals("identity"))
+            client -> !mentionedIds.contains(client.clientId()) && client.tier().equals("identity"))
         .forEach(client -> ordered.add(new ClientCandidate(client)));
     clients.stream()
         .filter(
-            client ->
-                !client.clientId().equals(mention.clientId()) && client.tier().equals("context"))
+            client -> !mentionedIds.contains(client.clientId()) && client.tier().equals("context"))
         .forEach(client -> ordered.add(new ClientCandidate(client)));
     return ordered;
   }

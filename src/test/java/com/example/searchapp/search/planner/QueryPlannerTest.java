@@ -24,13 +24,14 @@ class QueryPlannerTest {
       String name,
       String query,
       List<MentionCandidate> candidates,
-      UUID mentionedClient,
+      List<UUID> mentionedClients,
       String residual,
       Set<String> intents) {
     QueryPlan plan = PLANNER.plan(query, candidates);
 
-    assertThat(plan.mention() == null ? null : plan.mention().clientId())
-        .isEqualTo(mentionedClient);
+    assertThat(plan.mentions())
+        .extracting(ClientMention::clientId)
+        .containsExactlyElementsOf(mentionedClients);
     assertThat(plan.residual()).isEqualTo(residual);
     assertThat(plan.intents()).containsExactlyInAnyOrderElementsOf(intents);
   }
@@ -118,15 +119,42 @@ class QueryPlannerTest {
             null,
             "completion statement",
             Set.of("completion_statement")),
-        row(
-            "two matching clients are ambiguous",
+        tied(
+            "two clients tied on the longest run are both mentioned",
             "John Mary",
             List.of(
                 new MentionCandidate(JOHN, "name", 1.0, 1),
                 new MentionCandidate(MARY, "name", 1.0, 1)),
-            null,
-            "john mary",
+            List.of(JOHN, MARY),
+            "mary",
             Set.of()),
+        tied(
+            "an ambiguous first name still leaves the category text as the residual",
+            "John utility bill",
+            List.of(
+                new MentionCandidate(JOHN, "name", 1.0, 1),
+                new MentionCandidate(MARY, "name", 1.0, 1)),
+            List.of(JOHN, MARY),
+            "utility bill",
+            Set.of("utility_bill")),
+        tied(
+            "the category-name rule also blocks a tie",
+            "bill",
+            List.of(
+                new MentionCandidate(BILL, "name", 1.0, 1),
+                new MentionCandidate(MARY, "name", 1.0, 1)),
+            List.of(),
+            "bill",
+            Set.of("utility_bill", "council_tax_bill")),
+        tied(
+            "a possessive lifts the category-name rule for a tie",
+            "Bill's statement",
+            List.of(
+                new MentionCandidate(BILL, "name", 1.0, 1),
+                new MentionCandidate(MARY, "name", 1.0, 1)),
+            List.of(BILL, MARY),
+            "statement",
+            Set.of("bank_statement")),
         row(
             "longer leading identity beats a partial match",
             "John Doe utility bill",
@@ -154,7 +182,23 @@ class QueryPlannerTest {
       UUID mentionedClient,
       String residual,
       Set<String> intents) {
-    return Arguments.of(name, query, candidates, mentionedClient, residual, intents);
+    return tied(
+        name,
+        query,
+        candidates,
+        mentionedClient == null ? List.of() : List.of(mentionedClient),
+        residual,
+        intents);
+  }
+
+  private static Arguments tied(
+      String name,
+      String query,
+      List<MentionCandidate> candidates,
+      List<UUID> mentionedClients,
+      String residual,
+      Set<String> intents) {
+    return Arguments.of(name, query, candidates, mentionedClients, residual, intents);
   }
 
   private static List<MentionCandidate> john(int tokenCount) {
