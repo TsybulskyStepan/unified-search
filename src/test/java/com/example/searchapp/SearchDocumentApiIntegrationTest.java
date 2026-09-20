@@ -82,6 +82,23 @@ class SearchDocumentApiIntegrationTest extends IntegrationTest {
   }
 
   @Test
+  void matchesTheWordBeingTypedAsAPrefixOfTheLastQueryTerm() throws Exception {
+    String clientId = createClient("Tolliver", "Vance", "tolliver.vance@example.com");
+    createDocument(clientId, "Tenancy Agreement 2025", "Rent of GBP 950 per month for the flat.");
+
+    var named = get(port, "/search?q=vance%20agreemen", TEST_API_KEY).body();
+    assertThat(named).startsWith("[{\"type\":\"document\"");
+    assertThat(named).contains("\"title\":\"Tenancy Agreement 2025\"").contains("\"lexical\"");
+
+    var unnamed = get(port, "/search?q=tenancy%20agreemen", TEST_API_KEY).body();
+    assertThat(unnamed).contains("\"title\":\"Tenancy Agreement 2025\"").contains("\"lexical\"");
+
+    assertThat(get(port, "/search?q=vance%20ag", TEST_API_KEY).body())
+        .as("a one- or two-letter tail is too short to match as a prefix")
+        .doesNotContain("\"lexical\"");
+  }
+
+  @Test
   void skipsDocumentRetrievalWhenTheResidualContainsOnlyStopWords() throws Exception {
     String clientId = createClient("Stop", "Words", "stop.words@example.com");
     createDocument(clientId, "Supplier archive", "The declaration is recorded here.");

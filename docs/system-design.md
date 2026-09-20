@@ -499,6 +499,8 @@ LIMIT 200;
 
 `websearch_to_tsquery` ANDs terms, which keeps precision. Recall comes from the other two signals.
 
+**Prefix on the last term.** The advisor types into a live box, so the last word of the residual is usually unfinished, and a stem cannot match a fragment: `agreemen` is not the stem of `agreement`. When the last term is three or more letters it becomes a prefix term (`agreemen:*`) ANDed with a `websearch_to_tsquery` of everything before it. Terms with digits, hyphens or operators (`w-9`, `"exact phrase"`, `-word`) keep plain `websearch_to_tsquery` semantics. Cost: a finished word also matches longer words that start with it (`tax` reaches `taxation`), which the eval guards. `soroka agreemen` now lists Soroka's tenancy agreement before Soroka herself.
+
 **Semantic.** Best chunk per document over label and body chunks, above the floor.
 
 ```sql
