@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Stream;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -33,7 +34,24 @@ class QueryPlannerTest {
         .extracting(ClientMention::clientId)
         .containsExactlyElementsOf(mentionedClients);
     assertThat(plan.residual()).isEqualTo(residual);
-    assertThat(plan.intents()).containsExactlyInAnyOrderElementsOf(intents);
+    assertThat(Stream.concat(plan.types().stream(), plan.purposes().stream()))
+        .containsExactlyInAnyOrderElementsOf(intents);
+  }
+
+  @Test
+  void splitsIntentsIntoTypesAndPurposes() {
+    QueryPlan plan = PLANNER.plan("utility bill proof of address", List.of());
+
+    assertThat(plan.types()).containsExactly("utility_bill");
+    assertThat(plan.purposes()).containsExactly("proof_of_address");
+  }
+
+  @Test
+  void carriesNoTypesOrPurposesWhenNothingIsRecognised() {
+    QueryPlan plan = PLANNER.plan("meeting notes", List.of());
+
+    assertThat(plan.types()).isEmpty();
+    assertThat(plan.purposes()).isEmpty();
   }
 
   @ParameterizedTest(name = "{0}")

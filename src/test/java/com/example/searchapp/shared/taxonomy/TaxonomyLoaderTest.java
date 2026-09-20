@@ -233,6 +233,29 @@ class TaxonomyLoaderTest {
   }
 
   @Test
+  void rejectsAnIdThatNamesBothATypeAndAPurpose() {
+    String yaml =
+        """
+        version: 1
+        types:
+          proof_of_address:
+            label: proof of address form
+            purposes: [proof_of_address]
+            title_patterns: [proof of address]
+            content_patterns: [address]
+            synonyms: [address proof]
+        purposes:
+          proof_of_address:
+            label: proof of address
+            synonyms: [residence proof]
+        """;
+
+    assertThatFailsToParse(yaml)
+        .hasMessageContaining("proof_of_address")
+        .hasMessageContaining("both a type and a purpose id");
+  }
+
+  @Test
   void rejectsAFileThatDefinesTheReservedUnknownType() {
     String yaml =
         """

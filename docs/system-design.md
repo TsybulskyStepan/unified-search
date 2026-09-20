@@ -1,153 +1,93 @@
-# Unified Search, System Design v2
+# Unified Search: System Design
 
-One Spring Boot service (Java 25) on one PostgreSQL 17 database with `pgvector`, `pg_trgm` and `citext`. Runs locally with `docker compose up`. A React SPA serves as the primary UI; Swagger UI is available for API exploration. No broker, cache, ANN index or second service.
+One Spring Boot service (Java 25) on one PostgreSQL 17 database with `pgvector`, `pg_trgm` and `citext`. Runs locally with `docker compose up`. A React SPA is the primary UI, and Swagger UI is available for API exploration. No broker, cache, ANN index or second service.
 
-- **Documents carry a type and a set of KYC purposes** from a closed taxonomy (§3), assigned at ingest by a deterministic classifier. This is the signal v1 lacked.
-- **Every query is parsed into a plan** before retrieval (§6.1). The plan names the mentioned client if any, the residual text, and the taxonomy labels the residual refers to.
-- **Clients** are matched with `pg_trgm` `word_similarity`. Identity fields (name, email, social links) and the context field (description) form two tiers (§6.2).
-- **Documents** are retrieved by three signals, label match, lexical match on a `tsvector`, and semantic match on MiniLM chunks in `pgvector`, then fused with reciprocal rank fusion (§6.3, §6.4).
-- **Ordering** is a deterministic tier order selected by the plan shape (§6.5). Scores are never compared across types.
-- **Writes** are searchable on `201`. **Summaries** stay on request through Gemini and never touch search (§7).
+- **Documents carry a type and a set of KYC purposes** from a closed taxonomy, assigned at ingest by a deterministic classifier.
+- **Every query is parsed into a plan** before retrieval: the client it names, if any, the residual text, and the taxonomy labels that text refers to.
+- **Clients** are matched with `pg_trgm` `word_similarity` in two tiers: identity fields (name, email, social links) and context (description).
+- **Documents** are retrieved by three signals, label match, lexical match on a `tsvector` and semantic match on MiniLM chunks in `pgvector`, then fused with reciprocal rank fusion.
+- **Ordering** is a deterministic tier order chosen by the plan's shape. Scores are never compared across types.
+- **Writes** are searchable on `201`. **Summaries** are generated on request through Gemini and never touch search.
 
-### 0.1 Why v2 **(v2)**
+## Rationale
 
-v1 failed 4 of 8 eval queries. Replacing MiniLM with E5 reproduced the same failures, which rules out the model. The cause is structural. v1 had two surface-similarity signals and no representation of what a document is *for*.
+Similarity alone (embeddings plus a lexical signal) fails on the questions advisors ask, because it has no notion of what a document is *for*. Replacing MiniLM with E5 reproduced the same failures, so the cause is structural, not the model.
 
-| Query | v1 result | Cause | v2 fix |
-|---|---|---|---|
-| `tax residency` | Council Tax Bills first | The bills literally say "confirming liability and residency". Exact word overlap beats meaning for any embedding model | Purpose labels. The bills are `proof_of_address`, the W-9 and tax return are `tax_status`. The planner maps "tax residency" to `tax_status`, and label matches lead |
-| `source of funds` | Engagement letter first | The completion statement's "source and amount of funds" sentence sits in a chunk full of GBP figures. Max-pooled 50-word chunks are fragile | Purpose label `source_of_funds`, lexical retrieval over content and labels, and one label chunk per document (§5.3) |
-| `proof of address` | 5 of 7 found | Samuel's bill and statement never say "occupancy" or "residency". v1 could only find documents written with proof-of-address wording | Label retrieval admits every document tagged `proof_of_address` regardless of wording |
-| `advisory fees` | Client Grace Kim first | Her description contains "advisory arrangements", `word_similarity` scores 0.64 against it, and v1 put every client above every document | Description hits form a context tier ranked below documents. Only identity fields outrank documents |
+| Query | Similarity alone | Design response |
+|---|---|---|
+| `tax residency` | Council Tax Bills first: the bills literally say "residency", and word overlap beats meaning | Purpose labels. Bills are `proof_of_address`, the W-9 and tax return are `tax_status`, and label matches lead |
+| `source of funds` | Engagement letter first: the completion statement's answer sits in a chunk full of GBP figures | A `source_of_funds` label, lexical retrieval over labels and content, and one label chunk per document |
+| `proof of address` | 5 of 7 found: two bills never use address wording | Label retrieval admits every tagged document, whatever its wording |
+| `advisory fees` | Client Grace Kim first: her description says "advisory arrangements" (0.64) | A context tier for description hits, ranked below documents. Only identity fields outrank documents |
 
-Two eval defects hid the picture. A "top 3" assertion cannot pass for a query with seven correct answers, and the compound case had a single test query. §11.3 replaces both.
-
----
-
-## 1. Architecture
-
-### 1.1 Component view
+## Architecture
 
 ```mermaid
 flowchart TB
     UI["React SPA"]
     SWAGGER["Swagger UI, curl"]
-    ARF["ApiRewriteFilter: /api/* → /*"]
 
     subgraph App["Spring Boot app, one deployable"]
-        subgraph Shared["shared"]
-            F["ApiKeyFilter"]
-            EMB["Embedder, MiniLM ONNX, in-process"]
-            TAX["Taxonomy, loaded from taxonomy.yaml"]
-            WMC["WebMvcConfig: SPA fallback"]
-        end
+        AUTH["API key check, /api rewrite"]
         subgraph Onboarding["onboarding, write side"]
-            CC["ClientController"]
-            DC["DocumentController"]
-            DS["DocumentService, classify, chunk, embed, persist"]
-            CLS["DocumentClassifier"]
-            SW["SummaryWorker"]
-            SUM["GeminiSummarizer"]
+            CR["client and document creation"]
+            CLS["classifier, chunker"]
+            SW["summary worker"]
         end
         subgraph Search["search, read side"]
-            SC["SearchController"]
-            SS["SearchService, plan, retrieve, fuse, order, page, hydrate"]
-            QP["QueryPlanner"]
-            CR["ClientRetriever"]
-            DR["DocumentRetriever, label, lexical, semantic"]
+            PL["query planner"]
+            RET["client and document retrieval"]
+            ORD["fusion, ordering, hydration"]
+        end
+        subgraph Shared["shared"]
+            EMB["embedding model, in-process"]
+            TAX["taxonomy"]
         end
     end
     PG[("PostgreSQL 17, pgvector, pg_trgm, citext")]
     VX["Gemini API"]
 
-    UI -->|/api/*| ARF
-    ARF -->|X-API-Key| F
-    SWAGGER -->|X-API-Key| F
-    F --> CC & DC & SC
-    F --o WMC
-    WMC -->|index.html| UI
-    CC --> PG
-    DC --> DS
-    DS --> CLS --> TAX
-    DS --> EMB
-    DS --> PG
-    SC --> SS
-    SS --> QP --> TAX
-    SS --> CR --> PG
-    SS --> EMB
-    SS --> DR --> PG
+    UI --> AUTH
+    SWAGGER --> AUTH
+    AUTH --> CR & PL
+    CR --> CLS --> TAX
+    CLS --> EMB
+    CR --> PG
+    PL --> TAX
+    PL --> RET --> PG
+    RET --> EMB
+    RET --> ORD
     SW --> PG
-    SW --> SUM --> VX
+    SW --> VX
 ```
 
-### 1.2 Package layout
+The code is three packages: `onboarding` (write side: clients, documents, classification, chunking, summaries, seeding), `search` (read side: planning, retrieval, fusion, ordering, hydration, the audit line) and `shared` (embedding model, taxonomy, web plumbing). Client creation is validate, insert, map the unique violation to `409`, so it has no service layer. Document creation has real logic, so it does.
 
-```
-com.example.searchapp
-├── onboarding/            WRITE side
-│   ├── controller/        ClientController, DocumentController
-│   ├── dto/               CreateClientRequest, CreateDocumentRequest
-│   ├── entity/            Client, Document
-│   ├── repository/        ClientRepository, DocumentRepository
-│   ├── service/           DocumentService, Chunker, Chunk, EmbeddedChunk,
-│   │                      DocumentClassifier, Reclassifier (v2),
-│   │                      SummaryWorker, Summarizer, GeminiSummarizer
-│   ├── exception/         OnboardingExceptionHandler, *NotFoundException, DuplicateClientEmailException
-│   └── seed/              DemoSeeder
-├── search/                READ side
-│   ├── controller/        SearchController
-│   ├── dto/               SearchRequest, SearchResult, match types
-│   ├── planner/           QueryPlanner, QueryPlan, ClientMention (v2)
-│   ├── repository/        ClientRetriever, LabelDocumentRetriever, LexicalDocumentRetriever,
-│   │                      SemanticDocumentRetriever (v2 split)
-│   └── service/           SearchService, DocumentFusion, ResultOrdering (pure functions)
-└── shared/
-    ├── embedding/         Embedder, one bean, warmed at startup
-    ├── taxonomy/          Taxonomy, TaxonomyLoader (v2)
-    └── web/               ApiKeyFilter, ApiRewriteFilter, RequestIdFilter, GlobalExceptionHandler,
-                           ProblemDetails, RequestValidationException, OpenApiConfiguration, WebMvcConfig
-```
-
-There is no `ClientService`. Client creation is validate, insert, map the unique violation to `409`. `DocumentService` exists because document creation has logic (classify, chunk, embed outside the transaction, write atomically).
-
-### 1.3 Module boundary
-
-`onboarding` and `search` run in one process and never import each other. `search` reads `client`, `document` and `document_chunk` with its own SQL and its own row types. Nothing crosses the boundary in memory. Splitting into two services later is routing and role-conditional wiring, not a rewrite.
-
-**Three contracts exist between the modules, and only one has a compiler behind it.**
+`onboarding` and `search` run in one process and never import each other. `search` reads `client`, `document` and `document_chunk` with its own SQL and row types, so splitting into two services later is routing and wiring, not a rewrite. Three contracts exist between them, and only the first has a compiler behind it.
 
 1. **The schema**, versioned by Flyway.
-2. **The vector space.** Query and document vectors are comparable only from the same model. Enforced in data by `document_chunk.embedding_model`, filtered at query time. A same-dimension model swap without re-index would otherwise compute nonsense silently.
-3. **The taxonomy (v2).** The classifier writes labels from `taxonomy.yaml`, the planner reads the same file. Enforced in data by `document.taxonomy_version`. Changing the file requires a reclassification pass (§3.4), otherwise stored labels and query intents drift apart.
+2. **The vector space.** Every chunk records its embedding model and search filters on it, so a model swap without a re-index cannot silently mix vector spaces.
+3. **The taxonomy.** The classifier writes labels from `taxonomy.yaml` and the planner reads the same file. Each document records the version it was labelled under, and a change to the file requires a reclassification pass.
 
-### 1.4 Technology choices
+### Technology choices
 
 | Concern | Choice | Why | Rejected |
 |---|---|---|---|
-| Runtime | Java 25, Spring Boot 4.1 | Already in the repo. Virtual threads, ProblemDetail, Actuator built in | Quarkus, Micronaut |
-| Data access | `JdbcClient` + `com.pgvector:pgvector` | Every interesting query is native SQL (trigram, vector, tsvector, `DISTINCT ON`) | JPA, would be bypassed everywhere |
-| Migrations | Flyway | Explicit, versioned | `ddl-auto` |
-| Embeddings | `dev.langchain4j:langchain4j-embeddings-all-minilm-l6-v2` (ONNX, model inside the jar) | Nothing downloads at runtime. Only this module, not the framework. Pinned `1.20.0-beta30`, imported by `Embedder` alone | DJL, Spring AI Transformers (downloads at runtime) |
-| Lexical documents **(v2)** | Postgres `tsvector` + GIN | Built in, stemmed, weighted fields, indexed | Elasticsearch, BM25 library, a second store for one signal |
-| Classification **(v2)** | Rule-based over title and content, taxonomy in YAML | Deterministic, zero latency, testable, no credentials. KYC document types are a small stable vocabulary | LLM at ingest (adds a network call and a credential to `POST`, breaks the zero-credential local run) |
-| Summaries | `com.google.genai:google-genai`, API key | One env var for a reviewer. Vertex + ADC is the production shape | Spring AI |
-| API docs | springdoc, code-first | Cannot drift from the controllers | Design-first YAML |
-| Tests | JUnit 6, Testcontainers `pgvector/pgvector:pg17` | Real extensions | H2 |
-| UI | React SPA (Vite, React Router) | Served from the Spring Boot jar; calls API through `/api/*` prefix via `ApiRewriteFilter` | Swagger-only |
+| Runtime | Java 25, Spring Boot 4.1 | Virtual threads, ProblemDetail, Actuator built in | Quarkus, Micronaut |
+| Data access | `JdbcClient` + `pgvector` | Every interesting query is native SQL | JPA, would be bypassed everywhere |
+| Migrations | Flyway, additive only | Explicit, versioned | `ddl-auto` |
+| Embeddings | `langchain4j-embeddings-all-minilm-l6-v2` (ONNX, inside the jar) | Nothing downloads at runtime. One module imports it | DJL, Spring AI Transformers |
+| Lexical documents | Postgres `tsvector` + GIN | Built in, stemmed, weighted, indexed | Elasticsearch, a second store for one signal |
+| Classification | Rules over title and content, taxonomy in YAML | Deterministic, zero latency, no credentials | An LLM at ingest: a network call and a credential on `POST` |
+| Summaries | `google-genai`, API key | One env var for a reviewer. Vertex with ADC is the production shape | Spring AI |
+| Tests | JUnit, Testcontainers `pgvector/pgvector:pg17` | Real extensions | H2 |
+| UI | React SPA (Vite) served from the jar | One deployable | Swagger only |
 
----
+## Data model
 
-## 2. Data model
-
-### 2.1 Schema
-
-`V1__init.sql` (unchanged)
+The current schema; migrations are additive.
 
 ```sql
-CREATE EXTENSION IF NOT EXISTS vector;
-CREATE EXTENSION IF NOT EXISTS pg_trgm;
-CREATE EXTENSION IF NOT EXISTS citext;
-
 CREATE TABLE client (
     id           uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     first_name   text NOT NULL,
@@ -160,645 +100,287 @@ CREATE TABLE client (
 );
 
 CREATE TABLE document (
-    id                  uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    client_id           uuid NOT NULL REFERENCES client (id) ON DELETE CASCADE,
-    title               text NOT NULL,
-    content             text NOT NULL,
-    summary             text,
-    summary_status      text NOT NULL DEFAULT 'none'
-                        CHECK (summary_status IN ('none', 'pending', 'ready', 'failed')),
-    summary_attempts    smallint NOT NULL DEFAULT 0,
-    summary_lease_until timestamptz,
-    created_at          timestamptz NOT NULL DEFAULT now()
+    id                    uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    client_id             uuid NOT NULL REFERENCES client (id) ON DELETE CASCADE,
+    title                 text NOT NULL,
+    content               text NOT NULL,
+    summary               text,
+    summary_status        text NOT NULL DEFAULT 'none'
+                          CHECK (summary_status IN ('none', 'pending', 'ready', 'failed')),
+    summary_attempts      smallint NOT NULL DEFAULT 0,
+    summary_lease_until   timestamptz,
+    created_at            timestamptz NOT NULL DEFAULT now(),
+    document_type         text   NOT NULL DEFAULT 'unknown',
+    purposes              text[] NOT NULL DEFAULT '{}',
+    classification_source text   NOT NULL DEFAULT 'unknown'
+                          CHECK (classification_source IN ('request', 'rule', 'llm', 'unknown')),
+    taxonomy_version      int    NOT NULL DEFAULT 0,
+    label_text            text   NOT NULL DEFAULT '',
+    tsv tsvector GENERATED ALWAYS AS (
+        setweight(to_tsvector('english', title),      'A') ||
+        setweight(to_tsvector('english', label_text), 'A') ||
+        setweight(to_tsvector('english', content),    'C')) STORED
 );
-CREATE INDEX document_client_idx  ON document (client_id, created_at);
-CREATE INDEX document_pending_idx ON document (created_at) WHERE summary_status = 'pending';
+-- indexes: (client_id, created_at), pending summaries, GIN on tsv and purposes, document_type
 
 CREATE TABLE document_chunk (
     document_id     uuid NOT NULL REFERENCES document (id) ON DELETE CASCADE,
     embedding_model text NOT NULL,
+    kind            text NOT NULL DEFAULT 'body' CHECK (kind IN ('label', 'body')),
     ordinal         int  NOT NULL,
     start_offset    int  NOT NULL,   -- code-point offsets into document.content
     end_offset      int  NOT NULL,
     embedding       vector(384) NOT NULL,
-    PRIMARY KEY (document_id, embedding_model, ordinal)
+    PRIMARY KEY (document_id, embedding_model, kind, ordinal)
 );
 ```
 
-`V2__taxonomy.sql` **(v2)**
-
-```sql
-ALTER TABLE document
-    ADD COLUMN document_type         text   NOT NULL DEFAULT 'unknown',
-    ADD COLUMN purposes              text[] NOT NULL DEFAULT '{}',
-    ADD COLUMN classification_source text   NOT NULL DEFAULT 'unknown'
-        CHECK (classification_source IN ('request', 'rule', 'llm', 'unknown')),
-    ADD COLUMN taxonomy_version      int    NOT NULL DEFAULT 0,
-    ADD COLUMN label_text            text   NOT NULL DEFAULT '',
-    ADD COLUMN tsv tsvector GENERATED ALWAYS AS (
-        setweight(to_tsvector('english', title),      'A') ||
-        setweight(to_tsvector('english', label_text), 'A') ||
-        setweight(to_tsvector('english', content),    'C')) STORED;
-
-CREATE INDEX document_tsv_idx      ON document USING GIN (tsv);
-CREATE INDEX document_type_idx     ON document (document_type);
-CREATE INDEX document_purposes_idx ON document USING GIN (purposes);
-
-ALTER TABLE document_chunk
-    ADD COLUMN kind text NOT NULL DEFAULT 'body' CHECK (kind IN ('label', 'body'));
-ALTER TABLE document_chunk DROP CONSTRAINT document_chunk_pkey;
-ALTER TABLE document_chunk ADD PRIMARY KEY (document_id, embedding_model, kind, ordinal);
-```
-
 - `document_type` and `purposes` are validated against the taxonomy in the application, not by `CHECK`, so the vocabulary lives in one file. `unknown` is a legal type with no purposes.
-- `label_text` is the human-readable form of the labels ("utility bill proof of address"), written by the service so the generated `tsv` can include it. `array_to_string` is `STABLE` and cannot appear in a generated column, which is why the text is materialised.
-- One `english` configuration everywhere, so a query term and a label term with the same stem produce the same lexeme. Mixing `simple` for labels with `english` for queries would silently break label matching on any inflected word.
-- `embedding_model` stays in the primary key so a re-index can write new-model chunks beside the old ones and cut over by changing the query filter.
-- Existing rows get `taxonomy_version = 0` and are reclassified on startup (§3.4).
-
-### 2.2 Invariants
+- `label_text` is the readable form of the labels ("utility bill proof of address"), written by the service because a generated column cannot call `array_to_string`. One `english` text-search configuration is used everywhere, so a query term and a label term with the same stem match.
+- `embedding_model` is in the primary key so a re-index can write new-model chunks beside the old ones and cut over by changing the query filter.
 
 | Invariant | Enforced by |
 |---|---|
-| Email unique, case-insensitive | `UNIQUE (email)` on `citext` → `409` |
-| Every document is searchable | Document, its label chunk and ≥ 1 body chunk for the current model are inserted in one transaction |
-| Stored and query vectors come from the same model | `embedding_model` written at insert, filtered at query time. A mismatch returns nothing, never nonsense |
-| Stored labels and query intents share a vocabulary **(v2)** | `taxonomy_version` on every document. Rows below the current version are reclassified at startup (§3.4). Briefly stale, never absent |
-| Closed sets | `CHECK` on `summary_status`, `classification_source`, `kind`. Taxonomy names validated in code |
-| Clients and documents are create-only | No update or delete endpoint. Reclassification is the one internal write to an existing row and changes labels only |
+| Email unique, case-insensitive | `UNIQUE (email)` on `citext`, mapped to `409` |
+| Every document is searchable | The document, its label chunk and at least one body chunk are inserted in one transaction |
+| Vectors compared only within one model | `embedding_model` written at insert and filtered at query time. A mismatch returns nothing |
+| Labels and query intents share a vocabulary | `taxonomy_version` per document. Older rows are reclassified at startup: briefly stale, never absent |
+| Clients and documents are create-only | No update or delete endpoint. Reclassification is the one internal write and changes labels only |
 
----
+## Taxonomy
 
-## 3. Taxonomy **(v2)**
+Twelve document types, seven purposes and one `unknown`. A purpose is the KYC question a document answers. A type has default purposes, and a request may override them.
 
-### 3.1 Vocabulary
+| Purpose | Default for types |
+|---|---|
+| `proof_of_address` | `utility_bill`, `council_tax_bill`, `bank_statement`, `tenancy_agreement` |
+| `proof_of_identity` | `passport`, `driving_licence` |
+| `tax_status` | `w9`, `tax_return` |
+| `source_of_funds` | `completion_statement` |
+| `fees_and_terms` | `engagement_letter` |
+| `investment_mandate` | `investment_policy_statement` |
+| `trust_structure` | `trust_deed` |
 
-Twelve document types, seven purposes, one `unknown`. Purposes are the KYC question a document answers. A type has default purposes; a request may override them.
+`bank_statement` and `tax_return` are deliberately not tagged `source_of_funds`, and `driving_licence` is not tagged `proof_of_address`, because that is how the evaluation set defines those questions. Change the YAML and the evaluation together if compliance disagrees.
 
-| Type | Default purposes | Title patterns | Content patterns |
+`taxonomy.yaml` is loaded once at startup and validated: unique ids, no id that is both a type and a purpose (the planner splits intents by id), every purpose a type names exists, and no synonym equal to a type or purpose id. Each type has a `label`, default `purposes`, title and content patterns and query synonyms, and each purpose has a `label` and synonyms.
+
+**Classifier.** A deterministic function of title, content and an optional requested type. A requested type is validated and used (source `request`). Otherwise each type scores 2 per title pattern found and 1 per content pattern found, and the highest wins. A best score of 0 or a tie yields `unknown` (source `rule`). `label_text` is the type label followed by the purpose labels. An LLM classifier is deliberately not in the write path.
+
+**Reclassification.** At startup, after Flyway and before the seeder, rows below the current `taxonomy_version` are reclassified in batches of 100: rule and unknown rows are re-classified, request rows keep their type, and every row gets a fresh label, version and label chunk. One transaction per batch, idempotent, safe to interrupt. Readiness does not wait for it.
+
+## API contract
+
+JSON is `snake_case`. Errors are RFC 9457 `application/problem+json`. IDs are UUIDs, timestamps ISO-8601 UTC, auth is the `X-API-Key` header.
+
+| Method and path | Success | Errors | Notes |
 |---|---|---|---|
-| `utility_bill` | `proof_of_address` | utility bill, energy, electricity, gas bill, water bill | kwh, meter, supply address, standing charge |
-| `council_tax_bill` | `proof_of_address` | council tax | council tax, valuation band |
-| `bank_statement` | `proof_of_address` | account statement, bank statement | opening balance, closing balance, sort code |
-| `tenancy_agreement` | `proof_of_address` | tenancy, lease | landlord, tenant, deposit |
-| `passport` | `proof_of_identity` | passport | passport number, nationality |
-| `driving_licence` | `proof_of_identity` | driving licence, driver's licence, driver licence | licence number, entitlement |
-| `w9` | `tax_status` | w-9, w9, taxpayer identification | backup withholding, fatca |
-| `tax_return` | `tax_status` | tax return, self assessment | taxpayer reference, income tax |
-| `completion_statement` | `source_of_funds` | completion statement | sale proceeds, conveyancing, completion |
-| `engagement_letter` | `fees_and_terms` | engagement letter, terms of business | assets under management, terminate this arrangement |
-| `investment_policy_statement` | `investment_mandate` | investment policy | asset allocation, risk profile |
-| `trust_deed` | `trust_structure` | trust deed, deed of amendment | trustee, settlor, beneficiar |
+| `POST /clients` | `201`, `Location` | `400`, `401`, `409` | |
+| `GET /clients` | `200` | `401` | Debugging aid: every client, oldest first, unpaginated |
+| `GET /clients/{id}` | `200` | `400`, `401`, `404` | |
+| `GET /clients/{id}/documents` | `200` | `400`, `401`, `404` | Newest first |
+| `POST /clients/{id}/documents` | `201`, `Location` | `400`, `401`, `404` | Optional `document_type`, `purposes`. Never calls a model |
+| `GET /clients/{id}/documents/{documentId}` | `200` | `400`, `401`, `404` | Never triggers a summary |
+| `POST /clients/{id}/documents/{documentId}/summary` | `202` | `400`, `401`, `404` | `none` or `failed` becomes `pending`. Already `pending`: `202` no-op. `ready`: `200` no-op |
+| `GET /search?q=&limit=&offset=` | `200`, `X-Total-Count` | `400`, `401` | `[]` when nothing qualifies, never `404` |
+| `GET /health`, `/v3/api-docs`, `/swagger-ui/**`, `/` | `200` | | Unauthenticated. `/` serves the SPA, and `/api/*` is rewritten to `/*` |
 
-| Purpose | Query synonyms |
-|---|---|
-| `proof_of_address` | proof of address, address proof, proof of residence, residency evidence, address verification |
-| `proof_of_identity` | proof of identity, identity document, photo id, id document, identification |
-| `source_of_funds` | source of funds, source of wealth, origin of funds, where the money came from, sale proceeds |
-| `tax_status` | tax residency, tax residence, tax status, tax form, fatca, crs, self certification |
-| `fees_and_terms` | advisory fees, fees, charges, fee schedule, fee agreement, engagement |
-| `investment_mandate` | risk tolerance, risk profile, investment mandate, asset allocation, investment objectives |
-| `trust_structure` | trust restructuring, trust structure, trustees, beneficiaries, trust |
+A missing id is `404`, a malformed UUID is `400`, and an unknown route is `404` with the same generic body as any other. Requests declaring `Content-Length` over 256 KB get `413` before binding.
 
-Each type and purpose has a human-readable `label` in the YAML (`utility bill`, `w-9 form`, `proof of address`). Labels are what `label_text` and the label chunk are built from. Each type also has query synonyms, which are its title patterns plus short forms (`bill` → `utility_bill` and `council_tax_bill`, `statement` → `bank_statement`, `licence` → `driving_licence`, `ips` → `investment_policy_statement`).
+The SPA's home route lists clients as tiles (a create-client tile first) until a query is typed into the header search, which debounces a five-result preview and submits to a full results page. Creating a client writes the client and then each optional title and content entry through the same endpoints. It does not upload files: content is text.
 
-Two mappings are product decisions, not mistakes. `bank_statement` and `tax_return` are *not* tagged `source_of_funds`, and `driving_licence` is *not* tagged `proof_of_address`, because the eval set defines "proof of address" as utility bills, council tax bills, bank and savings statements and tenancy documents, and "source of funds" as the completion statements. If compliance wants them counted, change the YAML and the eval together.
+**Validation.** Strings are trimmed first, and required means non-blank. Names ≤ 100 chars. `email` a valid address with a `.` in the domain, ≤ 254. `description` ≤ 2 000. `social_links` ≤ 10 absolute `http(s)` URLs of ≤ 2 048. `title` ≤ 300 and `content` ≤ 64 000, both required. `document_type` must be a taxonomy type id, and `purposes` must be taxonomy purpose ids and only alongside `document_type`. `q` is 1 to 200 chars, `limit` 1 to 50 (default 20), `offset` ≥ 0.
 
-### 3.2 File
+**Responses.** A client is its brief fields plus `created_at`. A document adds `summary`, `summary_status`, `document_type`, `purposes` and `classification_source`. A search result is a union on `type`:
 
-`shared/taxonomy/taxonomy.yaml`, loaded once at startup, validated (unique names, every purpose referenced by a type exists, no synonym equals a type or purpose id).
+- A **client** result carries `match.field` (`name`, `email`, `social_links` or `description`), `match.tier` (`identity` or `context`) and the client.
+- A **document** result carries `match.passage`, `match.signals` (which of `label`, `lexical`, `semantic` admitted it), `match.labels` (the taxonomy labels that matched) and the document with `client_name`, but not `content`. Signals and labels exist so a wrong ranking can be explained from the response alone.
 
-```yaml
-version: 1
-types:
-  utility_bill:
-    label: utility bill
-    purposes: [proof_of_address]
-    title_patterns: [utility bill, energy, electricity, gas bill, water bill]
-    content_patterns: [kwh, meter, supply address, standing charge]
-    synonyms: [utility bill, energy bill, electricity bill, gas bill, water bill, bill]
-  # ... one entry per type
-purposes:
-  proof_of_address:
-    label: proof of address
-    synonyms: [proof of address, address proof, proof of residence, residency evidence, address verification]
-  # ... one entry per purpose
-```
+`score` is comparable within a type only: clients carry `word_similarity`, documents the fused score. Position comes from the ordering rules. Each retrieval signal fetches at most 200 candidates, so `X-Total-Count` is exact below that and a lower bound at it. Ordering is total, so a page is a slice and deep pages are stable.
 
-### 3.3 Classifier
+## Write path
 
-`DocumentClassifier.classify(title, content, requested)` is a pure function.
+**Create client.** Validate, insert, map the `client_email_uk` violation to `409`, return `201`. Searchable immediately.
 
-1. If the request supplies `document_type`, validate it and use it. `purposes` from the request if given, otherwise the type's defaults. Source `request`.
-2. Otherwise score every type. Each title pattern found (case-insensitive substring on the normalised title) scores 2, each content pattern found scores 1. Take the highest. A best score of 0, or a tie for first place, yields `unknown`. Source `rule`.
-3. `purposes` = the type's defaults. `label_text` = type label followed by purpose labels, space separated. Empty for `unknown`.
-4. `taxonomy_version` = the file's version.
+**Create document.** Validate and check the client exists (`404`), classify, split the content into chunks, and embed outside any transaction: the label and every body chunk in one batch. A body chunk's input is `title + "\n\n" + chunk text`, and the label's is `title + "\n" + label_text` (the title alone for `unknown`). Then, in one transaction, insert the document row, the label chunk (`kind = 'label'`, `ordinal = 0`) and the body chunks (`ordinal` 1..n), and return `201` with `Location`. No model call and no network: latency is embedding plus one transaction.
 
-Deterministic and unit-tested against every seed document (§11.1). An LLM classifier is deliberately not in the write path (§1.4, §13).
+**Chunking.** Whitespace tokens with code-point offsets, 50-word windows on a 40-word stride, so 50 words or fewer is one chunk. The bundled tokenizer truncates silently past 126 word pieces (measured with the model's own tokenizer, not the 256 usually quoted), and dense KYC text reaches about 2 pieces per word, so 50 words plus the title stays under the limit. A test asserts the bound.
 
-### 3.4 Reclassification
+**Label chunk.** One extra vector per document that says what it is, in the query's space. It gives the semantic signal a clean target for paraphrases the synonym list misses ("where did the money come from") and is immune to chunk dilution. It never serves as a passage.
 
-`Reclassifier` runs at startup in `onboarding`, after Flyway and before the seeder. It selects `document` rows with `taxonomy_version < current` in batches of 100, re-runs rule classification for rows whose source is `rule` or `unknown`, refreshes `label_text` and `taxonomy_version` for every row (including `request` rows, whose type is kept), and rewrites the label chunk (§5.3). One transaction per batch, idempotent, safe to interrupt. Readiness does not wait for it. Stale rows search under old labels for the seconds it takes, which is the same "briefly stale, never absent" contract as a re-index.
-
----
-
-## 4. API contract
-
-JSON is `snake_case`. Errors are RFC 9457 `application/problem+json`. IDs are UUID strings, timestamps ISO-8601 UTC. Auth header `X-API-Key`.
-
-### 4.1 Endpoints
-
-| Method and path | Module | Success | Errors | Notes |
-|---|---|---|---|---|
-| `POST /clients` | onboarding | `201`, `Location`, `Client` | `400`, `401`, `409` | |
-| `GET /clients` | onboarding | `200` `Client[]` | `401` | Debugging aid: every client, oldest first, unpaginated |
-| `GET /clients/{id}` | onboarding | `200` `Client` | `400`, `401`, `404` | |
-| `GET /clients/{id}/documents` | onboarding | `200` `Document[]` | `400`, `401`, `404` | Lists all documents for a client, newest first |
-| `POST /clients/{id}/documents` | onboarding | `201`, `Location`, `Document` | `400`, `401`, `404` | Optional `document_type`, `purposes` **(v2)**. Never calls a model |
-| `GET /clients/{id}/documents/{documentId}` | onboarding | `200` `Document` | `400`, `401`, `404` | Never triggers a summary |
-| `POST /clients/{id}/documents/{documentId}/summary` | onboarding | `202` `Document` | `400`, `401`, `404` | `none` or `failed` → `pending`. Already `pending` → `202` no-op. `ready` → `200` no-op |
-| `GET /search?q=&limit=&offset=` | search | `200` `SearchResult[]`, `X-Total-Count` | `400`, `401` | `[]` when nothing qualifies, never `404` |
-| `GET /health` | shared | `200` | | Unauthenticated |
-| `GET /v3/api-docs`, `/swagger-ui/**` | shared | `200` | | Unauthenticated |
-| `GET /` | shared | `200` `index.html` | | Serves the React SPA |
-| `GET /api/*` | shared | Rewritten to `/*` | | `ApiRewriteFilter` maps `/api/search` → `/search` etc. |
-
-The SPA home route lists all clients as responsive tiles (with a create-client tile first) until a query is supplied through the persistent header search field. Typing debounces a `GET /api/search?limit=5` preview dropdown; submitting runs the full search page. A client tile opens its detail route. The create-client route writes the client, then each optional title/content document entry through the existing onboarding endpoints. It intentionally does not upload files: the API accepts document content as text (§4.2).
-
-A missing id is `404`. A malformed UUID in a path is `400`, a bad request rather than a missing record. An unknown route is `404` with the same generic body as any other.
-
-### 4.2 Validation
-
-Strings are trimmed first. Required means non-blank after trimming.
-
-| Field | Rule |
-|---|---|
-| `first_name`, `last_name` | required, ≤ 100 chars |
-| `email` | required, valid address with a `.` in the domain, ≤ 254 chars |
-| `description` | optional, ≤ 2 000 chars |
-| `social_links` | optional, ≤ 10 absolute `http(s)` URLs, each ≤ 2 048 chars |
-| `title` | required, ≤ 300 chars |
-| `content` | required, ≤ 64 000 chars |
-| `document_type` **(v2)** | optional, must be a taxonomy type id |
-| `purposes` **(v2)** | optional, each a taxonomy purpose id, only allowed together with `document_type` |
-| `q` | required, 1 to 200 chars after trimming |
-| `limit` | 1 to 50, default 20 |
-| `offset` | ≥ 0, default 0 |
-
-Requests declaring `Content-Length` over 256 KB get `413` before binding.
-
-### 4.3 Response schemas
-
-`Client` = brief schema plus `created_at`.
-`Document` = brief schema plus `summary`, `summary_status`, and **(v2)** `document_type`, `purposes`, `classification_source`.
-
-`SearchResult` is a discriminated union on `type`.
-
-```json
-[
-  {
-    "type": "client",
-    "score": 0.833333,
-    "match": { "field": "email", "tier": "identity" },
-    "client": { "id": "7b0e…", "first_name": "John", "last_name": "Doe",
-                "email": "john.doe@neviswealth.com", "description": "…",
-                "social_links": ["https://www.linkedin.com/company/neviswealth"],
-                "created_at": "2026-09-17T10:00:00Z" }
-  },
-  {
-    "type": "document",
-    "score": 0.032787,
-    "match": { "passage": "…Registered supply address: Flat 4, 22 Willowmead Crescent…",
-               "signals": ["label", "lexical", "semantic"],
-               "labels": ["purpose:proof_of_address"] },
-    "document": { "id": "c41a…", "client_id": "7b0e…", "client_name": "John Doe",
-                  "title": "2024 Utility Bill", "document_type": "utility_bill",
-                  "purposes": ["proof_of_address"], "summary": null, "summary_status": "none",
-                  "created_at": "2026-09-17T10:05:00Z" }
-  }
-]
-```
-
-- `match.field` ∈ `name | email | social_links | description`. `match.tier` ∈ `identity | context` **(v2)**.
-- `match.signals` **(v2)** lists which of `label`, `lexical`, `semantic` admitted the document. `match.labels` lists the taxonomy labels that matched the query's intents. Both exist so a wrong ranking can be explained from the response alone.
-- Document results omit `content`. The passage plus `GET` covers display. `client_name` makes a document attributable without a second call.
-- `score` is comparable within a type only. Clients carry `word_similarity`, documents carry the fused score (§6.4). Position is decided by §6.5, never by comparing scores across types.
-
-### 4.4 Pagination
-
-The response is an array, the total is in `X-Total-Count`. Each retriever fetches at most 200 candidates, so the total is exact below that and a lower bound at it. Ordering is total (§6.5), so a page is a slice and deep pages are stable.
-
----
-
-## 5. Write path
-
-### 5.1 Create client
-
-Validate → `INSERT … RETURNING *` → map `client_email_uk` violation to `409` → `201`. Searchable immediately, the client retriever reads base columns.
-
-### 5.2 Create document **(v2 additions)**
-
-1. Validate, check the client exists (`404`).
-2. `classification = DocumentClassifier.classify(title, content, requested)`.
-3. `chunks = Chunker.split(content)`.
-4. Embed outside any transaction. Body chunk input is `title + "\n\n" + chunk text`. Label chunk input is `title + "\n" + label_text` (title alone for `unknown`).
-5. One transaction. Insert the document row with type, purposes, source, version and `label_text`, then the label chunk (`kind = 'label'`, `ordinal = 0`, offsets 0 and 0), then the body chunks (`kind = 'body'`, `ordinal` 1..n).
-6. `201` with `Location`.
-
-No model call, no network. Creation latency is embedding plus one transaction.
-
-### 5.3 Chunker and label chunk
-
-- Whitespace tokens with code-point offsets. Window 50 words, stride 40. A document of ≤ 50 words is one chunk.
-- The bundled tokenizer truncates silently past **126 word pieces**, measured with the model's own tokenizer, not the 256 usually quoted. Dense KYC text reaches ~2 word pieces per word, so 50 words plus title does not exceed the ceiling. The bound is asserted in a test, not assumed.
-- **Label chunk (v2).** One extra vector per document that says what the document is, in the same space as the query. It gives the semantic signal a clean target for paraphrases the synonym list does not cover ("where did the money come from") and is immune to the chunk-dilution failure in §0.1. It never serves as a passage (§6.6).
-
----
-
-## 6. Search path
-
-### 6.1 Flow and query plan **(v2)**
+## Search path
 
 ```mermaid
 flowchart LR
-    Q["q, limit, offset"] --> V["validate, normalise"] --> P["QueryPlanner"]
+    Q["q, limit, offset"] --> V["validate, normalise"] --> P["query planner"]
     P --> PAR{{"parallel on virtual threads"}}
-    PAR --> CR["ClientRetriever, identity and context tiers"]
-    PAR --> LB["LabelDocumentRetriever, type or purpose in intents"]
-    PAR --> LX["LexicalDocumentRetriever, tsvector"]
-    PAR --> EQ["Embedder.embed residual"] --> SM["SemanticDocumentRetriever, best chunk, cosine >= floor"]
-    LB & LX & SM --> FU["DocumentFusion, RRF"]
-    CR & FU --> ORD["ResultOrdering"] --> SL["slice"] --> HY["hydrate page"] --> R["200, X-Total-Count"]
+    PAR --> CR["client search, identity and context tiers"]
+    PAR --> DR
+    subgraph DR["document retrieval"]
+        LB["label, type or purpose in intents"]
+        LX["lexical, tsvector"]
+        EQ["embed residual"] --> SM["semantic, best chunk, cosine >= floor"]
+        LB & LX & SM --> FU["fusion, RRF"]
+    end
+    CR & FU --> ORD["ordering"] --> SL["slice"] --> HY["hydrate page"] --> R["200, X-Total-Count"]
 ```
 
-If any retriever fails the request returns `500`. Partial results would make documents vanish with nothing to show why.
+If any retrieval fails the request returns `500`. Partial results would make documents vanish with nothing to show why.
 
-**Normalisation.** Lowercase, Unicode NFKC, strip possessives (`john's`, `john’s` → `john`), collapse whitespace, keep intra-token hyphens (`w-9`) and also index the de-hyphenated form (`w9`).
+### Query plan
 
-**Plan.** `QueryPlanner.plan(q)` returns the normalised whole-query text, `mentions`, `residual`,
-and `intents`. The client retriever reads the whole query; every document retriever reads the
-residual.
+Normalisation lowercases, applies Unicode NFKC, strips possessives (`john's` becomes `john`), collapses whitespace and keeps intra-token hyphens (`w-9`, also indexed as `w9`). The plan holds the normalised query, the `mentions`, the `residual` and the intents split into type ids and purpose ids. Client search reads the whole query and document retrieval reads the residual.
 
-- **Mention.** Tokens are compared in order against every client's `first_name || ' ' || last_name` and `email` with `word_similarity ≥ 0.69` (just under the measured `Hendersen → Henderson` 0.70). Only the leading contiguous run of matching tokens counts, so in `john utility bill` matching stops at `utility` and a later `bill` can never become a client named Bill. Tokens under three characters are skipped. The clients whose leading run is longest are the `mentions`: `john doe utility bill` names John Doe (two tokens) over John Smith (one), so `mentions` holds one client. Two or more clients tied on the longest run mean the name is ambiguous and `mentions` holds all of them (`john utility bill` mentions every John), because the query still names a small, known set of people and their documents are the likeliest answers. Tied mentions are ordered by how well the whole query matches each client's name or email, then by last name and id, so `grace ki` lists the Grace whose name best fits it first. Their tokens are consumed like any mention, so the residual is `utility bill`, not `john utility bill`.
-- **Ambiguity rule.** A single-token mention (unique or tied) whose token is also a taxonomy synonym (`bill`, `statement`, `trust`) counts as a mention only if the token was possessive (`bill's`) or a second token also matched the same client (`bill carter`). Otherwise the token is treated as category text.
-- **Residual.** The tokens after the mentions. Empty for an identity query (`john`, `neviswealth`, `hendersen`).
-- **Intents.** Longest-match, non-overlapping phrase search of the residual against all type and purpose synonyms. `completion statement` matches the type, not `statement`. Result is a set of type ids and purpose ids, possibly empty.
+- **Mention.** Tokens are compared in order against every client's full name and email with `word_similarity ≥ 0.69` (just under the measured `Hendersen` to `Henderson` score of 0.70). Only the leading contiguous run counts, so in `john utility bill` matching stops at `utility` and a later `bill` never becomes a client named Bill. Tokens under three characters are skipped. The clients with the longest run are the `mentions`. If several tie, the name is ambiguous and all of them are kept (`john utility bill` mentions every John), because the query still names a small known set of people whose documents are the likeliest answers. Tied mentions are ordered by how well the whole query matches their name or email, then by last name and id. Mention tokens are consumed, so that query's residual is `utility bill`.
+- **Ambiguity rule.** A single-token mention whose token is also a taxonomy synonym (`bill`, `statement`, `trust`) counts only if the token was possessive (`bill's`) or a second token also matched the same client (`bill carter`). Otherwise it is category text.
+- **Residual.** The tokens after the mentions, empty for an identity query (`john`, `neviswealth`).
+- **Intents.** A longest-match, non-overlapping phrase search of the residual against every type and purpose synonym, so `completion statement` matches the type and not `statement`. Exact on normalised phrases, with no fuzzy threshold.
 
-Two thresholds beyond v1's floors, both fixed. Mention 0.69 is measured. Intent matching is exact on normalised phrases, no fuzzy threshold in v2 (§13).
+### Client search
 
-### 6.2 Client retriever **(v2 tiers)**
+Each client is scored with `word_similarity` on name, email and social links (the identity tier) and description (the context tier), and is kept if its best field clears the lexical floor, preferring an identity field. Results order identity first, then score, last name and id, capped at 200.
 
-```sql
-SELECT c.id, best.field, best.tier, best.score
-FROM client c
-CROSS JOIN LATERAL (
-    SELECT field, tier, score
-    FROM (VALUES
-        ('name',         'identity', word_similarity(:q, c.first_name || ' ' || c.last_name)),
-        ('email',        'identity', word_similarity(:q, c.email::text)),
-        ('social_links', 'identity', word_similarity(:q, array_to_string(c.social_links, ' '))),
-        ('description',  'context',  word_similarity(:q, coalesce(c.description, '')))
-    ) AS f(field, tier, score)
-    WHERE score >= :lexicalFloor
-    ORDER BY (tier = 'identity') DESC, score DESC
-    LIMIT 1
-) best
-ORDER BY (best.tier = 'identity') DESC, best.score DESC, c.last_name, c.id
-LIMIT 200;
-```
+- `pg_trgm` splits on non-alphanumerics, so `john.doe@neviswealth.com` is already `john`, `doe`, `neviswealth`, `com`: delimiter decomposition, partial tokens and typo tolerance from one built-in.
+- The lexical floor is **0.6**, pg_trgm's default, guarded by the evaluation and never derived from it. Anchors: `NevisWealth` to an email 1.0, `Hendersen` to `Henderson` 0.70, `passport` to an email 0.00.
+- **Identity beats context.** A name, email or company URL hit is the advisor naming a record they know exists. A description hit is weak evidence and ranks below documents.
+- No trigram index yet; a GIN `gin_trgm_ops` index per field is the escape hatch, on measurement. Transpositions and substitutions in short names (`jhon` 0.20, `joe` 0.50) cannot clear the floor.
 
-- `pg_trgm` lowercases and splits on non-alphanumerics, so `john.doe@neviswealth.com` is already `john`, `doe`, `neviswealth`, `com`. Delimiter decomposition, partial tokens and typo tolerance come from one built-in.
-- `lexicalFloor` is **0.6**, pg_trgm's default, guarded by the eval and never derived from it. Measured anchors, `NevisWealth → email` 1.0, `Hendersen → Henderson` 0.70, `passport → email` 0.00.
-- **Identity beats context.** A name, email or company URL hit is the advisor naming a record they know exists. A description hit (`advisory fees → "advisory arrangements"`, 0.64) is weak evidence and ranks below documents in §6.5. This is the fix for the fourth v1 failure and it costs no threshold change.
-- No trigram index. Escape hatch is GIN `gin_trgm_ops` per field, added on measurement.
-- **Known limits.** Transpositions and single substitutions in short names (`jhon` 0.20, `joe` 0.50 against `John Doe`) cannot clear any floor J2 survives. `fuzzystrmatch` Levenshtein is the follow-up (§13).
+### Document retrieval
 
-### 6.3 Document retrievers **(v2)**
+One module runs the three signals concurrently and returns a single fused list. It also keeps the query vector, so a page's passages are chosen against the same vector that retrieved them. When the residual is empty, or reduces to an empty tsquery (stop words only, `the and`), no signal runs and the result holds clients only. An embedding of stop words would admit documents on noise, so this is checked once, before the fan-out.
 
-All three take `plan.residual`. When the residual is empty, or non-empty but reduces to an empty tsquery (stop words only, `the and`), none of them runs and the result holds clients only. An embedding of stop words would admit documents on noise, so the check is made once, before the fan-out, rather than per retriever.
+- **Label.** Every document whose stored type or purposes match a query intent, newest first. Wording-independent, which is what makes `proof of address` complete.
+- **Lexical.** A stemmed match over title, labels and content, ranked by cover density, with terms ANDed for precision. The advisor types into a live box, so a last term of three or more letters is a prefix term (`agreemen:*`) ANDed with the rest; terms with digits, hyphens or operators keep plain web-search semantics. The cost is that `tax` also reaches `taxation`, which the evaluation guards.
+- **Semantic.** The best chunk per document over label and body chunks, above a floor, by exact scan (about 4×10⁴ distance computations; HNSW is the path if that outgrows the budget). The floor is a **recall gate**, currently 0.238, re-derived by the evaluation as the midpoint between the lowest positive and highest negative cosine. It is not the only thing between a relevant document and the results, because label and lexical admission do not depend on it.
+- **Readability gate.** Cosine cannot reject gibberish: `sdfewferdvrevrennfg` scores 0.2682, above the floor and only 0.004 under the lowest real positive (0.2917). So the query embedding also reports whether the model read the query as words. Real words are one or two word pieces each and random letters shatter into four or more, so a query averaging more than 3.5 pieces per word is unreadable and the semantic signal returns nothing for it (measured 1.0 to 3.0 for real queries and typos, 4.0 to 10.0 for gibberish). Label and lexical retrieval are unaffected, so identifiers such as account numbers still find documents.
 
-**Label.** Admits every document whose stored labels match a query intent. Wording-independent, which is what fixes `proof of address`.
+**Fusion.** Reciprocal rank fusion with `k = 60` over the two ranked lists, `1 / (60 + rank)` summed per document. Label admission is a tier flag, not a score, because "is tagged proof of address" is boolean evidence and mixing it into a sum needs a weight nobody can justify. Sort key: label match, fused score, cosine (nulls last), recency, id. A label-only document has a fused score of 0 but still precedes every untagged one. There is no normalised score blend, because `ts_rank_cd` and cosine live on unrelated scales.
 
-```sql
-SELECT id, document_type, purposes, created_at
-FROM document
-WHERE document_type = ANY(:types) OR purposes && :purposes
-ORDER BY created_at DESC, id
-LIMIT 200;
-```
+### Ordering
 
-**Lexical.** Stemmed match over title, labels and content, ranked by cover density.
+Ordering is a pure function of the plan, the identity clients `I` (whole-query `word_similarity ≥ 0.6` on name, email or social links), the context clients `X` (description) and the fused documents `D`. The plan picks one of two shapes.
 
-```sql
-SELECT d.id, ts_rank_cd(d.tsv, tq, 32) AS score
-FROM document d, websearch_to_tsquery('english', :residual) tq
-WHERE d.tsv @@ tq
-ORDER BY score DESC, d.id
-LIMIT 200;
-```
+**No mentions** (category queries, free text, and identity hits the mention detector cannot see, such as a social-link URL): `I`, then `D`, then `X`. Naming a record is the highest-precision signal, documents answer category queries, and description hits are shown but never above the documents they would hide.
 
-`websearch_to_tsquery` ANDs terms, which keeps precision. Recall comes from the other two signals.
+**One or more mentions** (identity queries such as `John`, and compound queries such as `John's bill`):
 
-**Prefix on the last term.** The advisor types into a live box, so the last word of the residual is usually unfinished, and a stem cannot match a fragment: `agreemen` is not the stem of `agreement`. When the last term is three or more letters it becomes a prefix term (`agreemen:*`) ANDed with a `websearch_to_tsquery` of everything before it. Terms with digits, hyphens or operators (`w-9`, `"exact phrase"`, `-word`) keep plain `websearch_to_tsquery` semantics. Cost: a finished word also matches longer words that start with it (`tax` reaches `taxation`), which the eval guards. `soroka agreemen` now lists Soroka's tenancy agreement before Soroka herself.
+1. `D` for the mentioned clients: in a compound query the client is a qualifier and the document is the target.
+2. The mentioned clients, in mention order: confirms who was recognised, even when the whole query did not clear the identity floor.
+3. `D` for everyone else: the fallback when the advisor named the wrong person or the client has no such document.
+4. `I` minus the mentioned clients, then `X`.
 
-**Semantic.** Best chunk per document over label and body chunks, above the floor.
+Ordering is total and deterministic, so pagination is a slice, and no score is compared across types. A mention has no filtering authority: it only reorders documents that already qualified through retrieval.
 
-```sql
-SELECT document_id, similarity
-FROM (
-    SELECT DISTINCT ON (document_id)
-           document_id, 1 - (embedding <=> :qvec) AS similarity
-    FROM document_chunk
-    WHERE embedding_model = :embeddingModel
-    ORDER BY document_id, embedding <=> :qvec
-) best
-WHERE similarity >= :semanticFloor
-ORDER BY similarity DESC, document_id
-LIMIT 200;
-```
+| Query | Top of the list |
+|---|---|
+| `John` (two Johns tie) | Both Johns |
+| `John utility bill` | Both Johns' utility bills and other qualifying documents, both Johns, then everyone else's bills |
+| `Bill's statement` (the possessive lifts the ambiguity rule) | Bill's statement, Bill Carter, then Samuel's statement |
+| `bill` (ambiguity rule blocks the mention) | Bill Carter, then the four bills |
+| `tax residency` | Mary's W-9, Bill's Tax Return, then Council Tax Bills, zero clients |
+| `advisory fees` | Two engagement letters, then Grace Kim (context tier) |
 
-- Exact scan, no index. ~10⁴ documents × ~4 chunks is ~4×10⁴ distance computations.
-- `embedding_model` is bound from the live `Embedder`. A model change without re-index matches nothing, loudly.
-- `semanticFloor` is a **recall gate**, currently 0.238, re-derived by the eval over both label and body chunks as the midpoint between the lowest positive and highest negative cosine (§11.3). With label and lexical admission it is no longer the only thing standing between a relevant document and the result list, which is the point. It does not separate near-domain noise from paraphrase recall, see the known limits in §13.
-- Future path when the scan exceeds budget, HNSW plus a top-K rewrite.
-- **Readability gate.** Cosine cannot reject gibberish. `sdfewferdvrevrennfg` scores 0.2682 and `qwpzxk lmnvbt hgfdsaq` 0.2877 against a driving licence chunk, above the floor and only 0.004 under the lowest real positive (0.2917), so no floor separates them. The query embedding therefore also reports whether the model could read the query as words: real words are one or two word-pieces each, random letters shatter into four or more. A query averaging more than 3.5 word-pieces per whitespace-separated word is *unreadable* and the semantic retriever returns nothing for it. Measured 1.0 to 3.0 for real queries, typos and rare terms (`passpport` 3.0, `DVLA` 3.0) and 4.0 to 10.0 for gibberish. Label and lexical retrieval are unaffected, so identifiers (`CMP-2024-2157`, account numbers) still find documents through the lexical signal. The pieces come from the model's own tokenizer inside `Embedder`, and `QueryReadabilityEvalTest` guards both sides.
+### Hydration
 
-### 6.4 Fusion **(v2)**
+Two queries per page: clients by id, and documents by id with the passage taken from the best **body** chunk against the query vector, so a passage always shows document text and never the label chunk. Results are put back into the order above.
 
-Documents now have more than one signal, so rank fusion is meaningful (it was not in v1, where the two retrievers covered disjoint corpora).
+## Summaries
 
-```
-candidates = label ∪ lexical ∪ semantic
-fused(d)   = Σ over lists L ∈ {lexical, semantic} where d ∈ L of  1 / (60 + rank_L(d))
-labelMatch(d) = d ∈ label
-sort key   = (labelMatch desc, fused desc, cosine desc nulls last, created_at desc, id)
-```
+On request only. `POST …/summary` moves `none` or `failed` to `pending` and resets attempts in one guarded `UPDATE`, so repeated clicks cannot double-enqueue. The `document` table is the queue.
 
-- Reciprocal rank fusion, `k = 60`, over the two *ranked* lists. Label admission is a tier flag, not a score, because "is tagged proof of address" is boolean evidence and mixing it into a sum would need a weight nobody can justify.
-- A document admitted by label alone has `fused = 0` and sorts by cosine when it was scanned, then recency. It still precedes every untagged document.
-- No normalised score blend. `ts_rank_cd` and cosine live on unrelated scales.
+- **Claim.** One `UPDATE` increments attempts and takes a two-minute lease on up to five pending, unleased rows under three attempts, oldest first, with `FOR UPDATE SKIP LOCKED`. Attempts count at claim, so a crash mid-call still consumes one.
+- **Call.** Gemini, 20 s timeout, outside any transaction. The prompt asks for a two to three sentence factual summary and treats document text as data.
+- **Complete.** Set the summary and `ready`, guarded on the row still being `pending`.
+- **Triggers.** A nudge from the request plus a scheduled sweep every 30 s, which doubles as retry backoff and marks exhausted rows `failed`.
+- **Degradation.** Without `GEMINI_API_KEY` the summarizer fails permanently, so a requested summary goes `pending` to `failed` within one nudge. Observable, not hidden.
+- **Isolation.** Search never reads `summary`, so a summary failure has no path to search.
 
-### 6.5 Ordering **(v2)**
+## Security
 
-`ResultOrdering` is a pure function of the plan, the two client tiers `I` (identity, whole-query `word_similarity ≥ 0.6` on name, email or social links) and `X` (context, description), and the fused document list `D` (already sorted by §6.4, tagged matches first). The plan selects one of two shapes.
-
-**Shape A, no mentions.** Covers category queries (`utility bill`), free text, and identity hits the mention detector cannot see because it only reads names and emails (`linkedin.com/company/neviswealth` scores 1.0 against John's social link but no token clears 0.69 against his name or email).
-
-| Tier | Content | Why |
-|---|---|---|
-| 1 | `I` | Naming a record is the highest-precision signal in the system |
-| 2 | `D` | The answer to a category or free-text query, tagged matches before untagged |
-| 3 | `X` | Weak evidence, shown but never above the documents it would otherwise hide |
-
-**Shape B, one or more mentions.** Covers identity queries (`John`, `NevisWealth`, `Hendersen`, residual empty so `D` is empty) and compound queries (`John's bill`, `John utility bill`). With one mention the client is a qualifier. With several tied mentions every tied client's documents are treated as equally likely and keep their §6.4 order among themselves.
-
-| Tier | Content | Why |
-|---|---|---|
-| 1 | `D` where `client_id` is a mentioned client | In a compound query the client is a qualifier and the document is the target |
-| 2 | The mentioned clients, in mention order (the tie order above) | Confirms who was recognised, even when the whole query did not clear the identity floor (`john utility bill` scores 0.28 against `John Doe`) |
-| 3 | `D` where `client_id` is not a mentioned client | Fallback when the advisor named the wrong person or the client has no such document |
-| 4 | `I` minus the mentioned clients | Rare, another client whose identity also matches the whole query |
-| 5 | `X` | As in Shape A |
-
-```
-order(plan, I, X, D) =
-    plan.mentions == {}
-        ? I ++ D ++ X
-        : D[client in M] ++ M ++ D[client not in M] ++ (I \ M) ++ X      where M = plan.mentions
-```
-
-Properties. Total and deterministic, so pagination is a slice. No score is compared across types. A mention has no filtering authority, it only reorders documents that qualified through §6.3. Two or more clients tied on the longest matched run are all in `M`, so a shared first name promotes every one of those clients' qualified documents instead of leaving them buried among every other client's.
-
-**Worked examples on the seed corpus**
-
-| Query | Plan | Top of the list |
-|---|---|---|
-| `John` | mentions John Doe and John Whitfield (tied), residual empty | Both Johns (identity, name) |
-| `John utility bill` | mentions both Johns (tied), residual `utility bill`, intents {utility_bill} | John Doe's 2024 Utility Bill, John Whitfield's Electricity Bill Oct to Dec 2026, their other qualifying documents, both Johns, then everyone else's bills |
-| `NevisWealth` | mention John via email 1.0, residual empty | John (identity, email) |
-| `Hendersen` | mention Mary 0.70, residual empty | Mary |
-| `utility bill` | no mention, intents {utility_bill} | John's bill, Samuel's bill (label + lexical + semantic), then other documents, zero clients |
-| `John's bill` | mentions John Doe and John Whitfield (tied), residual `bill`, intents {utility_bill, council_tax_bill} | John Doe's 2024 Utility Bill, John Whitfield's Electricity Bill Oct to Dec 2026, the two Johns, then the other bills |
-| `Bill's statement` | mention Bill Carter (possessive lifts the ambiguity rule), intents {bank_statement} | Bill's Current Account Statement, Bill Carter, Samuel's statement |
-| `bill` | ambiguity rule blocks the mention, whole-query identity hit on Bill Carter, intents {utility_bill, council_tax_bill} | Bill Carter, then the four bills |
-| `tax residency` | intents {tax_status} | Mary's W-9, Bill's Tax Return, then Council Tax Bills (untagged for this intent), zero clients |
-| `source of funds` | intents {source_of_funds} | Elena's Property Sale Completion Statement, zero clients |
-| `proof of address` | intents {proof_of_address} | every tagged document (53 in the seed corpus), zero clients |
-| `advisory fees` | intents {fees_and_terms} | two Advisory Engagement Letters, then Grace Kim (context tier, description) |
-
-### 6.6 Hydration
-
-Two queries per page. Clients by id. Documents by id with the passage computed as the best **body** chunk for the query, so a passage always shows document text and never the label chunk.
-
-```sql
-SELECT * FROM client WHERE id = ANY(:ids);
-
-SELECT d.id, d.client_id, c.first_name || ' ' || c.last_name AS client_name,
-       d.title, d.document_type, d.purposes, d.summary, d.summary_status, d.created_at,
-       substr(d.content, p.start_offset + 1, p.end_offset - p.start_offset) AS passage
-FROM document d
-JOIN client c ON c.id = d.client_id
-JOIN LATERAL (
-    SELECT start_offset, end_offset
-    FROM document_chunk dc
-    WHERE dc.document_id = d.id AND dc.kind = 'body' AND dc.embedding_model = :embeddingModel
-    ORDER BY dc.embedding <=> :qvec
-    LIMIT 1
-) p ON true
-WHERE d.id = ANY(:ids);
-```
-
-≤ 50 documents × a few chunks per page, negligible. Offsets are code points on both sides. Results are re-ordered in memory to the §6.5 order.
-
----
-
-## 7. Summaries
-
-On request only. `POST …/summary` moves `none` or `failed` to `pending` and resets attempts, in one guarded `UPDATE`, so repeated clicks cannot double-enqueue. The `document` table is the queue.
-
-- **Claim.** `UPDATE … SET summary_attempts + 1, summary_lease_until = now() + 2 min WHERE id IN (SELECT … pending AND attempts < 3 AND lease expired ORDER BY created_at LIMIT 5 FOR UPDATE SKIP LOCKED)`. Attempts increment at claim, so a crash mid-call still consumes one.
-- **Call.** Gemini, 20 s timeout, outside any transaction. Prompt asks for a 2 to 3 sentence factual summary and treats document text as data.
-- **Complete.** `UPDATE … SET summary, status 'ready' WHERE id = :id AND status = 'pending'`.
-- **Triggers.** A nudge from the request handler plus a `@Scheduled` sweep every 30 s, which doubles as retry backoff and marks exhausted rows `failed`.
-- **Degradation.** Without `GEMINI_API_KEY` the summarizer throws a permanent error, so a requested summary goes `pending → failed` within one nudge. Observable, not hidden.
-- **Isolation.** Search never reads `summary`. A summary failure has no path to search.
-
----
-
-## 8. Security
-
-- `ApiKeyFilter` compares `X-API-Key` against `API_KEY` with `MessageDigest.isEqual`. Startup fails if the key is unset or under 32 characters. Allowlist `GET /health`, `/v3/api-docs/**`, `/swagger-ui/**`, `/`, `/index.html`, and all static asset extensions (`.js`, `.css`, `.png`, `.svg`, `.ico`, `.woff2`). Spring Security rejected as oversized for one static key.
-- `ApiRewriteFilter` rewrites `GET /api/search?q=…` to `GET /search?q=…` so the SPA calls a consistent `/api/*` prefix without the backend changing its endpoint paths.
-- The SPA stores the API key in `localStorage` after the user types it into the API Key modal. It is never hard-coded in the bundle or served from the server.
-- Every query parameter is bound, never interpolated, including `:residual`, `:types` and `:purposes`.
-- `social_links` restricted to `http(s)` at write time. User text is returned verbatim as JSON strings, escaping is the renderer's job.
+- The API key filter compares `X-API-Key` against `API_KEY` in constant time. Startup fails if the key is unset or under 32 characters. `/health`, the API docs, `/`, `/index.html` and static assets are open. Spring Security was rejected as oversized for one static key.
+- The SPA keeps the key in `localStorage` after the user types it into the API Key modal. It is never in the bundle or served. Swagger UI declares the key scheme so **Authorize** sends the header.
+- Every query parameter is bound, never interpolated. `social_links` are restricted to `http(s)`. User text is returned verbatim as JSON strings, and escaping is the renderer's job.
 - Errors never carry stack traces, SQL or constraint names.
-- Secrets from env only. Compose ships a dev-only `API_KEY` so a clean clone runs with zero credentials. `GEMINI_API_KEY` optional, server-side only.
-- Swagger UI declares the API-key scheme so **Authorize** sends the header. The key is typed into the browser, never served to it.
+- Secrets come from the environment only. Compose ships a dev-only `API_KEY` so a clean clone runs with zero credentials, and `GEMINI_API_KEY` is optional and server-side only.
 
----
-
-## 9. Observability
+## Observability
 
 | Signal | Content |
 |---|---|
-| Logs | Structured JSON, `request_id` from `X-Cloud-Trace-Context` or generated, echoed as `X-Request-Id` |
-| Search audit line | `request_id`, `query_length`, **(v2)** `plan_shape` (`identity`, `compound`, `document`), `intent_count`, `mention_present`, per-retriever hit counts, `returned`, per-stage timings. Query text is never logged by the service, it is routinely PII. The eval's report (§11.3) logs its synthetic fixture queries |
-| Write lines | IDs, `document_type`, `classification_source`, chunk count, embed time. Never names, emails, titles or content |
-| Worker lines | `document_id`, attempt, outcome, error class, latency |
-| Metrics | Timers `search.plan`, `search.clients`, `search.label`, `search.lexical`, `search.embed_query`, `search.semantic`, `search.total`, `document.embed`, `summary.call`. Counters `summary.outcome{status}`, **(v2)** `classification.outcome{type,source}` |
-| Health | Readiness includes DB connectivity and a warmed model (one inference at startup) |
+| Logs | Structured JSON. `request_id` comes from `X-Cloud-Trace-Context` or is generated, and is echoed as `X-Request-Id` |
+| Search audit line | One per search: `request_id`, `query_length`, `plan_shape` (`identity`, `compound`, `document`), `intent_count`, `mention_present`, per-signal hit counts, `returned` and per-stage timings. Query text is never logged, because it is routinely PII. The line is written by one module that is handed only the query length. The evaluation's report may log its synthetic fixture queries |
+| Write and worker lines | IDs, `document_type`, `classification_source`, chunk count, embed time, attempt, outcome, error class, latency. Never names, emails, titles or content |
+| Metrics | Timers `search.plan`, `search.clients`, `search.label`, `search.lexical`, `search.embed_query`, `search.semantic`, `search.total`, `document.embed`, `summary.call`. Counters `summary.outcome{status}` and `classification.outcome{type,source}` |
+| Health | Readiness includes database connectivity and a warmed model |
 
----
+## Deployment
 
-## 10. Deployment
-
-Local is the only built target. `docker compose up` starts `pgvector/pgvector:pg17` with a healthcheck and the app depending on it. Three-stage Dockerfile: a Node 22 Alpine stage builds the React SPA, a `gradle:9.7.1-jdk25` stage builds the jar, and `eclipse-temurin:25-jre` is the runtime. Non-root, `-XX:MaxRAMPercentage=60`. The model and the SPA are inside the jar.
-
-`./gradlew composeBuild` rebuilds the images with `--no-cache --pull`. `./gradlew composeRedeploy` runs that, then `docker compose up -d --force-recreate --wait`. The Postgres volume is kept; use `docker compose down -v` to reset data.
-
-For local development without Docker, run `cd frontend && npm run build` first (or `./gradlew buildFrontend`), then `./gradlew bootRun`. During frontend development, `cd frontend && npm run dev` starts a Vite dev server on port 3000 that proxies `/api` to the backend on port 8080.
+Local is the only built target. `docker compose up` starts `pgvector/pgvector:pg17` and the app, which waits on the database healthcheck. A three-stage Dockerfile builds the SPA (Node), then the jar (Gradle, JDK 25), then runs on `eclipse-temurin:25-jre` as non-root with `-XX:MaxRAMPercentage=60`. The model and SPA are inside the jar. `./gradlew composeBuild` rebuilds the images and `./gradlew composeRedeploy` also recreates the containers. The Postgres volume survives, and `docker compose down -v` resets it. Without Docker, run `./gradlew buildFrontend` then `./gradlew bootRun`. For frontend work, `cd frontend && npm run dev` proxies `/api` to the backend.
 
 | Env var | Default | Purpose |
 |---|---|---|
 | `DB_URL`, `DB_USER`, `DB_PASSWORD` | compose values | JDBC |
 | `API_KEY` | dev-only compose default | Static API key, override in `.env` |
 | `GEMINI_API_KEY` | absent | Enables summaries |
-| `SUMMARY_MODEL` | current Gemini Flash id | Model ids retire on Google's schedule |
+| `SUMMARY_MODEL` | a current Gemini Flash id | Model ids retire on Google's schedule |
 | `SEED_ENABLED` | `true` | Seed when `client` is empty |
 
-`semanticFloor` lives in `application.yaml`. `lexicalFloor`, the mention threshold and the RRF constant are code constants, not deployment knobs.
+`semanticFloor` lives in `application.yaml`. The lexical floor, the mention threshold and the RRF constant are code constants, not deployment knobs. The demo seeder loads the seed corpus through the same creation path as the API, so seed documents are classified, chunked and embedded like real ones.
 
-**Seeding.** `DemoSeeder` loads `seed/corpus.json` through `ClientRepository` and `DocumentService`, so seed documents are classified, chunked and embedded by the production path. Runs after `Reclassifier`.
+**GCP, documented, not built.** One Cloud Run service (2 vCPU, 2 GiB, `min-instances=1`, `max-instances=2`, CPU always allocated so the summary sweep is not throttled), Cloud SQL Postgres 17, secrets from Secret Manager, summaries through Vertex with ADC. The summary lease is what makes more than one instance correct, and additive-only migrations let a split `search` keep working across an `onboarding` rollout.
 
-**GCP, documented, not built.** One Cloud Run service (2 vCPU, 2 GiB, `min-instances=1`, `max-instances=2`, CPU always allocated so the summary sweep is not throttled), Cloud SQL Postgres 17 on a dedicated vCPU, secrets from Secret Manager, summaries through Vertex with ADC. The lease in §7 is what makes more than one instance correct. Migrations are additive-only so a split `search` keeps working across an `onboarding` rollout.
+## Testing
 
----
+- **Unit, no containers.** Query planning as a table of queries to plans (worked examples, possessives, the ambiguity rule, ambiguous double mentions, stop-word residuals, `w-9`). Classification of every seed document with no ties. Taxonomy validation. Fusion and ordering in both shapes. Chunking, and that each vector lines up with the text it was made from. Request validation, the API key filter, and the search audit line and metric names. Embedding-backed checks with one model load per JVM: the 126 word-piece bound and the semantic floor gap. The frontend API client (`cd frontend && npm test`).
+- **Integration, Testcontainers with the real model.** Identity, category, compound and ambiguity queries against the seed corpus, context clients ranking below documents, label admission for a document that shares no query words, a paraphrase reaching a tagged document through the label chunk, classification on create, reclassification at startup, passages coming from body chunks, the semantic floor, the model guard, a failing retrieval returning `500` with no partial results, searchable-on-`201`, pagination, contract status codes and auth, and the summary lifecycle (not auto-started, retry after failure, degradation, lease exclusivity).
 
-## 11. Testing
+### Relevance evaluation set
 
-### 11.1 Unit (no containers)
-
-- `QueryPlanner` **(v2)**, a table of queries → expected plan. Includes every worked example in §6.5, possessives, the ambiguity rule, ambiguous double mention, stop-word-only residual, `w-9`.
-- `DocumentClassifier` **(v2)**, every seed document classifies to its expected type from `eval/classification.json`, no ties, and a handful of `unknown` cases.
-- `TaxonomyLoader` **(v2)**, rejects duplicate ids, unknown purpose references, synonyms equal to ids.
-- `DocumentFusion` and `ResultOrdering` **(v2)**, both shapes, label tier before untagged, mention not in `I` still inserted, `I minus mention` has no duplicate, empty residual yields clients only, order is total.
-- `Chunker`, offsets, overlap, single chunk, surrogate pairs.
-- Request validation, `ApiKeyFilter`.
-- Frontend API client: client listing and the client-then-document write sequence, run with `cd frontend && npm test`.
-- Embedding-backed (one model load per JVM), the 126 word-piece bound and the semantic floor gap.
-
-### 11.2 Integration (Testcontainers, full context, real model)
-
-| Test | Asserts |
-|---|---|
-| J1 | `NevisWealth` → John first, `match.field = email`, `tier = identity` |
-| J2 | `address proof` → every address document (53 in the seed corpus) in the first 53 positions, no client above any of them |
-| J3 | `Hendersen` → Mary first |
-| Identity over documents | A query hitting a client's email and a document lexically returns the client first |
-| Context under documents **(v2)** | `advisory fees` → engagement letters lead, Grace Kim present and below them |
-| Compound **(v2)** | `John Doe utility bill`, `Bill's statement`, `Mary's tax form` → the named client's expected document first, then only that client's own documents, then the client, then other clients' documents (§6.5 tier 1 then tier 2) |
-| Ambiguity rule **(v2)** | `bill` → Bill Carter first, bills after. `Bill's statement` → Bill's statement first |
-| Label admission **(v2)** | A document tagged `proof_of_address` whose text contains none of the query words is returned for `proof of address` |
-| Label chunk **(v2)** | A paraphrase absent from the synonym list still returns the tagged document through the semantic signal |
-| Classification on create **(v2)** | `POST` a utility bill → `document_type = utility_bill`, `purposes = [proof_of_address]`, `source = rule`. With `document_type` in the request → `source = request` |
-| Reclassification **(v2)** | A row inserted at `taxonomy_version = 0` is at the current version after startup, with a label chunk |
-| Passage | Passage is body text, never label text, and comes from the best body chunk |
-| Semantic floor | A document below the floor with no lexical or label hit is absent |
-| Model guard | Chunks under another `embedding_model` are invisible |
-| Retriever failure | Any failing retriever → RFC 9457 `500`, never partial results |
-| Searchable on 201, long documents, pagination, empty result, contract codes, auth | As v1 |
-| Summaries | Not auto-started, request, retry after `failed`, degradation, lease exclusivity. As v1 |
-
-### 11.3 Relevance evaluation set **(v2)**
-
-`src/test/resources/eval/` holds `corpus.json` (also the seed), `classification.json` (expected type per document) and `queries.json`.
-
-Each query declares one expectation shape.
+`src/test/resources/eval/` holds the corpus (also the seed: 50 clients, 126 documents), the expected type per document, and the queries. Each query declares one expectation.
 
 | Shape | Assertion |
 |---|---|
 | `first` | The named client or document is at position 1 |
-| `all_within` (n expected items) | Every expected item appears in the first n positions, i.e. recall@n = 1 |
-| `compound` | Expected document first, then only that client's own documents, then the expected client. A client's other documents that clear a signal are tier 1 (§6.5) and may sit between the two, so "second" holds only when no other document of that client qualified |
+| `all_within` (n items) | Every expected item is in the first n positions, so recall@n = 1 |
+| `compound` | Expected document first, then only that client's own documents, then the client. Other qualifying documents of that client may sit between |
 | `none` | Zero results |
-| `gibberish` | Zero results. Unlike `none` it is not a negative for the semantic floor, because the readability gate (§6.3) rejects it, not the floor |
+| `gibberish` | Zero results, rejected by the readability gate rather than the floor |
 
-Every document query additionally asserts **no client is ranked above any expected document**. This generalises v1's zero-client guard and still lets a context-tier client appear below the answers. MRR and recall@n are logged for every run.
+Every document query also asserts that **no client ranks above any expected document**, which still lets a context-tier client appear below the answers. A "top 3" check cannot pass for a query with seven correct answers, so `all_within` measures recall@n. MRR and recall@n are logged on every run; over the current 28 queries MRR is 1.000 and mean recall@n is 0.957. Expected items are hand-labelled from the taxonomy's definition of what answers the question, never read back from a search result. Shared answer sets (`proof_of_address` is 53 documents) keep synonymous queries consistent.
 
-Expected items are hand-labelled from the taxonomy's definition of what answers the question (§3.1), never read back from a search result. `queries.json` names shared answer sets (`proof_of_address` is 53 documents, so `address proof` and `proof of address` are `all_within 53`) and lets an entry name a title alone, meaning every document with that title.
+`semanticFloor` is set by this test as the midpoint of the gap between the lowest positive and highest negative cosine (0.2917 and 0.1836, midpoint 0.2377). The build fails if the gap closes or `application.yaml` drifts from the midpoint. The lexical floor stays 0.6 and is guarded from both sides at the endpoint: `Hendersen` (0.70) is admitted and `joe` (0.50) is not. The classifier must reach 100% on the labelled corpus. The negative queries use `how to bake sourdough bread` rather than a weather query, because `weather` is a substring of the client Zoë Fairweather and trigram matching admits her on the email.
 
-Queries at the current 50-client, 126-document corpus.
+**Known gap.** Two Broadband and Landline bills are genuine address evidence but classify `unknown`, so they never surface for `proof of address`. Adding `broadband` to the `utility_bill` title patterns closes it, together with the labelled corpus and the evaluation.
 
-- `first`: `NevisWealth` (John Doe), `Hendersen` (Mary Henderson), `bill` (Bill Carter), `letter of authority`.
-- `all_within`: `John` (both Johns, 2), `address proof` and `proof of address` (53), `utility bill` (13), `tax residency` (14), `source of funds` (5), `advisory fees` (12), `proof of identity` (22), `risk tolerance` (8), `trust restructuring` (6), `W-9` (2).
-- `compound`: possessive `Bill's statement`, `Mary's tax form`, `Elena's completion statement`, and bare `John Doe utility bill`, `Priya Shah tenancy`. Mentions are unambiguous on purpose. Ambiguous names are covered by the `all_within` and `first` entries below.
-- Tied mentions (§6.1): `John utility bill` and `John's bill` are `all_within 2` (John Doe's 2024 Utility Bill and John Whitfield's Electricity Bill Oct to Dec 2026), and `Priya tenancy` (Priya Shah and Priyanka Raman tie) is `first` Priya Shah's Assured Shorthold Tenancy Agreement. Before tied mentions their reciprocal ranks were 0.50, 0.17 and 0.14 (best expected document at rank 2, 6 and 7). After, all three are 1.0, and over the 28-query set MRR went from 0.905 to 1.000 and mean recall@n from 0.848 to 0.957.
-- `none`: five out-of-domain queries. `weather forecast for the weekend` was replaced by `how to bake sourdough bread` because `weather` is a substring of the client Zoë Fairweather and trigram `word_similarity` admits her on the email. This is a known limit of the lexical floor, not a fixed bug, and the old eval only asserted "no documents" so it never saw it.
+## Performance and capacity
 
-- `gibberish`: `sdfewferdvrevrennfg`, `qwpzxk lmnvbt hgfdsaq`, `asdfghjkl`. Before the readability gate both returned documents on semantic similarity alone (7 for the first); now they return none.
+Estimates, unverified. The timers under Observability are the measurement hook.
 
-`semanticFloor` is set by this test as the midpoint of the gap between the lowest positive and highest negative cosine (currently 0.2917 and 0.1836, midpoint 0.2377), and the build fails if the gap closes or if `application.yaml` drifts from the midpoint. `lexicalFloor` stays 0.6 and is guarded from both sides at the endpoint: `Hendersen` (0.70) is admitted and `joe` (0.50) is not. The classifier must reach 100% on `classification.json`.
+| Stage | Estimate |
+|---|---|
+| Plan | < 1 ms |
+| Query embedding | 5 to 15 ms, in parallel with the rest |
+| Client SQL | 5 to 15 ms (sequential scan, 10³ clients × 4 comparisons) |
+| Label / lexical SQL | < 2 ms / 1 to 5 ms |
+| Semantic SQL | 25 to 75 ms (exact scan, about 4×10⁴ chunks) |
+| Fusion, ordering, hydration | 3 to 8 ms |
+| **Total** | **about 45 to 110 ms**, budget p99 < 300 ms |
 
-**Known gap.** The two Broadband and Landline bills are genuine address evidence but classify `unknown` (§3.1), so they are not in the `proof_of_address` set and never surface for that query. Adding `broadband` to the `utility_bill` title patterns would close it, together with `classification.json` and the eval.
+Document creation is embedding plus one transaction: 10 to 50 ms typical, up to about 1 s at the 64 000-character cap (about 265 chunks), because cost is linear in length. Scale triggers: semantic p95 over about 100 ms means HNSW and a top-K rewrite, client SQL p95 over about 30 ms means GIN `gin_trgm_ops`, writes slowing search means splitting the modules into services, larger documents need an asynchronous ingestion mode that gives up searchable-on-`201`, and multi-tenancy needs a tenant column, scoped uniqueness and row-level security.
 
----
+## Follow-ups and ideas not adopted
 
-## 12. Performance and capacity
+In rough order of expected value; none is in scope.
 
-Estimates, unverified. Micrometer timers in §9 are the measurement hook.
+1. **Async LLM classification** for documents the rules left `unknown`, reusing the summary worker and writing `classification_source = llm`. Never in the write path.
+2. **Prototype embeddings for intents:** embed each purpose's synonyms into one vector and detect an intent when the residual's cosine clears a calibrated floor with a margin. Catches paraphrases the synonym list misses, but must be calibrated on the evaluation or it invents intents.
+3. **Typo-tolerant intents** (`word_similarity ≥ 0.8` against synonym phrases), and **Levenshtein for short names** (`jhon`), each needing evaluation negatives to prove they do not over-fire.
+4. **Cross-encoder rerank** of the top 50 documents once ranking quality plateaus: the first place a second model earns its cost.
+5. **Trailing mentions** (`utility bill for John`), and **filters on `/search`** (`client_id`, `document_type`, `purpose`).
+6. **Browse tier for identity queries**, so `John` returns John followed by his documents. A product decision, because it changes what a result means.
+7. **Sentence-aware chunking**, and **summary as a chunk**, which embeds well but couples summaries to search.
+8. **Click logging** on result position, to find missing synonyms and mis-tagged documents from real usage.
 
-| Stage | Estimate | Note |
-|---|---|---|
-| Plan | < 1 ms | In-process, ~100 synonym phrases |
-| Query embedding | 5 to 15 ms | Parallel with the others |
-| Client SQL | 5 to 15 ms | Sequential scan, 10³ clients × 4 trigram comparisons |
-| Label SQL | < 2 ms | Indexed on type and purposes |
-| Lexical SQL | 1 to 5 ms | GIN on `tsv` |
-| Semantic SQL | 25 to 75 ms | Exact scan over ~4×10⁴ chunks (label chunk adds ~25%) |
-| Fusion, ordering, hydration | 3 to 8 ms | |
-| **Total** | **~45 to 110 ms** | Budget p99 < 300 ms |
+Known limits: short-name typos, one- or two-character queries, English-only synonyms and stemming.
 
-Document creation is embedding plus one transaction, 10 to 50 ms typical, up to ~1 s at the 64 000-character cap (~265 body chunks). Cost is linear in length, which is why the cap and the 1 s target are one constraint.
-
-Scale triggers, unchanged from v1. Semantic p95 over ~100 ms → HNSW and a top-K rewrite. Client SQL p95 over ~30 ms → GIN `gin_trgm_ops`. Writes slowing search → split the modules into services. Documents larger than the cap → a second async ingestion mode that gives up searchable-on-`201`. Multi-tenancy → tenant column, scoped uniqueness, RLS.
-
----
-
-## 13. Follow-ups and ideas not adopted **(v2)**
-
-Ordered by expected value. None is in v2 scope.
-
-1. **Async LLM classification.** Reuse the summary worker pattern to have Gemini classify documents the rules left `unknown`, writing `classification_source = llm`. Never in the write path, so the zero-credential local run and the `201` latency stay intact.
-2. **Prototype embeddings for intents.** Embed each purpose's synonym list into one prototype vector at startup and detect an intent when the residual's cosine to a prototype clears a calibrated floor with a margin over the runner-up. Catches paraphrases the synonym list misses. Calibrate on the eval, or it becomes a new source of false intents.
-3. **Typo-tolerant intents.** `word_similarity ≥ 0.8` between residual and synonym phrases (`residancy evidence`). Cheap, needs eval negatives to prove it does not over-fire.
-4. **Cross-encoder rerank** of the top 50 documents once ranking quality plateaus. First place where a second model earns its cost.
-5. **Levenshtein for short names.** `fuzzystrmatch` for transpositions and single substitutions (`jhon`, `joe`). Wider false-match surface, gate it behind a length limit.
-6. **Trailing mentions.** `utility bill for John` puts the client last. Allow a mention at either end when the middle tokens are all intents or stop words.
-7. **Filters on `/search`.** `client_id`, `document_type`, `purpose` query parameters for a future UI. The label retriever already does the work.
-8. **Browse tier for identity queries.** `John` could return John followed by his documents by recency. A product decision, because it changes what a search result means.
-9. **Sentence-aware chunking.** Cut windows at sentence boundaries so the one sentence that answers a query is never split across chunks.
-10. **Summary as a chunk.** Embed a ready summary as `kind = 'summary'`. Purpose-oriented text embeds well, but it couples summaries to search, which v1 kept apart on purpose.
-11. **Click logging** on result position to find missing synonyms and mis-tagged documents from real usage.
-12. **Frontend debounce.** A request per keystroke would multiply the estimated 10 to 30 searches per second for 100 advisers. The current SPA debounces at 300 ms.
-
-Known limits carried forward. Short-name typos (§6.2), one- or two-character queries, English-only synonyms and stemming, a synonym that is also a client's name is resolved by the ambiguity rule and nothing smarter.
-
-**The semantic floor is a coarse gate, and no single cosine threshold is right.** Measured on the seed corpus with MiniLM. Near-domain out-of-corpus queries score higher than the floor: `cheap hotel deals in Rome` 0.328 (closest chunk, the Dutch lease), `weekend flight to Lisbon` 0.297 (a passport). Paraphrase queries with no taxonomy synonym score as low as 0.345 for `paper showing the home address` and 0.12 for one electricity bill under `evidence of where the client lives`. The two ranges overlap, so raising the floor would drop real paraphrase hits before it dropped travel noise, and the gap the eval derives from easy negatives does not survive harder ones. Such hits are admitted by the semantic signal alone and rank below every label and lexical hit (§6.4). The remedies are follow-ups 2 and 4, not a tuned number.
-
----
-
-## 14. Implementation plan (delta from v1)
-
-Each step leaves a runnable system with a green build. Steps 1-7 are v2, step 8 is the frontend.
-
-
-
-1. **Taxonomy.** `taxonomy.yaml`, `Taxonomy`, `TaxonomyLoader`, validation tests.
-2. **Schema and classification.** `V2__taxonomy.sql`, `DocumentClassifier`, `label_text`, label chunk in `DocumentService`, `Reclassifier` at startup, `classification.json`, 100% on the seed corpus. Request fields `document_type` and `purposes`.
-3. **Planner.** Normalisation, mention detection with the ambiguity rule, intents. Table-driven unit tests from §6.5.
-4. **Retrievers.** `ClientRetriever` tiers, `LabelDocumentRetriever`, `LexicalDocumentRetriever`, `SemanticDocumentRetriever` over both chunk kinds.
-5. **Fusion and ordering.** `DocumentFusion` (RRF), `ResultOrdering` v2, hydration with best body chunk, response schema changes (`tier`, `signals`, `labels`, document type fields).
-6. **Eval v2.** `queries.json` with expectation shapes, the no-client-above-answers guard, recall@n and MRR, floor re-derivation. Every v1 failure in §0.1 must pass.
-7. **Docs.** README examples for identity, category and compound queries, the taxonomy file as the place to add a document type, and the reclassification behaviour.
-8. **Frontend (React SPA).** Vite + React Router SPA served from the Spring Boot jar. The persistent header search calls `/api/search`; its home route shows responsive client tiles and a create-client tile. Four pages: home/search (`/`), create client (`/clients/new`), client detail (`/clients/:id`), document detail (`/clients/:id/documents/:docId`). API calls through `/api/*` prefix. `ApiRewriteFilter` rewrites `/api/search` → `/search` etc. `WebMvcConfig` serves `index.html` for SPA routes. `ApiKeyFilter` allowlists static assets. `GET /clients/{id}/documents` added to list a client's documents.
+**The semantic floor is a coarse gate, and no single cosine threshold is right.** Near-domain queries outside the corpus score above the floor (`cheap hotel deals in Rome` 0.328, `weekend flight to Lisbon` 0.297), while paraphrases with no taxonomy synonym score as low as 0.345 (`paper showing the home address`) and 0.12 (one electricity bill under `evidence of where the client lives`). The ranges overlap, so raising the floor would drop real paraphrase hits before travel noise. Such hits are admitted by the semantic signal alone and rank below every label and lexical hit. The remedies are prototype embeddings and a cross-encoder rerank, not a tuned number.

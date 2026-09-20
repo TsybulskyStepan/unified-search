@@ -262,7 +262,7 @@ A React SPA is the primary advisor surface. Its home page lists clients and prov
 
 **The seed corpus is a realistic KYC/onboarding document set** — utility bill, bank statement, passport summary, W-9, tax return, engagement letter — not a contrived synonym pair. It demonstrates the actual J2 workflow.
 
-**Performance targets — stated, not measured.** Search p99 < 300 ms; document creation p99 < 1 s, chunking and embedding included (§5.6). The creation figure is sized to the largest document §5.6 accepts, since embedding cost is linear in length. These are design targets derived in system-design §13.1; **no load test is run** and the numbers are not benchmarked. Per-stage timers are in place to measure them in operation, which is where the figures that matter would come from anyway.
+**Performance targets — stated, not measured.** Search p99 < 300 ms; document creation p99 < 1 s, chunking and embedding included (§5.6). The creation figure is sized to the largest document §5.6 accepts, since embedding cost is linear in length. These are design targets derived in the system design's performance section; **no load test is run** and the numbers are not benchmarked. Per-stage timers are in place to measure them in operation, which is where the figures that matter would come from anyway.
 
 **Reproducibility:** `docker compose up` yields a working, seeded system that demonstrably satisfies J1 and J2 **with zero external credentials**.
 
