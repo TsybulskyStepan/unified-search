@@ -5,6 +5,7 @@ import com.pgvector.PGvector;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -12,6 +13,7 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public class DocumentSearchRepository {
+  private static final int CANDIDATE_LIMIT = 200;
   private final JdbcClient jdbc;
   private final double semanticFloor;
 
@@ -21,48 +23,80 @@ public class DocumentSearchRepository {
     this.semanticFloor = semanticFloor;
   }
 
-  /**
-   * The best-matching chunk per document, floored (§6.4). Restricted to {@code kind = 'body'} (§2.1
-   * v2): a document's label chunk (ticket 15, §5.3) embeds its type and purposes, not its text, and
-   * must never win the passage a hydrated result shows (§6.6) — it would surface as an empty
-   * string, since a label chunk's offsets are always {@code 0, 0}.
-   */
-  public List<DocumentMatch> findMatches(float[] queryVector, String embeddingModel) {
+  public List<LabelDocumentMatch> findLabelMatches(Set<String> types, Set<String> purposes) {
+    if (types.isEmpty() && purposes.isEmpty()) {
+      return List.of();
+    }
     return jdbc.sql(
             """
-            SELECT document_id, client_id, start_offset, end_offset, similarity
+            SELECT id, client_id, document_type, purposes, created_at
+            FROM document
+            WHERE document_type = ANY(:types) OR purposes && CAST(:purposes AS text[])
+            ORDER BY created_at DESC, id
+            LIMIT :limit
+            """)
+        .param("types", types.toArray(String[]::new))
+        .param("purposes", purposes.toArray(String[]::new))
+        .param("limit", CANDIDATE_LIMIT)
+        .query((resultSet, rowNumber) -> mapLabelMatch(resultSet, types, purposes))
+        .list();
+  }
+
+  public boolean hasSearchableTerms(String residual) {
+    return jdbc.sql("SELECT numnode(websearch_to_tsquery('english', :residual)) > 0")
+        .param("residual", residual)
+        .query(Boolean.class)
+        .single();
+  }
+
+  public List<RankedDocumentMatch> findLexicalMatches(String residual) {
+    return jdbc.sql(
+            """
+            SELECT d.id AS document_id, d.client_id, d.created_at, ts_rank_cd(d.tsv, tq, 32) AS similarity
+            FROM document d, websearch_to_tsquery('english', :residual) tq
+            WHERE numnode(tq) > 0 AND d.tsv @@ tq
+            ORDER BY similarity DESC, d.id
+            LIMIT :limit
+            """)
+        .param("residual", residual)
+        .param("limit", CANDIDATE_LIMIT)
+        .query(DocumentSearchRepository::mapRankedMatch)
+        .list();
+  }
+
+  public List<RankedDocumentMatch> findSemanticMatches(float[] queryVector, String embeddingModel) {
+    return jdbc.sql(
+            """
+            SELECT document_id, client_id, created_at, similarity
             FROM (
-                SELECT DISTINCT ON (document_id)
-                    document_id,
-                    client_id,
-                    start_offset,
-                    end_offset,
-                    1 - (embedding <=> :query_vector) AS similarity
+                SELECT DISTINCT ON (chunk.document_id)
+                    chunk.document_id,
+                    document.client_id,
+                    document.created_at,
+                    1 - (chunk.embedding <=> :query_vector) AS similarity
                 FROM document_chunk chunk
                 JOIN document ON document.id = chunk.document_id
-                WHERE embedding_model = :embedding_model AND kind = 'body'
-                ORDER BY document_id, embedding <=> :query_vector
+                WHERE chunk.embedding_model = :embedding_model
+                ORDER BY chunk.document_id, chunk.embedding <=> :query_vector
             ) AS best_chunk
             WHERE similarity >= :semantic_floor
             ORDER BY similarity DESC, document_id
-            LIMIT 200
+            LIMIT :limit
             """)
         .param("query_vector", new PGvector(queryVector))
         .param("embedding_model", embeddingModel)
         .param("semantic_floor", semanticFloor)
-        .query(DocumentSearchRepository::mapMatch)
+        .param("limit", CANDIDATE_LIMIT)
+        .query(DocumentSearchRepository::mapRankedMatch)
         .list();
   }
 
-  public List<HydratedDocument> findByMatches(List<DocumentMatch> matches) {
+  public List<HydratedDocument> findByMatches(
+      List<DocumentMatch> matches, float[] queryVector, String embeddingModel) {
     if (matches.isEmpty()) {
       return List.of();
     }
-
     UUID[] documentIds = matches.stream().map(DocumentMatch::documentId).toArray(UUID[]::new);
-    int[] starts = matches.stream().mapToInt(DocumentMatch::startOffset).toArray();
-    int[] ends = matches.stream().mapToInt(DocumentMatch::endOffset).toArray();
-
     return jdbc.sql(
             """
             SELECT d.id,
@@ -71,34 +105,61 @@ public class DocumentSearchRepository {
                    d.title,
                    d.summary,
                    d.summary_status,
+                   d.document_type,
+                   d.purposes,
+                   d.classification_source,
                    d.created_at,
                    substr(d.content, p.start_offset + 1, p.end_offset - p.start_offset) AS passage
-            FROM unnest(
-                CAST(:document_ids AS uuid[]),
-                CAST(:starts AS int[]),
-                CAST(:ends AS int[])
-            ) AS p(id, start_offset, end_offset)
-            JOIN document d ON d.id = p.id
+            FROM unnest(CAST(:document_ids AS uuid[])) AS selected(id)
+            JOIN document d ON d.id = selected.id
             JOIN client c ON c.id = d.client_id
+            JOIN LATERAL (
+                SELECT start_offset, end_offset
+                FROM document_chunk
+                WHERE document_id = d.id AND kind = 'body' AND embedding_model = :embedding_model
+                ORDER BY embedding <=> :query_vector
+                LIMIT 1
+            ) p ON true
             """)
         .param("document_ids", documentIds)
-        .param("starts", starts)
-        .param("ends", ends)
+        .param("embedding_model", embeddingModel)
+        .param("query_vector", new PGvector(queryVector))
         .query(DocumentSearchRepository::mapDocument)
         .list();
   }
 
-  private static DocumentMatch mapMatch(ResultSet resultSet, int rowNumber) throws SQLException {
-    return new DocumentMatch(
+  private static LabelDocumentMatch mapLabelMatch(
+      ResultSet resultSet, Set<String> types, Set<String> purposes) throws SQLException {
+    String documentType = resultSet.getString("document_type");
+    String[] documentPurposes = (String[]) resultSet.getArray("purposes").getArray();
+    List<String> labels = new java.util.ArrayList<>();
+    if (types.contains(documentType)) {
+      labels.add("type:" + documentType);
+    }
+    for (String purpose : documentPurposes) {
+      if (purposes.contains(purpose)) {
+        labels.add("purpose:" + purpose);
+      }
+    }
+    return new LabelDocumentMatch(
+        resultSet.getObject("id", UUID.class),
+        resultSet.getObject("client_id", UUID.class),
+        resultSet.getTimestamp("created_at").toInstant(),
+        labels);
+  }
+
+  private static RankedDocumentMatch mapRankedMatch(ResultSet resultSet, int rowNumber)
+      throws SQLException {
+    return new RankedDocumentMatch(
         resultSet.getObject("document_id", UUID.class),
         resultSet.getObject("client_id", UUID.class),
-        resultSet.getInt("start_offset"),
-        resultSet.getInt("end_offset"),
+        resultSet.getTimestamp("created_at").toInstant(),
         resultSet.getDouble("similarity"));
   }
 
   private static HydratedDocument mapDocument(ResultSet resultSet, int rowNumber)
       throws SQLException {
+    String[] purposes = (String[]) resultSet.getArray("purposes").getArray();
     SearchDocument document =
         new SearchDocument(
             resultSet.getObject("id", UUID.class),
@@ -107,6 +168,9 @@ public class DocumentSearchRepository {
             resultSet.getString("title"),
             resultSet.getString("summary"),
             resultSet.getString("summary_status"),
+            resultSet.getString("document_type"),
+            List.of(purposes),
+            resultSet.getString("classification_source"),
             resultSet.getTimestamp("created_at").toInstant());
     return new HydratedDocument(document, resultSet.getString("passage"));
   }

@@ -73,6 +73,8 @@ class ObservabilityIntegrationTest extends IntegrationTest {
             "plan_shape=",
             "intent_count=",
             "mention_present=",
+            "client_hits=",
+            "label_hits=",
             "lexical_hits=",
             "semantic_hits=",
             "returned=",
@@ -104,6 +106,8 @@ class ObservabilityIntegrationTest extends IntegrationTest {
     assertThat(metrics.statusCode()).isEqualTo(200);
     assertThat(metrics.body())
         .contains(
+            "search.clients",
+            "search.label",
             "search.lexical",
             "search.plan",
             "search.embed_query",

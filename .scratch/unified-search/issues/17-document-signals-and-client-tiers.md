@@ -18,16 +18,16 @@ available here, because nothing in the response would show what went missing.
 
 **Blocked by:** 15 — Classify on ingest; 16 — The query planner.
 
-**Status:** ready-for-agent
+**Status:** complete
 
-- [ ] A document carrying a queried purpose is admitted however its text is worded
-- [ ] A document matching on stemmed text in its title, labels or content is admitted
-- [ ] The semantic retriever considers the label chunk alongside the body chunks
-- [ ] A query whose residual is empty returns no documents at all
-- [ ] A residual of only stop words neither errors nor admits everything
-- [ ] A client matched on name, email or social links is marked identity; one matched only on description is marked context
-- [ ] The tier a client matched on is visible in the response
-- [ ] Each retriever caps its candidates, and the cap is the same for all three
-- [ ] Any one retriever failing yields an RFC 9457 error and never a partial result
-- [ ] The three retrievers and the query embedding run concurrently, so the request is not the sum of their latencies
-- [ ] The semantic floor still applies, but a document below it can now be admitted by another signal
+- [x] A document carrying a queried purpose is admitted however its text is worded
+- [x] A document matching on stemmed text in its title, labels or content is admitted
+- [x] The semantic retriever considers the label chunk alongside the body chunks
+- [x] A query whose residual is empty returns no documents at all
+- [x] A residual of only stop words neither errors nor admits everything
+- [x] A client matched on name, email or social links is marked identity; one matched only on description is marked context
+- [x] The tier a client matched on is visible in the response
+- [x] Each retriever caps its candidates, and the cap is the same for all three
+- [x] Any one retriever failing yields an RFC 9457 error and never a partial result
+- [x] The three retrievers and the query embedding run concurrently, so the request is not the sum of their latencies
+- [x] The semantic floor still applies, but a document below it can now be admitted by another signal

@@ -95,7 +95,9 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/ClientSearchResult"
+                  oneOf:
+                    - $ref: "#/components/schemas/ClientSearchResult"
+                    - $ref: "#/components/schemas/DocumentSearchResult"
 
 components:
   schemas:
@@ -145,10 +147,66 @@ components:
           format: double
         match:
           type: object
-          required: [field]
+          required: [field, tier]
           properties:
             field:
               type: string
               enum: [name, email, description, social_links]
+            tier:
+              type: string
+              enum: [identity, context]
         client:
           $ref: "#/components/schemas/Client"
+
+    DocumentSearchResult:
+      type: object
+      required: [type, score, match, document]
+      properties:
+        type:
+          type: string
+          enum: [document]
+        score:
+          type: number
+          format: double
+        match:
+          type: object
+          required: [passage, signals, labels]
+          properties:
+            passage:
+              type: string
+            signals:
+              type: array
+              items:
+                type: string
+                enum: [label, lexical, semantic]
+            labels:
+              type: array
+              items:
+                type: string
+        document:
+          type: object
+          properties:
+            id:
+              type: string
+            client_id:
+              type: string
+            client_name:
+              type: string
+            title:
+              type: string
+            document_type:
+              type: string
+            purposes:
+              type: array
+              items:
+                type: string
+            classification_source:
+              type: string
+            summary:
+              type: string
+              nullable: true
+            summary_status:
+              type: string
+            created_at:
+              type: string
+              format: date-time

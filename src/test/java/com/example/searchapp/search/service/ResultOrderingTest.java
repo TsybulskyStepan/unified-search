@@ -57,12 +57,29 @@ class ResultOrderingTest {
         .containsExactly(JOHN, MARYS_BILL, MARY);
   }
 
+  @Test
+  void placesContextClientsAfterDocumentsWhileKeepingIdentityClientsFirst() {
+    var candidates =
+        ResultOrdering.order(
+            List.of(client(JOHN, "identity"), client(MARY, "context")),
+            List.of(document(MARYS_BILL, MARY)),
+            new QueryPlan("advisory fees", null, "advisory fees", java.util.Set.of()));
+
+    assertThat(candidates)
+        .extracting(ResultOrdering.Candidate::id)
+        .containsExactly(JOHN, MARYS_BILL, MARY);
+  }
+
   private static ClientMatch client(UUID id) {
-    return new ClientMatch(id, "name", 1.0);
+    return client(id, "identity");
+  }
+
+  private static ClientMatch client(UUID id, String tier) {
+    return new ClientMatch(id, "name", tier, 1.0);
   }
 
   private static DocumentMatch document(UUID documentId, UUID clientId) {
-    return new DocumentMatch(documentId, clientId, 0, 1, 1.0);
+    return new DocumentMatch(documentId, clientId, 1.0, List.of("semantic"), List.of());
   }
 
   private static QueryPlan plan(UUID clientId, String residual) {

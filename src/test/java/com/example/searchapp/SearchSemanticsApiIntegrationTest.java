@@ -53,12 +53,7 @@ class SearchSemanticsApiIntegrationTest extends IntegrationTest {
   }
 
   @Test
-  void neverReturnsTheLabelChunkAsTheDocumentPassage() throws Exception {
-    // The label chunk (ticket 15, §5.3) is made the closest possible match to the query, and the
-    // body chunk the furthest: if the semantic retriever ever let a label chunk win best-passage
-    // selection, this document would either be missing (label chunk excluded, body chunk alone is
-    // below the floor) or would surface an empty passage (a label chunk's offsets are always 0, 0).
-    // Either way, "the passage is the label chunk" can never be what the assertion below sees.
+  void usesALabelChunkForSemanticAdmissionButABodyChunkForThePassage() throws Exception {
     String query = "label chunk isolation regression";
     String content = "unrelated body content";
     String documentId =
@@ -74,7 +69,10 @@ class SearchSemanticsApiIntegrationTest extends IntegrationTest {
 
     JsonNode results = search(query);
 
-    assertThat(results.toString()).doesNotContain(documentId);
+    assertThat(results.toString())
+        .contains(documentId)
+        .contains("\"passage\":\"unrelated body content\"")
+        .doesNotContain("\"passage\":\"\"");
   }
 
   @Test
@@ -90,8 +88,7 @@ class SearchSemanticsApiIntegrationTest extends IntegrationTest {
 
     assertThat(results.get(0).path("type").asText()).isEqualTo("client");
     assertThat(matchedDocument.path("type").asText()).isEqualTo("document");
-    assertThat(results.get(0).path("score").decimalValue())
-        .isLessThan(matchedDocument.path("score").decimalValue());
+    assertThat(matchedDocument.path("match").path("signals")).isNotEmpty();
   }
 
   @Test
@@ -154,7 +151,7 @@ class SearchSemanticsApiIntegrationTest extends IntegrationTest {
     String documentId =
         createDocument(
             createClient("below-floor-owner@example.com"), "Evidence", "unrelated passage");
-    setOnlyChunkEmbedding(documentId, inverse(embedder.embed(query)));
+    setAllChunkEmbeddings(documentId, inverse(embedder.embed(query)));
 
     JsonNode results = search(query);
 
@@ -223,6 +220,16 @@ class SearchSemanticsApiIntegrationTest extends IntegrationTest {
             .param("document_id", UUID.fromString(documentId))
             .update();
     assertThat(updated).isEqualTo(1);
+  }
+
+  private void setAllChunkEmbeddings(String documentId, float[] embedding) {
+    int updated =
+        jdbc.sql(
+                "UPDATE document_chunk SET embedding = :embedding WHERE document_id = :document_id")
+            .param("embedding", new PGvector(embedding))
+            .param("document_id", UUID.fromString(documentId))
+            .update();
+    assertThat(updated).isGreaterThanOrEqualTo(2);
   }
 
   private static float[] inverse(float[] vector) {
