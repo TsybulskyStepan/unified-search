@@ -28,7 +28,11 @@ class ApiBoundaryIntegrationTest extends IntegrationTest {
     assertThat(missing.body()).contains("\"status\":401").doesNotContain("stackTrace");
 
     assertThat(get(port, "/protected", "wrong-key").statusCode()).isEqualTo(401);
-    assertThat(get(port, "/protected", TEST_API_KEY).statusCode()).isEqualTo(404);
+    var unknownRoute = get(port, "/protected", TEST_API_KEY);
+    assertThat(unknownRoute.statusCode()).isEqualTo(404);
+    assertThat(unknownRoute.body())
+        .contains("The requested resource was not found")
+        .doesNotContain("static resource");
   }
 
   @Test

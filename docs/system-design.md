@@ -311,18 +311,18 @@ JSON is `snake_case`. Errors are RFC 9457 `application/problem+json`. IDs are UU
 | Method and path | Module | Success | Errors | Notes |
 |---|---|---|---|---|
 | `POST /clients` | onboarding | `201`, `Location`, `Client` | `400`, `401`, `409` | |
-| `GET /clients/{id}` | onboarding | `200` `Client` | `401`, `404` | |
-| `GET /clients/{id}/documents` | onboarding | `200` `Document[]` | `401`, `404` | Lists all documents for a client, newest first |
+| `GET /clients/{id}` | onboarding | `200` `Client` | `400`, `401`, `404` | |
+| `GET /clients/{id}/documents` | onboarding | `200` `Document[]` | `400`, `401`, `404` | Lists all documents for a client, newest first |
 | `POST /clients/{id}/documents` | onboarding | `201`, `Location`, `Document` | `400`, `401`, `404` | Optional `document_type`, `purposes` **(v2)**. Never calls a model |
-| `GET /clients/{id}/documents/{documentId}` | onboarding | `200` `Document` | `401`, `404` | Never triggers a summary |
-| `POST /clients/{id}/documents/{documentId}/summary` | onboarding | `202` `Document` | `401`, `404` | `none` or `failed` → `pending`. Already `pending` → `202` no-op. `ready` → `200` no-op |
+| `GET /clients/{id}/documents/{documentId}` | onboarding | `200` `Document` | `400`, `401`, `404` | Never triggers a summary |
+| `POST /clients/{id}/documents/{documentId}/summary` | onboarding | `202` `Document` | `400`, `401`, `404` | `none` or `failed` → `pending`. Already `pending` → `202` no-op. `ready` → `200` no-op |
 | `GET /search?q=&limit=&offset=` | search | `200` `SearchResult[]`, `X-Total-Count` | `400`, `401` | `[]` when nothing qualifies, never `404` |
 | `GET /health` | shared | `200` | | Unauthenticated |
 | `GET /v3/api-docs`, `/swagger-ui/**` | shared | `200` | | Unauthenticated |
 | `GET /` | shared | `200` `index.html` | | Serves the React SPA |
 | `GET /api/*` | shared | Rewritten to `/*` | | `ApiRewriteFilter` maps `/api/search` → `/search` etc. |
 
-A `404` covers both a missing id and a malformed UUID.
+A missing id is `404`. A malformed UUID in a path is `400`, a bad request rather than a missing record. An unknown route is `404` with the same generic body as any other.
 
 ### 4.2 Validation
 
@@ -514,7 +514,7 @@ LIMIT 200;
 
 - Exact scan, no index. ~10⁴ documents × ~4 chunks is ~4×10⁴ distance computations.
 - `embedding_model` is bound from the live `Embedder`. A model change without re-index matches nothing, loudly.
-- `semanticFloor` is a **recall gate**, currently 0.238, re-derived by the eval over both label and body chunks as the midpoint between the lowest positive and highest negative cosine (§11.3). With label and lexical admission it is no longer the only thing standing between a relevant document and the result list, which is the point.
+- `semanticFloor` is a **recall gate**, currently 0.238, re-derived by the eval over both label and body chunks as the midpoint between the lowest positive and highest negative cosine (§11.3). With label and lexical admission it is no longer the only thing standing between a relevant document and the result list, which is the point. It does not separate near-domain noise from paraphrase recall, see the known limits in §13.
 - Future path when the scan exceeds budget, HNSW plus a top-K rewrite.
 
 ### 6.4 Fusion **(v2)**
@@ -769,6 +769,8 @@ Ordered by expected value. None is in v2 scope.
 12. **Frontend debounce.** A request per keystroke would multiply the estimated 10 to 30 searches per second for 100 advisers. The current SPA debounces at 300 ms.
 
 Known limits carried forward. Short-name typos (§6.2), one- or two-character queries, English-only synonyms and stemming, a synonym that is also a client's name is resolved by the ambiguity rule and nothing smarter.
+
+**The semantic floor is a coarse gate, and no single cosine threshold is right.** Measured on the seed corpus with MiniLM. Near-domain out-of-corpus queries score higher than the floor: `cheap hotel deals in Rome` 0.328 (closest chunk, the Dutch lease), `weekend flight to Lisbon` 0.297 (a passport). Paraphrase queries with no taxonomy synonym score as low as 0.345 for `paper showing the home address` and 0.12 for one electricity bill under `evidence of where the client lives`. The two ranges overlap, so raising the floor would drop real paraphrase hits before it dropped travel noise, and the gap the eval derives from easy negatives does not survive harder ones. Such hits are admitted by the semantic signal alone and rank below every label and lexical hit (§6.4). The remedies are follow-ups 2 and 4, not a tuned number.
 
 ---
 

@@ -33,3 +33,11 @@ the README has to say where it lives and what editing it costs.
 - [ ] The taxonomy file is named as the place to add a document type, with what else has to change when one is added
 - [ ] Reclassification on startup is described, including the briefly-stale window and why it is not blocking
 - [ ] The rule-based classifier is explained as a deliberate choice over an LLM at ingest, with the zero-credential run as the reason
+
+Added after the pre-README assessment (2026-09-20), each from a finding made on a running stack.
+
+- [ ] The reset command (`docker compose down -v`) is stated next to the setup command, with the symptom it fixes: the seeder skips a non-empty database, so one client created before the first seed leaves `NevisWealth` returning `[]`
+- [ ] The complexity is justified by the four failures it fixes (§0.1), in a paragraph a reviewer meets before the architecture, because the brief budgets 10 to 14 hours and this is more than that
+- [ ] The semantic floor is described as a coarse gate with its measured limit (§13), not as a tuned threshold
+- [ ] The broadband-bill gap (§11.3) and the `Fairweather` lexical false positive are listed among the known limits
+- [ ] `http/` is named as the place to run every endpoint, with the reset command

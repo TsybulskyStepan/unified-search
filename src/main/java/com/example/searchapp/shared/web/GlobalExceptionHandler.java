@@ -21,6 +21,7 @@ import org.springframework.web.context.request.ServletWebRequest;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 /**
  * Extends {@link ResponseEntityExceptionHandler} so Spring's request-shape exception mappings keep
@@ -61,20 +62,32 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
       WebRequest request) {
     if (exception instanceof MethodArgumentTypeMismatchException argumentMismatch
         && argumentMismatch.getRequiredType() == UUID.class) {
-      // §4.1: "A 404 is returned for a missing ID and for a malformed UUID." Deliberately generic
-      // rather than naming an entity — this handler runs before any controller method, so it has
-      // no reliable way to know which resource a malformed id was meant to identify (§4.1 has
-      // several path variables named "id" alone), and guessing from the variable name would
-      // couple shared/web to onboarding's path-naming convention (§1.3).
+      // Deliberately generic: this runs before any controller, so it cannot know which resource
+      // the id was meant to identify, and naming one would couple shared/web to onboarding (§1.3).
       ProblemDetail problem =
           ProblemDetails.of(
-              HttpStatus.NOT_FOUND,
-              "Not found",
-              "The requested resource was not found",
+              HttpStatus.BAD_REQUEST,
+              "Invalid request",
+              "The identifier in the request path is malformed",
               instanceUri(request));
-      return handleExceptionInternal(exception, problem, headers, HttpStatus.NOT_FOUND, request);
+      return handleExceptionInternal(exception, problem, headers, HttpStatus.BAD_REQUEST, request);
     }
     return super.handleTypeMismatch(exception, headers, statusCode, request);
+  }
+
+  @Override
+  protected ResponseEntity<Object> handleNoResourceFoundException(
+      NoResourceFoundException exception,
+      HttpHeaders headers,
+      HttpStatusCode statusCode,
+      WebRequest request) {
+    ProblemDetail problem =
+        ProblemDetails.of(
+            HttpStatus.NOT_FOUND,
+            "Not found",
+            "The requested resource was not found",
+            instanceUri(request));
+    return handleExceptionInternal(exception, problem, headers, HttpStatus.NOT_FOUND, request);
   }
 
   @Override
