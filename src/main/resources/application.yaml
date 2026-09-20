@@ -14,10 +14,10 @@ app:
     enabled: ${SEED_ENABLED:true}
   search:
     # §6.3. Measured by SemanticFloorEvalTest over label and body chunks in the seed/eval corpus
-    # (§12.3): lowest positive-pair cosine score 0.3483, highest negative-query score 0.1836,
-    # midpoint 0.266.
-    # The live /search integration tests guard the same floor at the API boundary.
-    semantic-floor: 0.266
+    # (§11.3): lowest positive-pair cosine score 0.2917, highest negative-query score 0.1836,
+    # midpoint 0.2377. The test fails the build if the gap closes or this value drifts from the
+    # midpoint. The live /search integration tests guard the same floor at the API boundary.
+    semantic-floor: 0.238
 springdoc:
   swagger-ui:
     path: /swagger-ui.html

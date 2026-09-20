@@ -22,20 +22,20 @@ below it is now a ranking question instead of a disappearance.
 
 **Blocked by:** 18 — Fuse the signals, then order by plan shape.
 
-**Status:** ready-for-agent
+**Status:** complete
 
 - [x] Every genuinely relevant document for a query is labelled, so a query with several correct answers can be asserted at all
 - [x] A total miss lowers MRR instead of raising it
 - [x] Every query is measured and recorded whether or not it passes, so one failure does not hide the rest
-- [ ] Each query declares one expectation shape, and the shape decides its assertion
-- [ ] A single-answer query asserts position 1
-- [ ] An n-answer query asserts every expected item inside the first n positions
-- [ ] A compound query asserts the expected document first and the expected client second
-- [ ] An out-of-domain query asserts an empty result
-- [ ] No client outranks any expected document, on every document query
-- [ ] Recall@n and MRR are logged on every run
-- [ ] The semantic floor is re-derived from the measured gap, and the build fails if the gap closes
-- [ ] The lexical floor is guarded from both sides and is never derived from the eval
-- [ ] The classifier reaches 100% against the expected-type file
-- [ ] Compound behaviour is covered by more than one query, including a possessive and a bare-category case
-- [ ] Every failure listed in §0.1 passes
+- [x] Each query declares one expectation shape, and the shape decides its assertion
+- [x] A single-answer query asserts position 1
+- [x] An n-answer query asserts every expected item inside the first n positions
+- [x] A compound query asserts the expected document first and the expected client second
+- [x] An out-of-domain query asserts an empty result
+- [x] No client outranks any expected document, on every document query
+- [x] Recall@n and MRR are logged on every run
+- [x] The semantic floor is re-derived from the measured gap, and the build fails if the gap closes
+- [x] The lexical floor is guarded from both sides and is never derived from the eval
+- [x] The classifier reaches 100% against the expected-type file
+- [x] Compound behaviour is covered by more than one query, including a possessive and a bare-category case
+- [x] Every failure listed in §0.1 passes

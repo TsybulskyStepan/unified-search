@@ -11,9 +11,13 @@ import com.example.searchapp.shared.embedding.Cosine;
 import com.example.searchapp.shared.embedding.Embedder;
 import com.example.searchapp.shared.taxonomy.Taxonomy;
 import com.example.searchapp.shared.taxonomy.TaxonomyLoader;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
+import org.yaml.snakeyaml.Yaml;
 
 /**
  * The risk gate this ticket exists for (§12.3): proves the embedding model bridges a KYC *category*
@@ -28,11 +32,18 @@ import org.junit.jupiter.api.Test;
  * build if that gap ever closes, per the ticket's own gate: "if positives and negatives do not
  * separate, stop and change the model before continuing."
  *
- * <p>This uses raw similarity scores computed in Java, not the search endpoint (that version,
- * exercising the real floors end to end, is ticket 08).
+ * <p>Positives are every expected document of a {@code first} or {@code all_within} query in {@code
+ * queries.json}; negatives are its {@code none} queries (§11.3). The configured floor must equal
+ * the measured midpoint, so a change to the corpus or the query set that moves the gap fails the
+ * build until {@code application.yaml} is re-derived.
+ *
+ * <p>This uses raw similarity scores computed in Java; {@code
+ * SearchRelevanceEvalApiIntegrationTest} exercises the floors end to end.
  */
 class SemanticFloorEvalTest {
   private static final Embedder embedder = new Embedder();
+
+  private static final double FLOOR_TOLERANCE = 0.0005;
 
   private record EmbeddedDocument(String clientEmail, String title, List<float[]> chunkVectors) {}
 
@@ -44,14 +55,16 @@ class SemanticFloorEvalTest {
     List<EmbeddedDocument> documents = embedCorpus(corpus);
 
     List<Double> positiveScores = new ArrayList<>();
-    for (EvalQueries.PositivePair pair : queries.positives()) {
-      float[] queryVector = embedder.embed(pair.query());
-      EmbeddedDocument expected = findDocument(documents, pair);
-      double best = bestCosine(queryVector, expected.chunkVectors());
-      positiveScores.add(best);
-      System.out.printf(
-          "positive '%s' -> '%s' (%s): %.4f%n",
-          pair.query(), pair.documentTitle(), pair.clientEmail(), best);
+    for (EvalQueries.EvalQuery query : queries.queries()) {
+      float[] queryVector = embedder.embed(query.query());
+      for (EvalQueries.Item item : queries.semanticPositives(query, corpus)) {
+        EmbeddedDocument expected = findDocument(documents, item);
+        double best = bestCosine(queryVector, expected.chunkVectors());
+        positiveScores.add(best);
+        System.out.printf(
+            "positive '%s' -> '%s' (%s): %.4f%n",
+            query.query(), item.title(), item.clientEmail(), best);
+      }
     }
 
     List<Double> negativeScores = new ArrayList<>();
@@ -90,6 +103,24 @@ class SemanticFloorEvalTest {
                 + " if this closes, change the model before building on it",
             lowestPositive, highestNegative)
         .isPositive();
+    assertThat(configuredSemanticFloor())
+        .as(
+            "application.yaml semantic-floor must be the measured midpoint %.4f;"
+                + " re-derive it from this output",
+            midpoint)
+        .isCloseTo(midpoint, org.assertj.core.api.Assertions.within(FLOOR_TOLERANCE));
+  }
+
+  @SuppressWarnings("unchecked")
+  private static double configuredSemanticFloor() {
+    try (InputStream in = SemanticFloorEvalTest.class.getResourceAsStream("/application.yaml")) {
+      Map<String, Object> root = new Yaml().load(in);
+      Map<String, Object> app = (Map<String, Object>) root.get("app");
+      Map<String, Object> search = (Map<String, Object>) app.get("search");
+      return ((Number) search.get("semantic-floor")).doubleValue();
+    } catch (IOException e) {
+      throw new java.io.UncheckedIOException(e);
+    }
   }
 
   private static List<EmbeddedDocument> embedCorpus(DemoCorpus corpus) {
@@ -116,17 +147,14 @@ class SemanticFloorEvalTest {
   }
 
   private static EmbeddedDocument findDocument(
-      List<EmbeddedDocument> documents, EvalQueries.PositivePair pair) {
+      List<EmbeddedDocument> documents, EvalQueries.Item item) {
     return documents.stream()
-        .filter(
-            d ->
-                d.clientEmail().equals(pair.clientEmail())
-                    && d.title().equals(pair.documentTitle()))
+        .filter(d -> d.clientEmail().equals(item.clientEmail()) && d.title().equals(item.title()))
         .findFirst()
         .orElseThrow(
             () ->
                 new IllegalStateException(
-                    "positive pair references a document not in the corpus: " + pair));
+                    "expected item references a document not in the corpus: " + item));
   }
 
   private static double bestCosine(float[] query, List<float[]> chunkVectors) {

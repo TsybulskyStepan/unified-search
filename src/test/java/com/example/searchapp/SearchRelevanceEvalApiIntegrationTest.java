@@ -8,10 +8,10 @@ import com.example.searchapp.onboarding.seed.DemoCorpus;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import org.assertj.core.api.SoftAssertions;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,18 +26,39 @@ class SearchRelevanceEvalApiIntegrationTest extends IntegrationTest {
 
   @LocalServerPort private int port;
 
-  @Test
-  void genericCategoryQueryDoesNotPromoteClientWhoseFirstNameIsACategoryTerm() throws Exception {
-    JsonNode results = search("utility bill");
+  private record Result(String type, String key) {
+    boolean isClient() {
+      return type.equals("client");
+    }
+  }
 
-    assertThat(results).isNotEmpty();
-    assertThat(results)
-        .allSatisfy(result -> assertThat(result.path("type").asText()).isEqualTo("document"));
+  private record Outcome(
+      EvalQueries.EvalQuery query,
+      List<Result> results,
+      List<EvalQueries.Item> expectedItems,
+      List<String> expectedKeys,
+      List<Integer> expectedRanks,
+      int n) {
+    int recallHits() {
+      return (int) expectedRanks.stream().filter(rank -> rank > 0 && rank <= n).count();
+    }
+
+    double reciprocalRank() {
+      return expectedRanks.stream()
+          .filter(rank -> rank > 0)
+          .mapToInt(Integer::intValue)
+          .min()
+          .stream()
+          .mapToDouble(rank -> 1.0 / rank)
+          .findFirst()
+          .orElse(0.0);
+    }
   }
 
   @Test
-  void everyQuerysLabelledDocumentsAreReturnedBeforeUntaggedDocumentsAndLogsMrr() throws Exception {
+  void everyQueryMeetsItsExpectationShapeAndNoClientOutranksAnExpectedDocument() throws Exception {
     DemoCorpus corpus = EvalCorpusLoader.corpus();
+    EvalQueries queries = EvalCorpusLoader.queries();
     Map<String, String> clientNames =
         corpus.clients().stream()
             .collect(
@@ -45,132 +66,156 @@ class SearchRelevanceEvalApiIntegrationTest extends IntegrationTest {
                     DemoCorpus.DemoClient::email,
                     client -> client.firstName() + " " + client.lastName()));
 
-    Map<String, List<EvalQueries.PositivePair>> pairsByQuery =
-        EvalCorpusLoader.queries().positives().stream()
-            .collect(
-                Collectors.groupingBy(
-                    EvalQueries.PositivePair::query, LinkedHashMap::new, Collectors.toList()));
-
-    // Every expected document must be returned. The v2 label retriever may correctly return
-    // additional documents with the same purpose, so the old semantic-only top-N purity check is
-    // no longer valid. Instead, label-admitted documents must precede every untagged document.
-    //
-    // Every query is measured and logged before any assertion runs, so the MRR and per-query
-    // outcome are always recorded — the same requirement as the identifier-probe query: the
-    // outcome is recorded whether or not it passes, not only when every query already passes.
-    record QueryResult(
-        String query,
-        List<String> expected,
-        List<String> returned,
-        List<String> signals,
-        int firstHitRank) {}
-
-    List<QueryResult> queryResults = new ArrayList<>();
-    for (Map.Entry<String, List<EvalQueries.PositivePair>> entry : pairsByQuery.entrySet()) {
-      List<String> expectedDocuments =
-          entry.getValue().stream()
-              .map(pair -> labelKey(clientNames.get(pair.clientEmail()), pair.documentTitle()))
-              .toList();
-
-      List<JsonNode> results = allResults(entry.getKey());
-      List<String> returnedDocuments = new ArrayList<>();
-      List<String> signals = new ArrayList<>();
-      int firstHitRank = 0;
-      for (int index = 0; index < results.size(); index++) {
-        JsonNode result = results.get(index);
-        if (!result.path("type").asText().equals("document")) {
-          continue;
-        }
-        String key =
-            labelKey(
-                result.path("document").path("client_name").asText(),
-                result.path("document").path("title").asText());
-        if (firstHitRank == 0 && expectedDocuments.contains(key)) {
-          firstHitRank = index + 1;
-        }
-        returnedDocuments.add(key);
-        signals.add(result.path("match").path("signals").toString());
-      }
-      queryResults.add(
-          new QueryResult(
-              entry.getKey(), expectedDocuments, returnedDocuments, signals, firstHitRank));
+    // Every query is measured and logged before any assertion runs, so one failure cannot hide
+    // the rest and the numbers are recorded whether or not the run passes.
+    List<Outcome> outcomes = new ArrayList<>();
+    for (EvalQueries.EvalQuery query : queries.queries()) {
+      List<EvalQueries.Item> items = queries.resolve(query, corpus);
+      List<String> expectedKeys = items.stream().map(item -> keyOf(item, clientNames)).toList();
+      List<Result> results = results(query.query());
+      List<Integer> ranks = expectedKeys.stream().map(key -> rankOf(results, key)).toList();
+      int n =
+          switch (query.shape()) {
+            case FIRST -> 1;
+            case ALL_WITHIN, COMPOUND -> expectedKeys.size();
+            case NONE -> 0;
+          };
+      outcomes.add(new Outcome(query, results, items, expectedKeys, ranks, n));
     }
 
-    // A miss (rank 0, i.e. the labelled document never appears at all) contributes 0 to MRR
-    // rather than dividing by zero — a total miss must lower MRR, not raise it to Infinity.
-    List<Integer> firstHitRanks = queryResults.stream().map(QueryResult::firstHitRank).toList();
-    double mrr =
-        firstHitRanks.stream()
-            .mapToDouble(rank -> rank > 0 ? 1.0 / rank : 0.0)
+    // A total miss has reciprocal rank 0, so it lowers MRR instead of dividing by zero.
+    List<Outcome> ranked =
+        outcomes.stream().filter(o -> o.query().shape() != EvalQueries.Shape.NONE).toList();
+    for (Outcome outcome : outcomes) {
+      log.info(
+          "eval query='{}' shape={} n={} recall@n={}/{} rr={} results={}",
+          outcome.query().query(),
+          outcome.query().shape(),
+          outcome.n(),
+          outcome.recallHits(),
+          outcome.expectedKeys().size(),
+          outcome.reciprocalRank(),
+          outcome.results().size());
+    }
+    double mrr = ranked.stream().mapToDouble(Outcome::reciprocalRank).average().orElseThrow();
+    double meanRecall =
+        ranked.stream()
+            .mapToDouble(o -> (double) o.recallHits() / o.expectedKeys().size())
             .average()
             .orElseThrow();
-    log.info("Search relevance evaluation firstHitRanks={} MRR={}", firstHitRanks, mrr);
+    log.info("eval summary queries={} MRR={} meanRecall@n={}", outcomes.size(), mrr, meanRecall);
 
-    for (QueryResult result : queryResults) {
-      assertThat(result.returned())
-          .as("expected documents for query length %s", result.query().length())
-          .containsAll(result.expected());
-      int firstUntagged = firstWithoutLabel(result.signals());
-      if (firstUntagged >= 0) {
-        assertThat(result.signals().subList(firstUntagged, result.signals().size()))
-            .as(
-                "label matches must precede untagged documents for query length %s",
-                result.query().length())
-            .allSatisfy(signals -> assertThat(signals).doesNotContain("\"label\""));
+    SoftAssertions softly = new SoftAssertions();
+    for (Outcome outcome : outcomes) {
+      assertShape(softly, outcome);
+      assertNoClientAboveExpectedDocument(softly, outcome);
+    }
+    softly.assertAll();
+  }
+
+  private static int rankOf(List<Result> results, String key) {
+    for (int index = 0; index < results.size(); index++) {
+      if (results.get(index).key().equals(key)) {
+        return index + 1;
       }
     }
+    return 0;
   }
 
-  private static int firstWithoutLabel(List<String> signals) {
-    for (int index = 0; index < signals.size(); index++) {
-      if (!signals.get(index).contains("\"label\"")) {
-        return index;
-      }
-    }
-    return -1;
-  }
-
-  private static String labelKey(String clientName, String documentTitle) {
-    return clientName + "::" + documentTitle;
-  }
-
-  @Test
-  void excludesDocumentsForEveryUnrelatedQuery() throws Exception {
-    for (String query : EvalCorpusLoader.queries().negatives()) {
-      assertThat(search(query))
-          .as("query length %s", query.length())
-          .noneMatch(result -> result.path("type").asText().equals("document"));
-    }
-  }
-
-  @Test
-  void placesContextClientsAfterDocumentResults() throws Exception {
-    for (String query : List.of("address proof", "proof of identity", "source of funds")) {
-      JsonNode results = search(query);
-      int firstClient = firstResultOfType(results, "client");
-      if (firstClient >= 0) {
-        for (int index = 0; index < firstClient; index++) {
-          assertThat(results.get(index).path("type").asText())
-              .as("context client must follow documents for query length %s", query.length())
-              .isEqualTo("document");
+  private static void assertShape(SoftAssertions softly, Outcome outcome) {
+    String name = outcome.query().shape() + " '" + outcome.query().query() + "'";
+    List<Result> results = outcome.results();
+    switch (outcome.query().shape()) {
+      case FIRST ->
+          softly
+              .assertThat(results.isEmpty() ? null : results.get(0).key())
+              .as("%s: position 1", name)
+              .isEqualTo(outcome.expectedKeys().get(0));
+      case ALL_WITHIN ->
+          softly
+              .assertThat(outcome.expectedRanks())
+              .as(
+                  "%s: every expected item inside the first %d positions (rank 0 = absent)",
+                  name, outcome.n())
+              .allSatisfy(rank -> assertThat(rank).isBetween(1, outcome.n()));
+      case COMPOUND -> {
+        // §6.5 shape B: the mentioned client's documents (tier 1) lead, then the client. Other
+        // documents of that client may sit between the expected document and the client.
+        String documentKey = outcome.expectedKeys().get(0);
+        String clientKey = outcome.expectedKeys().get(1);
+        softly
+            .assertThat(results.isEmpty() ? null : results.get(0).key())
+            .as("%s: expected document first", name)
+            .isEqualTo(documentKey);
+        int clientIndex = rankOf(results, clientKey) - 1;
+        softly.assertThat(clientIndex).as("%s: expected client present", name).isPositive();
+        String ownDocuments = "document::" + clientKey.substring("client::".length()) + "::";
+        for (int index = 1; index < clientIndex; index++) {
+          softly
+              .assertThat(results.get(index).key())
+              .as("%s: only the client's own documents may precede the client", name)
+              .startsWith(ownDocuments);
         }
       }
+      case NONE -> softly.assertThat(results).as("%s: empty result", name).isEmpty();
     }
   }
 
-  private static int firstResultOfType(JsonNode results, String type) {
-    for (int index = 0; index < results.size(); index++) {
-      if (results.get(index).path("type").asText().equals(type)) {
-        return index;
+  private static void assertNoClientAboveExpectedDocument(SoftAssertions softly, Outcome outcome) {
+    int lastExpectedDocument = 0;
+    for (int index = 0; index < outcome.expectedItems().size(); index++) {
+      if (outcome.expectedItems().get(index).isDocument()) {
+        lastExpectedDocument = Math.max(lastExpectedDocument, outcome.expectedRanks().get(index));
       }
     }
-    return -1;
+    for (int index = 0; index < Math.min(lastExpectedDocument, outcome.results().size()); index++) {
+      softly
+          .assertThat(outcome.results().get(index).isClient())
+          .as(
+              "'%s': no client above an expected document (client at position %d, last expected"
+                  + " document at %d)",
+              outcome.query().query(), index + 1, lastExpectedDocument)
+          .isFalse();
+    }
+  }
+
+  private static String keyOf(EvalQueries.Item item, Map<String, String> clientNames) {
+    String name = clientNames.get(item.clientEmail());
+    return item.isDocument() ? "document::" + name + "::" + item.title() : "client::" + name;
+  }
+
+  private List<Result> results(String query) throws Exception {
+    List<Result> results = new ArrayList<>();
+    for (JsonNode result : allResults(query)) {
+      if (result.path("type").asText().equals("client")) {
+        JsonNode client = result.path("client");
+        results.add(
+            new Result(
+                "client",
+                "client::"
+                    + client.path("first_name").asText()
+                    + " "
+                    + client.path("last_name").asText()));
+      } else {
+        JsonNode document = result.path("document");
+        results.add(
+            new Result(
+                "document",
+                "document::"
+                    + document.path("client_name").asText()
+                    + "::"
+                    + document.path("title").asText()));
+      }
+    }
+    return results;
   }
 
   @Test
-  void keepsClientIdentifierQueriesClientFirst() throws Exception {
-    assertClientFirst(search("NevisWealth"), "John", "Doe");
+  void lexicalFloorAdmitsAMisspelledNameAndRejectsAShortNearMiss() throws Exception {
+    // Measured anchors (§6.2): Hendersen scores 0.70 against Mary Henderson, joe 0.50 against John
+    // Doe. Raising the floor above 0.70 or dropping it below 0.50 flips one of these.
     assertClientFirst(search("Hendersen"), "Mary", "Henderson");
+    assertThat(search("joe")).noneMatch(result -> result.path("type").asText().equals("client"));
   }
 
   @Test
@@ -285,7 +330,12 @@ class SearchRelevanceEvalApiIntegrationTest extends IntegrationTest {
     var response =
         get(
             port,
-            "/search?q=" + query.replace(" ", "%20") + "&limit=" + limit + "&offset=" + offset,
+            "/search?q="
+                + java.net.URLEncoder.encode(query, java.nio.charset.StandardCharsets.UTF_8)
+                + "&limit="
+                + limit
+                + "&offset="
+                + offset,
             TEST_API_KEY);
     assertThat(response.statusCode()).isEqualTo(200);
     return JSON.readTree(response.body());
