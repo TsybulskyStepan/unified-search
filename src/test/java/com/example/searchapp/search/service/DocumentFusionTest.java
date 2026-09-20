@@ -35,18 +35,37 @@ class DocumentFusionTest {
   }
 
   @Test
-  void ranksADocumentAdmittedByTwoSignalsAboveOneAdmittedByOneEvenWhenItRanksLowerInOneList() {
+  void sumsRankScoresSoTwoSignalsBeatOneEvenWhenEachIndividualRankIsLower() {
+    UUID single = UUID.fromString("00000000-0000-0000-0000-000000000040");
+    UUID both = UUID.fromString("00000000-0000-0000-0000-000000000041");
+    UUID filler = UUID.fromString("00000000-0000-0000-0000-000000000042");
+
     var results =
         DocumentFusion.fuse(
             List.of(),
             List.of(
-                new RankedDocumentMatch(UNLABELLED, CLIENT, NOW, 0.9),
-                new RankedDocumentMatch(LABELLED, CLIENT, NOW, 0.8)),
-            List.of(new RankedDocumentMatch(LABELLED, CLIENT, NOW, 0.7)));
+                new RankedDocumentMatch(single, CLIENT, NOW, 0.9),
+                new RankedDocumentMatch(both, CLIENT, NOW, 0.8)),
+            List.of(
+                new RankedDocumentMatch(filler, CLIENT, NOW, 0.7),
+                new RankedDocumentMatch(both, CLIENT, NOW, 0.6)));
+
+    assertThat(results.getFirst().documentId()).isEqualTo(both);
+    assertThat(results.getFirst().signals()).containsExactly("lexical", "semantic");
+  }
+
+  @Test
+  void placesALabelOnlyDocumentAheadOfAnUntaggedDocumentWithAPositiveFusedScore() {
+    var results =
+        DocumentFusion.fuse(
+            List.of(label(LABELLED, NOW.minusSeconds(3600))),
+            List.of(new RankedDocumentMatch(UNLABELLED, CLIENT, NOW, 0.9)),
+            List.of(new RankedDocumentMatch(UNLABELLED, CLIENT, NOW, 0.9)));
 
     assertThat(results)
         .extracting(result -> result.documentId())
         .containsExactly(LABELLED, UNLABELLED);
+    assertThat(results.getFirst().signals()).containsExactly("label");
   }
 
   @Test
