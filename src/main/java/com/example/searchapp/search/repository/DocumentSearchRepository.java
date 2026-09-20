@@ -7,6 +7,7 @@ import java.sql.SQLException;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import java.util.regex.Pattern;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
@@ -14,6 +15,10 @@ import org.springframework.stereotype.Repository;
 @Repository
 public class DocumentSearchRepository {
   private static final int CANDIDATE_LIMIT = 200;
+
+  // The word still being typed: letters only, so digits and operators keep websearch semantics.
+  private static final Pattern PREFIX_TERM = Pattern.compile("\\p{L}{3,}");
+
   private final JdbcClient jdbc;
   private final double semanticFloor;
 
@@ -50,15 +55,25 @@ public class DocumentSearchRepository {
   }
 
   public List<RankedDocumentMatch> findLexicalMatches(String residual) {
+    int tailStart = residual.lastIndexOf(' ') + 1;
+    String tail = residual.substring(tailStart);
+    boolean prefixTail = PREFIX_TERM.matcher(tail).matches();
+    String head = prefixTail ? residual.substring(0, tailStart) : residual;
     return jdbc.sql(
             """
-            SELECT d.id AS document_id, d.client_id, d.created_at, ts_rank_cd(d.tsv, tq, 32) AS similarity
-            FROM document d, websearch_to_tsquery('english', :residual) tq
-            WHERE numnode(tq) > 0 AND d.tsv @@ tq
+            WITH query AS (
+                SELECT websearch_to_tsquery('english', :head)
+                       && CASE WHEN :prefix = '' THEN ''::tsquery
+                               ELSE to_tsquery('english', :prefix || ':*') END AS tq
+            )
+            SELECT d.id AS document_id, d.client_id, d.created_at, ts_rank_cd(d.tsv, query.tq, 32) AS similarity
+            FROM document d, query
+            WHERE numnode(query.tq) > 0 AND d.tsv @@ query.tq
             ORDER BY similarity DESC, d.id
             LIMIT :limit
             """)
-        .param("residual", residual)
+        .param("head", head)
+        .param("prefix", prefixTail ? tail : "")
         .param("limit", CANDIDATE_LIMIT)
         .query(DocumentSearchRepository::mapRankedMatch)
         .list();

@@ -303,6 +303,19 @@
       ]
     },
     {
+      "query": "Lindqvist agreemen",
+      "shape": "compound",
+      "expected": [
+        {
+          "client": "sarah.lindqvist@example.com",
+          "title": "Assured Shorthold Tenancy Agreement"
+        },
+        {
+          "client": "sarah.lindqvist@example.com"
+        }
+      ]
+    },
+    {
       "query": "bill",
       "shape": "first",
       "expected": [
