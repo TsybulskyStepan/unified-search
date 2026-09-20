@@ -32,6 +32,9 @@ dependencies {
     implementation 'dev.langchain4j:langchain4j-embeddings-all-minilm-l6-v2:1.20.0-beta30'
     // Binds float[] to the pgvector `vector` column type (§1.4).
     implementation 'com.pgvector:pgvector:0.1.6'
+    // Official Google Gen AI SDK, Gemini API mode with a plain API key (§1.4). GeminiSummarizer
+    // is the only class that imports it.
+    implementation 'com.google.genai:google-genai:1.72.0'
 
     runtimeOnly 'org.postgresql:postgresql'
 

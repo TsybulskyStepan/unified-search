@@ -17,10 +17,10 @@ misleading summary of that one document.
 
 **Status:** ready-for-agent
 
-- [ ] With a key configured, a requested summary reaches the ready state and is stored as plain text
-- [ ] With no key, a requested summary reaches the failed state within one nudge, by the same code path as a bad or revoked key
-- [ ] Rate limits, server errors and timeouts are classified as transient; authentication and invalid-request failures as permanent
-- [ ] The model call is bounded by a timeout comfortably shorter than the claim lease
-- [ ] The system instruction treats document text as data, and output length is bounded
-- [ ] Search results are unaffected in every summary state, including failure
-- [ ] The key is never logged, never baked into the image, and never returned to a client
+- [ ] With a key configured, a requested summary reaches the ready state and is stored as plain text — **not verifiable here: no `GEMINI_API_KEY` is available in this environment (`.env` is read-denied by `.claude/settings.json`, and no such env var is set). Verified structurally instead: `GeminiSummarizer.summarize` returns `response.text()` untouched aside from a strip, and `SummarizerConfigTest` proves a non-blank key wires up `GeminiSummarizer`. Needs a manual check with a real key.**
+- [x] With no key, a requested summary reaches the failed state within one nudge, by the same code path as a bad or revoked key
+- [x] Rate limits, server errors and timeouts are classified as transient; authentication and invalid-request failures as permanent
+- [x] The model call is bounded by a timeout comfortably shorter than the claim lease
+- [x] The system instruction treats document text as data, and output length is bounded
+- [x] Search results are unaffected in every summary state, including failure
+- [x] The key is never logged, never baked into the image, and never returned to a client

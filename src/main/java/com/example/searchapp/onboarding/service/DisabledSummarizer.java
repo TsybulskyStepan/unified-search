@@ -1,13 +1,13 @@
 package com.example.searchapp.onboarding.service;
 
 import com.example.searchapp.onboarding.exception.PermanentSummarizationException;
-import org.springframework.stereotype.Component;
 
 /**
- * The only {@link Summarizer} bean until ticket 11's {@code GeminiSummarizer} replaces it — keeps
- * the app runnable in the meantime (§15).
+ * {@link SummarizerConfig} returns this in place of {@link GeminiSummarizer} when {@code
+ * GEMINI_API_KEY} is absent — the default, and what every reviewer running this locally will have
+ * (§7.3). Every requested summary reaches {@code failed} within one nudge, by the same code path a
+ * bad or revoked key would take once {@link GeminiSummarizer} rejects it.
  */
-@Component
 class DisabledSummarizer implements Summarizer {
   @Override
   public String summarize(String title, String content) {

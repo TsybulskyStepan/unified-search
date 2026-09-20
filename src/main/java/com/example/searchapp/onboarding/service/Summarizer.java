@@ -4,9 +4,10 @@ import com.example.searchapp.onboarding.exception.PermanentSummarizationExceptio
 import com.example.searchapp.onboarding.exception.TransientSummarizationException;
 
 /**
- * {@code GeminiSummarizer} (ticket 11) is the only production implementation; {@link
- * DisabledSummarizer} stands in until then, and tests supply their own double. Throws {@link
- * TransientSummarizationException} or {@link PermanentSummarizationException} on failure.
+ * {@link GeminiSummarizer} is the only production implementation; {@link SummarizerConfig} falls
+ * back to {@link DisabledSummarizer} when {@code GEMINI_API_KEY} is absent, and tests supply their
+ * own double. Throws {@link TransientSummarizationException} or {@link
+ * PermanentSummarizationException} on failure.
  */
 public interface Summarizer {
   String summarize(String title, String content);
