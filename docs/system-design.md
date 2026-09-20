@@ -336,7 +336,7 @@ Local is the only built target. `docker compose up` starts `pgvector/pgvector:pg
 
 ### Relevance evaluation set
 
-`src/test/resources/eval/` holds the corpus (also the seed: 50 clients, 126 documents), the expected type per document, and the queries. Each query declares one expectation.
+`src/test/resources/eval/` holds the expected type per document and the queries. The corpus they run against is the seed corpus, `src/main/resources/seed/corpus.json`: 50 clients and 126 documents. Each query declares one expectation.
 
 | Shape | Assertion |
 |---|---|
@@ -346,7 +346,7 @@ Local is the only built target. `docker compose up` starts `pgvector/pgvector:pg
 | `none` | Zero results |
 | `gibberish` | Zero results, rejected by the readability gate rather than the floor |
 
-Every document query also asserts that **no client ranks above any expected document**, which still lets a context-tier client appear below the answers. A "top 3" check cannot pass for a query with seven correct answers, so `all_within` measures recall@n. MRR and recall@n are logged on every run; over the current 28 queries MRR is 1.000 and mean recall@n is 0.957. Expected items are hand-labelled from the taxonomy's definition of what answers the question, never read back from a search result. Shared answer sets (`proof_of_address` is 53 documents) keep synonymous queries consistent.
+Every document query also asserts that **no client ranks above any expected document**, which still lets a context-tier client appear below the answers. A "top 3" check cannot pass for a query with seven correct answers, so `all_within` measures recall@n. MRR and recall@n are logged on every run; over the current 34 queries MRR is 1.000 and mean recall@n is 0.96. Expected items are hand-labelled from the taxonomy's definition of what answers the question, never read back from a search result. Shared answer sets (`proof_of_address` is 53 documents) keep synonymous queries consistent.
 
 `semanticFloor` is set by this test as the midpoint of the gap between the lowest positive and highest negative cosine (0.2917 and 0.1836, midpoint 0.2377). The build fails if the gap closes or `application.yaml` drifts from the midpoint. The lexical floor stays 0.6 and is guarded from both sides at the endpoint: `Hendersen` (0.70) is admitted and `joe` (0.50) is not. The classifier must reach 100% on the labelled corpus. The negative queries use `how to bake sourdough bread` rather than a weather query, because `weather` is a substring of the client Zoë Fairweather and trigram matching admits her on the email.
 
