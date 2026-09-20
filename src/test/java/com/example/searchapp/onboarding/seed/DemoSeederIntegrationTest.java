@@ -60,7 +60,9 @@ class DemoSeederIntegrationTest {
   @Test
   void seedsTheCorpusOnAnEmptyDatabaseAndSearchFindsIt() throws Exception {
     try (ConfigurableApplicationContext context = boot(true, true)) {
-      assertThat(countClients()).isEqualTo(8);
+      // Not a fixed count: the corpus grows independently of this test (§12.3), same reasoning as
+      // doesNotSeedAgainOnASecondStartupOnceClientsExist below.
+      assertThat(countClients()).isPositive();
 
       int port = Integer.parseInt(context.getEnvironment().getProperty("local.server.port"));
       HttpResponse<String> response = searchViaHttp(port, "NevisWealth");
