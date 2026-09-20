@@ -7,12 +7,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * The query set loaded from {@code src/test/resources/eval/queries.json} (§11.3). Every query
- * declares one expectation {@link Shape}; the shape decides its assertion. Expected items are
- * hand-labelled by what the document is, never read back from a search result.
- *
- * <p>{@code sets} names lists of expected documents shared by several queries ({@code address
- * proof} and {@code proof of address} answer the same question).
+ * The query set in {@code eval/queries.json} (§11.3); {@code sets} are answer lists queries share.
  */
 public record EvalQueries(Map<String, List<Expected>> sets, List<EvalQuery> queries) {
 
@@ -42,10 +37,7 @@ public record EvalQueries(Map<String, List<Expected>> sets, List<EvalQuery> quer
     }
   }
 
-  /**
-   * Expands an entry to the concrete corpus items it names, in corpus order: the query's named set
-   * first, then its own entries.
-   */
+  /** The corpus items a query expects: its named set first, then its own entries. */
   public List<Item> resolve(EvalQuery query, DemoCorpus corpus) {
     List<Expected> entries = new ArrayList<>();
     if (query.expectedSet() != null) {
@@ -77,11 +69,7 @@ public record EvalQueries(Map<String, List<Expected>> sets, List<EvalQuery> quer
     return items;
   }
 
-  /**
-   * The (query, document) pairs the semantic signal is expected to recall: every expected document
-   * of a {@code first} or {@code all_within} query. A compound query's document is retrieved on its
-   * residual text, not on the whole query, so it does not measure the floor.
-   */
+  /** Documents the semantic signal must recall; compound queries search on a residual, so skip. */
   public List<Item> semanticPositives(EvalQuery query, DemoCorpus corpus) {
     if (query.shape() != Shape.FIRST && query.shape() != Shape.ALL_WITHIN) {
       return List.of();

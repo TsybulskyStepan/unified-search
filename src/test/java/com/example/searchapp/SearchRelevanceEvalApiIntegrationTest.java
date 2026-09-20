@@ -7,6 +7,8 @@ import com.example.searchapp.eval.EvalQueries;
 import com.example.searchapp.onboarding.seed.DemoCorpus;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -66,8 +68,7 @@ class SearchRelevanceEvalApiIntegrationTest extends IntegrationTest {
                     DemoCorpus.DemoClient::email,
                     client -> client.firstName() + " " + client.lastName()));
 
-    // Every query is measured and logged before any assertion runs, so one failure cannot hide
-    // the rest and the numbers are recorded whether or not the run passes.
+    // Measure and log every query before asserting, so one failure cannot hide the rest.
     List<Outcome> outcomes = new ArrayList<>();
     for (EvalQueries.EvalQuery query : queries.queries()) {
       List<EvalQueries.Item> items = queries.resolve(query, corpus);
@@ -139,8 +140,7 @@ class SearchRelevanceEvalApiIntegrationTest extends IntegrationTest {
                   name, outcome.n())
               .allSatisfy(rank -> assertThat(rank).isBetween(1, outcome.n()));
       case COMPOUND -> {
-        // §6.5 shape B: the mentioned client's documents (tier 1) lead, then the client. Other
-        // documents of that client may sit between the expected document and the client.
+        // §6.5 tier 1: the client's own documents may sit between the expected document and it.
         String documentKey = outcome.expectedKeys().get(0);
         String clientKey = outcome.expectedKeys().get(1);
         softly
@@ -156,6 +156,10 @@ class SearchRelevanceEvalApiIntegrationTest extends IntegrationTest {
               .as("%s: only the client's own documents may precede the client", name)
               .startsWith(ownDocuments);
         }
+        softly
+            .assertThat(results.subList(Math.max(clientIndex + 1, 0), results.size()))
+            .as("%s: none of the client's own documents follow the client", name)
+            .noneMatch(result -> result.key().startsWith(ownDocuments));
       }
       case NONE -> softly.assertThat(results).as("%s: empty result", name).isEmpty();
     }
@@ -212,8 +216,7 @@ class SearchRelevanceEvalApiIntegrationTest extends IntegrationTest {
 
   @Test
   void lexicalFloorAdmitsAMisspelledNameAndRejectsAShortNearMiss() throws Exception {
-    // Measured anchors (§6.2): Hendersen scores 0.70 against Mary Henderson, joe 0.50 against John
-    // Doe. Raising the floor above 0.70 or dropping it below 0.50 flips one of these.
+    // §6.2 anchors: Hendersen 0.70 against Mary Henderson, joe 0.50 against John Doe.
     assertClientFirst(search("Hendersen"), "Mary", "Henderson");
     assertThat(search("joe")).noneMatch(result -> result.path("type").asText().equals("client"));
   }
@@ -331,7 +334,7 @@ class SearchRelevanceEvalApiIntegrationTest extends IntegrationTest {
         get(
             port,
             "/search?q="
-                + java.net.URLEncoder.encode(query, java.nio.charset.StandardCharsets.UTF_8)
+                + URLEncoder.encode(query, StandardCharsets.UTF_8)
                 + "&limit="
                 + limit
                 + "&offset="

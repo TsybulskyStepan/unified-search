@@ -706,8 +706,8 @@ Queries at the current 50-client, 126-document corpus.
 
 - `first`: `NevisWealth` (John Doe), `Hendersen` (Mary Henderson), `bill` (Bill Carter), `letter of authority`.
 - `all_within`: `John` (both Johns, 2), `address proof` and `proof of address` (53), `utility bill` (13), `tax residency` (14), `source of funds` (5), `advisory fees` (12), `proof of identity` (22), `risk tolerance` (8), `trust restructuring` (6), `W-9` (2).
-- `compound`: `John Doe utility bill`, `Bill's statement`, `Mary's tax form`, `Priya Shah tenancy`, `Elena's completion statement`. Mentions are unambiguous on purpose. `John's bill` and `Priya tenancy` tie two clients (John Doe and John Whitfield, Priya Shah and Priyanka Raman), so §6.1 correctly yields no mention.
-- `none`: five out-of-domain queries. `weather forecast for the weekend` was replaced by `how to bake sourdough bread` because `weather` is a substring of the client Zoë Fairweather, and returning her is correct lexical behaviour.
+- `compound`: possessive `Bill's statement`, `Mary's tax form`, `Elena's completion statement`, and bare `John Doe utility bill`, `Priya Shah tenancy`. Mentions are unambiguous on purpose. `John's bill` and `Priya tenancy` tie two clients (John Doe and John Whitfield, Priya Shah and Priyanka Raman), so §6.1 correctly yields no mention.
+- `none`: five out-of-domain queries. `weather forecast for the weekend` was replaced by `how to bake sourdough bread` because `weather` is a substring of the client Zoë Fairweather and trigram `word_similarity` admits her on the email. This is a known limit of the lexical floor, not a fixed bug, and the old eval only asserted "no documents" so it never saw it.
 
 `semanticFloor` is set by this test as the midpoint of the gap between the lowest positive and highest negative cosine (currently 0.2917 and 0.1836, midpoint 0.2377), and the build fails if the gap closes or if `application.yaml` drifts from the midpoint. `lexicalFloor` stays 0.6 and is guarded from both sides at the endpoint: `Hendersen` (0.70) is admitted and `joe` (0.50) is not. The classifier must reach 100% on `classification.json`.
 

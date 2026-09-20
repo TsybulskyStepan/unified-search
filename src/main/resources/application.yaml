@@ -13,10 +13,7 @@ app:
     # §11.2/§11.3. DemoSeeder runs after startup when this is true and the client table is empty.
     enabled: ${SEED_ENABLED:true}
   search:
-    # §6.3. Measured by SemanticFloorEvalTest over label and body chunks in the seed/eval corpus
-    # (§11.3): lowest positive-pair cosine score 0.2917, highest negative-query score 0.1836,
-    # midpoint 0.2377. The test fails the build if the gap closes or this value drifts from the
-    # midpoint. The live /search integration tests guard the same floor at the API boundary.
+    # §6.3, §11.3: the midpoint SemanticFloorEvalTest measures; the build fails if this drifts.
     semantic-floor: 0.238
 springdoc:
   swagger-ui:

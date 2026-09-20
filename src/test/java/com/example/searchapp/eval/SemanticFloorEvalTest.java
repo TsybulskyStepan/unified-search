@@ -1,6 +1,7 @@
 package com.example.searchapp.eval;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.within;
 
 import com.example.searchapp.onboarding.seed.DemoCorpus;
 import com.example.searchapp.onboarding.service.Chunk;
@@ -13,6 +14,7 @@ import com.example.searchapp.shared.taxonomy.Taxonomy;
 import com.example.searchapp.shared.taxonomy.TaxonomyLoader;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -20,7 +22,7 @@ import org.junit.jupiter.api.Test;
 import org.yaml.snakeyaml.Yaml;
 
 /**
- * The risk gate this ticket exists for (§12.3): proves the embedding model bridges a KYC *category*
+ * The risk gate this ticket exists for (§11.3): proves the embedding model bridges a KYC *category*
  * query to a document *artifact* — "proof of address" to a utility bill, with no shared words —
  * before anything is built on top of that assumption.
  *
@@ -108,7 +110,7 @@ class SemanticFloorEvalTest {
             "application.yaml semantic-floor must be the measured midpoint %.4f;"
                 + " re-derive it from this output",
             midpoint)
-        .isCloseTo(midpoint, org.assertj.core.api.Assertions.within(FLOOR_TOLERANCE));
+        .isCloseTo(midpoint, within(FLOOR_TOLERANCE));
   }
 
   @SuppressWarnings("unchecked")
@@ -119,7 +121,7 @@ class SemanticFloorEvalTest {
       Map<String, Object> search = (Map<String, Object>) app.get("search");
       return ((Number) search.get("semantic-floor")).doubleValue();
     } catch (IOException e) {
-      throw new java.io.UncheckedIOException(e);
+      throw new UncheckedIOException(e);
     }
   }
 

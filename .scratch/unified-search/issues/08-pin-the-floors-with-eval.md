@@ -30,7 +30,7 @@ below it is now a ranking question instead of a disappearance.
 - [x] Each query declares one expectation shape, and the shape decides its assertion
 - [x] A single-answer query asserts position 1
 - [x] An n-answer query asserts every expected item inside the first n positions
-- [x] A compound query asserts the expected document first and the expected client second
+- [x] A compound query asserts the expected document first and the expected client second, allowing only that client's own documents between them (§6.5 tier 1 puts every admitted document of the mentioned client ahead of the client card; "second" would fail whenever another of that client's documents clears a signal, e.g. `John Doe utility bill`)
 - [x] An out-of-domain query asserts an empty result
 - [x] No client outranks any expected document, on every document query
 - [x] Recall@n and MRR are logged on every run
