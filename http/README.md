@@ -23,4 +23,6 @@ Both tools read `@key = value` at the top of a file, so the base URL and API key
 | `05-summaries.http` | Request a summary and watch the state machine |
 | `06-errors.http` | Auth, validation, conflict and not-found responses |
 
+**If `NevisWealth` returns `[]`**, the database was not empty when the app first started, and the seeder deliberately skips a non-empty database. Reset it with `docker compose down -v && docker compose up -d`.
+
 Seeded ids are random on every fresh volume, so nothing here hardcodes one; the files look records up by search or create them first.

@@ -503,7 +503,7 @@ LIMIT 200;
 
 - Exact scan, no index. ~10⁴ documents × ~4 chunks is ~4×10⁴ distance computations.
 - `embedding_model` is bound from the live `Embedder`. A model change without re-index matches nothing, loudly.
-- `semanticFloor` is a **recall gate**, currently 0.238, re-derived by the eval over both label and body chunks as the midpoint between the lowest positive and highest negative cosine (§11.3). With label and lexical admission it is no longer the only thing standing between a relevant document and the result list, which is the point.
+- `semanticFloor` is a **recall gate**, currently 0.238, re-derived by the eval over both label and body chunks as the midpoint between the lowest positive and highest negative cosine (§11.3). With label and lexical admission it is no longer the only thing standing between a relevant document and the result list, which is the point. It does not separate near-domain noise from paraphrase recall, see the known limits in §13.
 - Future path when the scan exceeds budget, HNSW plus a top-K rewrite.
 
 ### 6.4 Fusion **(v2)**
@@ -754,6 +754,8 @@ Ordered by expected value. None is in v2 scope.
 12. **Frontend debounce.** A request per keystroke would multiply the estimated 10 to 30 searches per second for 100 advisers.
 
 Known limits carried forward. Short-name typos (§6.2), one- or two-character queries, English-only synonyms and stemming, a synonym that is also a client's name is resolved by the ambiguity rule and nothing smarter.
+
+**The semantic floor is a coarse gate, and no single cosine threshold is right.** Measured on the seed corpus with MiniLM. Near-domain out-of-corpus queries score higher than the floor: `cheap hotel deals in Rome` 0.328 (closest chunk, the Dutch lease), `weekend flight to Lisbon` 0.297 (a passport). Paraphrase queries with no taxonomy synonym score as low as 0.345 for `paper showing the home address` and 0.12 for one electricity bill under `evidence of where the client lives`. The two ranges overlap, so raising the floor would drop real paraphrase hits before it dropped travel noise, and the gap the eval derives from easy negatives does not survive harder ones. Such hits are admitted by the semantic signal alone and rank below every label and lexical hit (§6.4). The remedies are follow-ups 2 and 4, not a tuned number.
 
 ---
 
