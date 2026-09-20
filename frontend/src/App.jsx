@@ -85,7 +85,10 @@ export default function App() {
             {previewOpen && query.trim() && (
               <ul className="search-preview" aria-label="Search suggestions">
                 {suggestions.map((result, index) => (
-                  <li key={`${result.type}-${result.client?.id || result.document?.id}-${index}`}>
+                  <li
+                    key={`${result.type}-${result.client?.id || result.document?.id}-${index}`}
+                    className={`search-preview-item search-preview-item--${result.type}`}
+                  >
                     <Link
                       to={result.type === 'client'
                         ? `/clients/${result.client.id}`
@@ -102,6 +105,16 @@ export default function App() {
                           ? result.client.email
                           : result.document.client_name}
                       </span>
+                      {result.type === 'document' && (
+                        <span className="search-preview-tags">
+                          {result.document.document_type && (
+                            <span className="tag tag-type">{result.document.document_type}</span>
+                          )}
+                          {result.document.purposes?.slice(0, 2).map((p) => (
+                            <span key={p} className="tag tag-purpose">{p}</span>
+                          ))}
+                        </span>
+                      )}
                     </Link>
                   </li>
                 ))}
