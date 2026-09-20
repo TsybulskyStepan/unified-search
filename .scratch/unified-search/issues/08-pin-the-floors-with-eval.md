@@ -1,42 +1,41 @@
-# 08 — Pin the floors with the eval set against the live endpoint
+# 08 — The relevance eval: expectation shapes, the floors, and the no-client-above guard
 
-**What to build:** The guard that keeps relevance from regressing silently. The eval set from ticket
-03 moves from raw similarity scores to real calls against the search endpoint, so it measures what an
-advisor actually receives rather than what the model scores internally.
+**What to build:** The guard that keeps relevance from regressing silently, rebuilt around what v2
+actually promises. It runs against the live `/search` endpoint, so it measures what an advisor
+receives rather than what the model scores internally.
 
-It asserts in both directions: every query's full set of genuinely relevant documents is labelled, and
-that labelled set must occupy the top of the ranking as a block — recall@N with a hard purity
-constraint, where N is the labelled set's size, so a single-answer query becomes rank-1-or-fail. Every
-unrelated query returns nothing, and — the assertion that matters most — every document-shaped query
-returns no clients at all.
+v1's gate had two defects that hid the real picture (§0.1). A "top three" assertion cannot pass for a
+query with seven correct answers, and a single compound test query cannot tell a working rule from a
+lucky one. The first defect is already corrected — the labels are complete and the assertion is a
+recall@n with a purity constraint — and this ticket generalises that into the four expectation shapes
+in §11.3.
 
-That last one is what pins the lexical floor. Because clients rank above documents unconditionally, a
-floor set slightly too low breaks the brief's second example while every presence-only assertion still
-passes. The two floors are therefore handled differently: the semantic floor is *derived* from the
-measured gap, since cosine similarity has no principled default; the lexical floor is *fixed* at the
-trigram default and merely guarded. A midpoint rule applied to the lexical floor would compute a lower
-number and admit exactly the weak client matches that break things.
+The addition that matters most is the **no client above any expected document** guard. v1 asserted
+"zero clients" for document queries, which was the right instinct expressed too narrowly: it could
+not express `advisory fees`, where the correct answer is that Grace Kim may appear, but under the two
+engagement letters rather than over them. The general form is the one worth having.
 
-Labelling as a set, not a single "expected document," is what keeps this gate compatible with the corpus
-duplication below: when the same artifact type exists for more than one client, every genuine match is
-in the labelled set and the purity assertion still holds — a duplicated positive grows N, it doesn't
-break the gate. If a query's labelled set grows large enough to feel like a blunt discriminator, retarget
-which artifact type gets duplicated — e.g. Investment Policy Statement across clients, rather than the
-proof-of-address documents a content query already retrieves — instead of relaxing the assertion.
+The floors stay derived rather than guessed. `semanticFloor` is still the midpoint of the measured
+gap and the build still fails if that gap closes. What changes is its meaning: with label and lexical
+admission it is a recall gate rather than the only door into the result list (§6.3), so a document
+below it is now a ranking question instead of a disappearance.
 
-**Blocked by:** 07a — Client mention detection and compound-query ordering.
+**Blocked by:** 18 — Fuse the signals, then order by plan shape.
 
 **Status:** ready-for-agent
 
-- [ ] The eval runs through the search endpoint rather than against similarity scores directly
-- [ ] Every query's relevant documents are fully labelled, and the labelled set occupies ranks 1..N (N = its size) with nothing unlabelled above or inside it; MRR is logged from the same labels, so single-answer queries (W-9, trust restructuring, risk tolerance) are rank-1-or-fail
-- [ ] Every negative query returns no documents
-- [ ] Every document-shaped query returns zero clients
-- [ ] The build fails if the gap between the lowest positive and the highest negative closes
-- [ ] The identifier-probe query is present and its outcome is recorded, whether or not it passes
-- [ ] The lexical floor is asserted from both sides: client positives clear it, and document queries return no clients
-- [ ] Compound queries assert **order**, not just membership: the named client's document first, that client second
-- [ ] The corpus holds the same artifact type for more than one client, so a compound assertion can actually discriminate
-- [ ] Every name-only query still returns the client first — the guard that keeps the brief's first example from silently becoming a document result
-- [ ] A generic category query does not reorder around a client whose first name is an ordinary word
-- [ ] The mention threshold is guarded from both sides: a misspelled name still scopes, a category word never does
+- [x] Every genuinely relevant document for a query is labelled, so a query with several correct answers can be asserted at all
+- [x] A total miss lowers MRR instead of raising it
+- [x] Every query is measured and recorded whether or not it passes, so one failure does not hide the rest
+- [ ] Each query declares one expectation shape, and the shape decides its assertion
+- [ ] A single-answer query asserts position 1
+- [ ] An n-answer query asserts every expected item inside the first n positions
+- [ ] A compound query asserts the expected document first and the expected client second
+- [ ] An out-of-domain query asserts an empty result
+- [ ] No client outranks any expected document, on every document query
+- [ ] Recall@n and MRR are logged on every run
+- [ ] The semantic floor is re-derived from the measured gap, and the build fails if the gap closes
+- [ ] The lexical floor is guarded from both sides and is never derived from the eval
+- [ ] The classifier reaches 100% against the expected-type file
+- [ ] Compound behaviour is covered by more than one query, including a possessive and a bare-category case
+- [ ] Every failure listed in §0.1 passes

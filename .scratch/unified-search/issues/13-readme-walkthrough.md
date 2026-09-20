@@ -25,3 +25,11 @@ it were a measurement would be worse than publishing no number at all.
 - [ ] Deviations from the brief are listed, including the additional endpoints and the embedding input
 - [ ] Summary egress to a third party, and how to disable it, are stated plainly
 - [ ] Latency figures are labelled as estimates and say explicitly that they were not benchmarked
+
+v2 additions (§14.7). The taxonomy is the one part of this system a reader is expected to edit, so
+the README has to say where it lives and what editing it costs.
+
+- [ ] An identity query, a category query and a compound query each appear as a real request with its real response
+- [ ] The taxonomy file is named as the place to add a document type, with what else has to change when one is added
+- [ ] Reclassification on startup is described, including the briefly-stale window and why it is not blocking
+- [ ] The rule-based classifier is explained as a deliberate choice over an LLM at ingest, with the zero-credential run as the reason
