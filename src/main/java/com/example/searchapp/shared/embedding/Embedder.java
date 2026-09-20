@@ -25,6 +25,8 @@ public class Embedder {
    */
   public static final String MODEL_ID = "all-MiniLM-L6-v2";
 
+  private static final double MAX_WORD_PIECES_PER_WORD = 3.5;
+
   private final AllMiniLmL6V2EmbeddingModel model = new AllMiniLmL6V2EmbeddingModel();
 
   @PostConstruct
@@ -40,6 +42,20 @@ public class Embedder {
   /** Embeds a single text, e.g. a search query (§6.4). */
   public float[] embed(String text) {
     return model.embed(text).content().vector();
+  }
+
+  /**
+   * Embeds a search query and judges whether it is made of words. Real words are one or two
+   * word-pieces each and random letters shatter into four or more, so a query averaging more than
+   * {@link #MAX_WORD_PIECES_PER_WORD} pieces per word is unreadable. Measured 1.0 to 3.0 for real
+   * queries and typos and 4.0 to 10.0 for gibberish (§6.3); {@code QueryReadabilityEvalTest} guards
+   * both sides.
+   */
+  public QueryEmbedding embedQuery(String query) {
+    var response = model.embed(query);
+    int words = query.trim().split("\\s+").length;
+    boolean readable = response.tokenUsage().inputTokenCount() <= MAX_WORD_PIECES_PER_WORD * words;
+    return new QueryEmbedding(response.content().vector(), readable);
   }
 
   /** Embeds a batch of texts, e.g. a document's chunks (§5.2), in one call. */

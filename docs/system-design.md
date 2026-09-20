@@ -519,6 +519,7 @@ LIMIT 200;
 - `embedding_model` is bound from the live `Embedder`. A model change without re-index matches nothing, loudly.
 - `semanticFloor` is a **recall gate**, currently 0.238, re-derived by the eval over both label and body chunks as the midpoint between the lowest positive and highest negative cosine (§11.3). With label and lexical admission it is no longer the only thing standing between a relevant document and the result list, which is the point. It does not separate near-domain noise from paraphrase recall, see the known limits in §13.
 - Future path when the scan exceeds budget, HNSW plus a top-K rewrite.
+- **Readability gate.** Cosine cannot reject gibberish. `sdfewferdvrevrennfg` scores 0.2682 and `qwpzxk lmnvbt hgfdsaq` 0.2877 against a driving licence chunk, above the floor and only 0.004 under the lowest real positive (0.2917), so no floor separates them. The query embedding therefore also reports whether the model could read the query as words: real words are one or two word-pieces each, random letters shatter into four or more. A query averaging more than 3.5 word-pieces per whitespace-separated word is *unreadable* and the semantic retriever returns nothing for it. Measured 1.0 to 3.0 for real queries, typos and rare terms (`passpport` 3.0, `DVLA` 3.0) and 4.0 to 10.0 for gibberish. Label and lexical retrieval are unaffected, so identifiers (`CMP-2024-2157`, account numbers) still find documents through the lexical signal. The pieces come from the model's own tokenizer inside `Embedder`, and `QueryReadabilityEvalTest` guards both sides.
 
 ### 6.4 Fusion **(v2)**
 
@@ -719,6 +720,7 @@ Each query declares one expectation shape.
 | `all_within` (n expected items) | Every expected item appears in the first n positions, i.e. recall@n = 1 |
 | `compound` | Expected document first, then only that client's own documents, then the expected client. A client's other documents that clear a signal are tier 1 (§6.5) and may sit between the two, so "second" holds only when no other document of that client qualified |
 | `none` | Zero results |
+| `gibberish` | Zero results. Unlike `none` it is not a negative for the semantic floor, because the readability gate (§6.3) rejects it, not the floor |
 
 Every document query additionally asserts **no client is ranked above any expected document**. This generalises v1's zero-client guard and still lets a context-tier client appear below the answers. MRR and recall@n are logged for every run.
 
@@ -731,6 +733,8 @@ Queries at the current 50-client, 126-document corpus.
 - `compound`: possessive `Bill's statement`, `Mary's tax form`, `Elena's completion statement`, and bare `John Doe utility bill`, `Priya Shah tenancy`. Mentions are unambiguous on purpose. Ambiguous names are covered by the `all_within` and `first` entries below.
 - Tied mentions (§6.1): `John utility bill` and `John's bill` are `all_within 2` (John Doe's 2024 Utility Bill and John Whitfield's Electricity Bill Oct to Dec 2026), and `Priya tenancy` (Priya Shah and Priyanka Raman tie) is `first` Priya Shah's Assured Shorthold Tenancy Agreement. Before tied mentions their reciprocal ranks were 0.50, 0.17 and 0.14 (best expected document at rank 2, 6 and 7). After, all three are 1.0, and over the 28-query set MRR went from 0.905 to 1.000 and mean recall@n from 0.848 to 0.957.
 - `none`: five out-of-domain queries. `weather forecast for the weekend` was replaced by `how to bake sourdough bread` because `weather` is a substring of the client Zoë Fairweather and trigram `word_similarity` admits her on the email. This is a known limit of the lexical floor, not a fixed bug, and the old eval only asserted "no documents" so it never saw it.
+
+- `gibberish`: `sdfewferdvrevrennfg`, `qwpzxk lmnvbt hgfdsaq`, `asdfghjkl`. Before the readability gate both returned documents on semantic similarity alone (7 for the first); now they return none.
 
 `semanticFloor` is set by this test as the midpoint of the gap between the lowest positive and highest negative cosine (currently 0.2917 and 0.1836, midpoint 0.2377), and the build fails if the gap closes or if `application.yaml` drifts from the midpoint. `lexicalFloor` stays 0.6 and is guarded from both sides at the endpoint: `Hendersen` (0.70) is admitted and `joe` (0.50) is not. The classifier must reach 100% on `classification.json`.
 

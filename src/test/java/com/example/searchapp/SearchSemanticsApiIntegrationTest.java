@@ -77,9 +77,9 @@ class SearchSemanticsApiIntegrationTest extends IntegrationTest {
 
   @Test
   void keepsClientBeforeADocumentWithAHigherScore() throws Exception {
-    String query = "lexicalordersignal";
+    String query = "lexical order signal";
     createClientWithSocialLink(
-        "advisor@example.com", "https://www.linkedin.com/company/lexicalordersignalx");
+        "advisor@example.com", "https://www.linkedin.com/company/lexical-order-signal");
     String documentId =
         createDocument(createClient("document-owner@example.com"), "Evidence", "ranked passage");
     setOnlyChunkEmbedding(documentId, embedder.embed(query));
