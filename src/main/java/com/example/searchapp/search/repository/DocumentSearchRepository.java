@@ -21,6 +21,12 @@ public class DocumentSearchRepository {
     this.semanticFloor = semanticFloor;
   }
 
+  /**
+   * The best-matching chunk per document, floored (§6.4). Restricted to {@code kind = 'body'} (§2.1
+   * v2): a document's label chunk (ticket 15, §5.3) embeds its type and purposes, not its text, and
+   * must never win the passage a hydrated result shows (§6.6) — it would surface as an empty
+   * string, since a label chunk's offsets are always {@code 0, 0}.
+   */
   public List<DocumentMatch> findMatches(float[] queryVector, String embeddingModel) {
     return jdbc.sql(
             """
@@ -34,7 +40,7 @@ public class DocumentSearchRepository {
                     1 - (embedding <=> :query_vector) AS similarity
                 FROM document_chunk chunk
                 JOIN document ON document.id = chunk.document_id
-                WHERE embedding_model = :embedding_model
+                WHERE embedding_model = :embedding_model AND kind = 'body'
                 ORDER BY document_id, embedding <=> :query_vector
             ) AS best_chunk
             WHERE similarity >= :semantic_floor

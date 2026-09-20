@@ -7,6 +7,7 @@ import com.example.searchapp.onboarding.repository.ClaimedSummaryJob;
 import com.example.searchapp.onboarding.repository.ClientRepository;
 import com.example.searchapp.onboarding.repository.DocumentRepository;
 import com.example.searchapp.onboarding.service.Chunk;
+import com.example.searchapp.onboarding.service.Classification;
 import com.example.searchapp.onboarding.service.EmbeddedChunk;
 import java.util.List;
 import java.util.Set;
@@ -113,6 +114,8 @@ class SummaryLeaseIntegrationTest extends IntegrationTest {
             clientId,
             "Title",
             "one two three",
+            new Classification("unknown", List.of(), Classification.SOURCE_UNKNOWN, 0, ""),
+            new float[384],
             List.of(new EmbeddedChunk(new Chunk(0, 0, 5), new float[384])),
             "test-model");
     jdbcClient

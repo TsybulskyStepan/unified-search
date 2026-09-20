@@ -48,6 +48,7 @@ class HealthAndSchemaIntegrationTest extends IntegrationTest {
 
     assertThat(extensions).containsExactlyInAnyOrder("vector", "pg_trgm", "citext");
     assertThat(tables).contains("client", "document", "document_chunk");
-    assertThat(primaryKeyColumns).containsExactly("document_id", "embedding_model", "ordinal");
+    assertThat(primaryKeyColumns)
+        .containsExactly("document_id", "embedding_model", "kind", "ordinal");
   }
 }
