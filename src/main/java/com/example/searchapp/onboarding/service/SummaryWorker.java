@@ -77,19 +77,21 @@ public class SummaryWorker {
       documents.completeSummaryFailed(job.id());
       failedOutcomes.increment();
       log.warn(
-          "Summary outcome document_id={} attempt={} outcome=failed error={} latency_ms={}",
+          "Summary outcome document_id={} attempt={} outcome=failed error={} reason={} latency_ms={}",
           job.id(),
           job.attempts(),
           exception.getClass().getSimpleName(),
+          exception.getMessage(),
           latencyMillis(startNanos));
     } catch (RuntimeException exception) {
       // TransientSummarizationException, and any other unexpected failure, treated alike: leave
       // the row pending (§7.2 handles the rest).
       log.warn(
-          "Summary outcome document_id={} attempt={} outcome=retry error={} latency_ms={}",
+          "Summary outcome document_id={} attempt={} outcome=retry error={} reason={} latency_ms={}",
           job.id(),
           job.attempts(),
           exception.getClass().getSimpleName(),
+          exception.getMessage(),
           latencyMillis(startNanos));
     }
   }
