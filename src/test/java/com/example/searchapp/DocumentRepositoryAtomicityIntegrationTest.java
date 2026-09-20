@@ -29,11 +29,11 @@ class DocumentRepositoryAtomicityIntegrationTest extends IntegrationTest {
         clients.insert(
             new CreateClientRequest("Atomicity", "Test", "atomicity.test@example.com", null, null));
 
-    // The second chunk's embedding is the wrong dimension for the vector(768) column — pgvector
+    // The second chunk's embedding is the wrong dimension for the vector(384) column — pgvector
     // rejects the insert, which must take the document row down with it.
     List<EmbeddedChunk> chunks =
         List.of(
-            new EmbeddedChunk(new Chunk(0, 0, 5), new float[768]),
+            new EmbeddedChunk(new Chunk(0, 0, 5), new float[384]),
             new EmbeddedChunk(new Chunk(1, 6, 11), new float[10]));
 
     assertThatThrownBy(

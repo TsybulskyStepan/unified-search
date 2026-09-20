@@ -10,7 +10,7 @@ running. It runs only when the database is empty, and is safe to run twice.
 
 **Blocked by:** 05 — Create and fetch documents.
 
-**Status:** ready-for-agent
+**Status:** complete
 
 - [x] On a clean volume, startup seeds the corpus and search returns meaningful results with no manual setup
 - [x] Seeding goes through the same creation path the API uses, not raw SQL

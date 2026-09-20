@@ -1,0 +1,102 @@
+# The closed vocabulary of document types and KYC purposes (system-design §3.1, §3.2).
+#
+# Adding a type or a purpose is a change to this file alone (system-design §14, ticket 14) — no
+# code change is required. `unknown` is reserved by the loader and must not appear here.
+#
+# A synonym must never equal a type or purpose id: the loader rejects that as ambiguous (§3.1).
+version: 1
+types:
+  utility_bill:
+    label: utility bill
+    purposes: [proof_of_address]
+    title_patterns: [utility bill, energy, electricity, gas bill, water bill]
+    content_patterns: [kwh, meter, supply address, standing charge]
+    synonyms: [utility bill, energy bill, electricity bill, gas bill, water bill, bill]
+  council_tax_bill:
+    label: council tax bill
+    purposes: [proof_of_address]
+    title_patterns: [council tax]
+    content_patterns: [council tax, valuation band]
+    synonyms: [council tax, council tax bill, bill]
+  bank_statement:
+    label: bank statement
+    purposes: [proof_of_address]
+    title_patterns: [account statement, bank statement]
+    content_patterns: [opening balance, closing balance, sort code]
+    synonyms: [account statement, bank statement, statement]
+  tenancy_agreement:
+    label: tenancy agreement
+    purposes: [proof_of_address]
+    title_patterns: [tenancy, lease]
+    content_patterns: [landlord, tenant, deposit]
+    synonyms: [tenancy, lease, tenancy agreement]
+  passport:
+    label: passport
+    purposes: [proof_of_identity]
+    title_patterns: [passport]
+    content_patterns: [passport number, nationality]
+    synonyms: []
+  driving_licence:
+    label: driving licence
+    purposes: [proof_of_identity]
+    title_patterns: [driving licence, driver's licence, driver licence]
+    content_patterns: [licence number, entitlement]
+    synonyms: [driving licence, driver's licence, driver licence, licence]
+  w9:
+    label: w-9 form
+    purposes: [tax_status]
+    title_patterns: [w-9, w9, taxpayer identification]
+    content_patterns: [backup withholding, fatca]
+    synonyms: [w-9, w-9 form, taxpayer identification]
+  tax_return:
+    label: tax return
+    purposes: [tax_status]
+    title_patterns: [tax return, self assessment]
+    content_patterns: [taxpayer reference, income tax]
+    synonyms: [tax return, self assessment]
+  completion_statement:
+    label: completion statement
+    purposes: [source_of_funds]
+    title_patterns: [completion statement]
+    content_patterns: [sale proceeds, conveyancing, completion]
+    synonyms: [completion statement]
+  engagement_letter:
+    label: engagement letter
+    purposes: [fees_and_terms]
+    title_patterns: [engagement letter, terms of business]
+    content_patterns: [assets under management, terminate this arrangement]
+    synonyms: [engagement letter, terms of business]
+  investment_policy_statement:
+    label: investment policy statement
+    purposes: [investment_mandate]
+    title_patterns: [investment policy]
+    content_patterns: [asset allocation, risk profile]
+    synonyms: [investment policy, investment policy statement, ips]
+  trust_deed:
+    label: trust deed
+    purposes: [trust_structure]
+    title_patterns: [trust deed, deed of amendment]
+    content_patterns: [trustee, settlor, beneficiar]
+    synonyms: [trust deed, deed of amendment]
+purposes:
+  proof_of_address:
+    label: proof of address
+    synonyms: [proof of address, address proof, proof of residence, residency evidence, address verification]
+  proof_of_identity:
+    label: proof of identity
+    synonyms: [proof of identity, identity document, photo id, id document, identification]
+  source_of_funds:
+    label: source of funds
+    synonyms: [source of funds, source of wealth, origin of funds, where the money came from, sale proceeds]
+  tax_status:
+    label: tax status
+    synonyms: [tax residency, tax residence, tax status, tax form, fatca, crs, self certification]
+  fees_and_terms:
+    label: fees and terms
+    synonyms: [advisory fees, fees, charges, fee schedule, fee agreement, engagement]
+  investment_mandate:
+    label: investment mandate
+    synonyms: [risk tolerance, risk profile, investment mandate, asset allocation, investment objectives]
+  trust_structure:
+    label: trust structure
+    synonyms: [trust restructuring, trust structure, trustees, beneficiaries, trust]

@@ -14,6 +14,10 @@ that falls out of the same mechanism.
 
 **Blocked by:** 04 — Create and fetch clients.
 
+**Extended by:** 17 — client matches split into an identity tier and a context tier, so a description
+hit no longer outranks the documents that answer the query (§6.2). The floor and the fields are
+unchanged.
+
 **Status:** complete
 
 - [x] Searching for a firm name returns the client whose email carries that domain, first, reporting the email as the matched field

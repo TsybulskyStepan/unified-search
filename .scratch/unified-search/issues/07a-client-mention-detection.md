@@ -27,6 +27,9 @@ all three need tests, not just code:
 
 **Blocked by:** 07 — Add documents to search.
 
+**Extended by:** 16 — mention detection moves behind the query planner and gains possessive
+normalisation and the ambiguity rule (§6.1). The leading-run anchor built here is kept, not replaced.
+
 **Status:** complete
 
 - [x] A query naming a client plus a category returns that client's matching document first and the client second

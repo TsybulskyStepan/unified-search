@@ -22,9 +22,9 @@ public class DocumentRepository {
   private static final String INSERT_CHUNK_SQL =
       """
       INSERT INTO document_chunk
-          (document_id, embedding_model, ordinal, start_offset, end_offset, embedding_768)
+          (document_id, embedding_model, ordinal, start_offset, end_offset, embedding)
       VALUES
-          (:document_id, :embedding_model, :ordinal, :start_offset, :end_offset, :embedding_768)
+          (:document_id, :embedding_model, :ordinal, :start_offset, :end_offset, :embedding)
       """;
 
   private final JdbcClient jdbc;
@@ -180,7 +180,7 @@ public class DocumentRepository {
         .addValue("ordinal", chunk.ordinal())
         .addValue("start_offset", chunk.startOffset())
         .addValue("end_offset", chunk.endOffset())
-        .addValue("embedding_768", new PGvector(embeddedChunk.embedding()));
+        .addValue("embedding", new PGvector(embeddedChunk.embedding()));
   }
 
   private static Document map(ResultSet resultSet, int rowNumber) throws SQLException {

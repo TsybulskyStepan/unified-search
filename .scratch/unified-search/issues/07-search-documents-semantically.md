@@ -15,6 +15,9 @@ because a single weak client match would take position one and demote the utilit
 
 **Blocked by:** 05 — Create and fetch documents; 06 — Search clients lexically.
 
+**Extended by:** 17 and 18 — the semantic scan becomes one of three document signals, fused by rank
+rather than used alone, and type ordering becomes a plan-shaped tier order (§6.3, §6.4, §6.5).
+
 **Status:** complete
 
 - [x] Searching for a document category returns the artifact that satisfies it, with a passage, and returns zero clients
