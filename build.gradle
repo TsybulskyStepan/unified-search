@@ -78,3 +78,21 @@ tasks.named('processResources') {
         into 'static'
     }
 }
+
+/**
+ * Forces a from-scratch rebuild of the compose images: no layer cache, fresh base images.
+ */
+tasks.register('composeBuild', Exec) {
+    group = 'docker'
+    commandLine 'docker', 'compose', 'build', '--no-cache', '--pull'
+}
+
+/**
+ * Rebuilds the images, then recreates the containers and waits until they are healthy. The
+ * database volume is kept, so data survives.
+ */
+tasks.register('composeRedeploy', Exec) {
+    group = 'docker'
+    dependsOn('composeBuild')
+    commandLine 'docker', 'compose', 'up', '-d', '--force-recreate', '--wait'
+}

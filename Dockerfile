@@ -14,7 +14,7 @@ COPY gradlew build.gradle settings.gradle ./
 RUN ./gradlew --no-daemon dependencies
 COPY --from=frontend-build /frontend/dist /workspace/src/main/resources/static
 COPY src src
-RUN ./gradlew --no-daemon bootJar
+RUN ./gradlew --no-daemon bootJar -x buildFrontend -x npmInstall
 
 FROM eclipse-temurin:25-jre
 
