@@ -155,16 +155,12 @@ public class SearchService {
         List<LabelDocumentMatch> labels = labelMatches.join();
         List<RankedDocumentMatch> lexical = lexicalMatches.join();
         List<RankedDocumentMatch> semantic = semanticMatches.join();
-        hits =
-            new SearchHits(
-                clientMatches.join().size(), labels.size(), lexical.size(), semantic.size());
+        hits = new SearchHits(0, labels.size(), lexical.size(), semantic.size());
         documentResults = DocumentFusion.fuse(labels, lexical, semantic);
       }
 
       List<ClientMatch> clientResults = clientMatches.join();
-      if (!plan.hasResidual()) {
-        hits = new SearchHits(clientResults.size(), 0, 0, 0);
-      }
+      hits = hits.withClients(clientResults.size());
       List<ResultOrdering.Candidate> candidates =
           ResultOrdering.order(clientResults, documentResults, plan);
       if (request.offset() >= candidates.size()) {
@@ -294,6 +290,10 @@ public class SearchService {
   private record SearchHits(int clients, int labels, int lexical, int semantic) {
     private SearchHits() {
       this(0, 0, 0, 0);
+    }
+
+    private SearchHits withClients(int clients) {
+      return new SearchHits(clients, labels, lexical, semantic);
     }
   }
 

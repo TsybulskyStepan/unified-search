@@ -122,6 +122,31 @@ class ObservabilityIntegrationTest extends IntegrationTest {
     assertThat(summaryOutcomes.body()).contains("COUNT");
   }
 
+  @Test
+  void auditLineCountsClientHitsWhenTheResidualIsOnlyStopWords() throws Exception {
+    var created =
+        post(
+            port,
+            "/clients",
+            TEST_API_KEY,
+            "{\"first_name\":\"Zanzibarine\",\"last_name\":\"Quillfeather\","
+                + "\"email\":\"zanzibarine@example.test\","
+                + "\"description\":\"Zanzibarine and the harbour\"}");
+    assertThat(created.statusCode()).isEqualTo(201);
+
+    var response = get(port, "/search?q=zanzibarine%20and", TEST_API_KEY);
+    String requestId = response.headers().firstValue("X-Request-Id").orElseThrow();
+
+    assertThat(response.body()).contains("\"type\":\"client\"");
+    ILoggingEvent auditLine =
+        searchEvents.list.stream()
+            .filter(event -> event.getFormattedMessage().startsWith("Search audit"))
+            .filter(event -> event.getFormattedMessage().contains("request_id=" + requestId))
+            .findFirst()
+            .orElseThrow(() -> new AssertionError("no search audit line was captured"));
+    assertThat(auditLine.getFormattedMessage()).doesNotContain("client_hits=0 ");
+  }
+
   private String createClient(String firstName, String lastName, String email) throws Exception {
     var response =
         post(
