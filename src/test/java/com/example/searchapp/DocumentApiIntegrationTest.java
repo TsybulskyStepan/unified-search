@@ -103,7 +103,7 @@ class DocumentApiIntegrationTest extends IntegrationTest {
   }
 
   @Test
-  void rejectsInvalidBodiesAndTreatsUnknownOrMalformedIdsAsNotFound() throws Exception {
+  void rejectsInvalidBodiesAndMalformedIdsAndReportsUnknownIdsAsNotFound() throws Exception {
     String clientId = createClient("Val", "Idator", "val.idator@example.com");
 
     var blank =
@@ -129,7 +129,7 @@ class DocumentApiIntegrationTest extends IntegrationTest {
             "/clients/not-a-uuid/documents",
             TEST_API_KEY,
             "{\"title\":\"T\",\"content\":\"C\"}");
-    assertThat(malformedClient.statusCode()).isEqualTo(404);
+    assertThat(malformedClient.statusCode()).isEqualTo(400);
 
     var create =
         post(
@@ -148,7 +148,7 @@ class DocumentApiIntegrationTest extends IntegrationTest {
 
     var malformedDocument =
         get(port, "/clients/" + clientId + "/documents/not-a-uuid", TEST_API_KEY);
-    assertThat(malformedDocument.statusCode()).isEqualTo(404);
+    assertThat(malformedDocument.statusCode()).isEqualTo(400);
 
     // a document created under a different client is not found through this one
     String otherClientId = createClient("Other", "Client", "other.client@example.com");

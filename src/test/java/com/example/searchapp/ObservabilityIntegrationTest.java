@@ -115,7 +115,16 @@ class ObservabilityIntegrationTest extends IntegrationTest {
             "search.total",
             "document.embed",
             "summary.call",
-            "summary.outcome");
+            "summary.outcome",
+            "classification.outcome");
+
+    var classificationOutcomes =
+        get(
+            port,
+            "/metrics/classification.outcome?tag=type:bank_statement&tag=source:rule",
+            TEST_API_KEY);
+    assertThat(classificationOutcomes.statusCode()).isEqualTo(200);
+    assertThat(classificationOutcomes.body()).contains("COUNT");
 
     var summaryOutcomes = get(port, "/metrics/summary.outcome?tag=status:failed", TEST_API_KEY);
     assertThat(summaryOutcomes.statusCode()).isEqualTo(200);

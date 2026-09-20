@@ -42,7 +42,7 @@ class ClientApiIntegrationTest extends IntegrationTest {
   }
 
   @Test
-  void reportsValidationAndTreatsMalformedIdsAsNotFound() throws Exception {
+  void reportsValidationAndRejectsMalformedIds() throws Exception {
     var invalid =
         post(
             port,
@@ -53,7 +53,10 @@ class ClientApiIntegrationTest extends IntegrationTest {
     assertThat(invalid.body()).contains("errors").contains("first_name").contains("email");
 
     var malformed = get(port, "/clients/not-a-uuid", TEST_API_KEY);
-    assertThat(malformed.statusCode()).isEqualTo(404);
+    assertThat(malformed.statusCode()).isEqualTo(400);
+    assertThat(malformed.body())
+        .contains("identifier in the request path is malformed")
+        .doesNotContain("UUID");
     var unknown = get(port, "/clients/00000000-0000-0000-0000-000000000000", TEST_API_KEY);
     assertThat(unknown.statusCode()).isEqualTo(404);
   }

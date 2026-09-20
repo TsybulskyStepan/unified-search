@@ -303,15 +303,15 @@ JSON is `snake_case`. Errors are RFC 9457 `application/problem+json`. IDs are UU
 | Method and path | Module | Success | Errors | Notes |
 |---|---|---|---|---|
 | `POST /clients` | onboarding | `201`, `Location`, `Client` | `400`, `401`, `409` | |
-| `GET /clients/{id}` | onboarding | `200` `Client` | `401`, `404` | |
+| `GET /clients/{id}` | onboarding | `200` `Client` | `400`, `401`, `404` | |
 | `POST /clients/{id}/documents` | onboarding | `201`, `Location`, `Document` | `400`, `401`, `404` | Optional `document_type`, `purposes` **(v2)**. Never calls a model |
-| `GET /clients/{id}/documents/{documentId}` | onboarding | `200` `Document` | `401`, `404` | Never triggers a summary |
-| `POST /clients/{id}/documents/{documentId}/summary` | onboarding | `202` `Document` | `401`, `404` | `none` or `failed` → `pending`. Already `pending` → `202` no-op. `ready` → `200` no-op |
+| `GET /clients/{id}/documents/{documentId}` | onboarding | `200` `Document` | `400`, `401`, `404` | Never triggers a summary |
+| `POST /clients/{id}/documents/{documentId}/summary` | onboarding | `202` `Document` | `400`, `401`, `404` | `none` or `failed` → `pending`. Already `pending` → `202` no-op. `ready` → `200` no-op |
 | `GET /search?q=&limit=&offset=` | search | `200` `SearchResult[]`, `X-Total-Count` | `400`, `401` | `[]` when nothing qualifies, never `404` |
 | `GET /health` | shared | `200` | | Unauthenticated |
 | `GET /v3/api-docs`, `/swagger-ui/**` | shared | `200` | | Unauthenticated |
 
-A `404` covers both a missing id and a malformed UUID.
+A missing id is `404`. A malformed UUID in a path is `400`, a bad request rather than a missing record. An unknown route is `404` with the same generic body as any other.
 
 ### 4.2 Validation
 

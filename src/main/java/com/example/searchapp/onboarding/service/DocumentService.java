@@ -31,6 +31,7 @@ public class DocumentService {
   private final Embedder embedder;
   private final SummaryWorker summaryWorker;
   private final Timer embeddingTimer;
+  private final MeterRegistry meterRegistry;
 
   public DocumentService(
       ClientRepository clients,
@@ -45,6 +46,7 @@ public class DocumentService {
     this.embedder = embedder;
     this.summaryWorker = summaryWorker;
     embeddingTimer = meterRegistry.timer("document.embed");
+    this.meterRegistry = meterRegistry;
   }
 
   public Document create(UUID clientId, CreateDocumentRequest request) {
@@ -97,6 +99,14 @@ public class DocumentService {
             labelEmbedding,
             embeddedChunks,
             embedder.modelId());
+    meterRegistry
+        .counter(
+            "classification.outcome",
+            "type",
+            document.documentType(),
+            "source",
+            document.classificationSource())
+        .increment();
     log.info(
         "Document indexed document_id={} document_type={} classification_source={}"
             + " chunk_count={} embed_ms={}",

@@ -17,7 +17,7 @@ invariants that belong to everyone belong to no one.
 
 **Blocked by:** 07 — Add documents to search.
 
-**Status:** ready-for-agent
+**Status:** complete
 
 - [x] Timers exist for the lexical query, the query embedding, the semantic query, total search, document embedding and summary calls
 - [x] Summary outcomes are counted by terminal status
@@ -31,5 +31,5 @@ recoverable from timings.
 
 - [x] Timers exist for planning, the label query and the lexical query
 - [x] The audit line records the plan shape, the intent count and whether a client was mentioned
-- [ ] Classification outcomes are counted by type and source — **not implemented: `classification.outcome` is absent from `/metrics` on a running instance (verified 2026-09-20); every other item on this ticket is live.**
+- [x] Classification outcomes are counted by type and source
 - [x] The added fields carry no query text, no label text and no client identifiers beyond ids
