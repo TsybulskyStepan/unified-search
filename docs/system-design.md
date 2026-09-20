@@ -266,7 +266,7 @@ Two mappings are product decisions, not mistakes. `bank_statement` and `tax_retu
 
 ### 3.2 File
 
-`shared/taxonomy/taxonomy.yaml`, loaded once at startup, validated (unique names, every purpose referenced by a type exists, no synonym equals a type or purpose id).
+`shared/taxonomy/taxonomy.yaml`, loaded once at startup, validated (unique names, no id is both a type and a purpose, every purpose referenced by a type exists, no synonym equals a type or purpose id). The planner splits a query's intents into types and purposes by id, so the two id spaces must not overlap.
 
 ```yaml
 version: 1
@@ -681,7 +681,7 @@ For local development without Docker, run `cd frontend && npm run build` first (
 
 - `QueryPlanner` **(v2)**, a table of queries → expected plan. Includes every worked example in §6.5, possessives, the ambiguity rule, ambiguous double mention, stop-word-only residual, `w-9`.
 - `DocumentClassifier` **(v2)**, every seed document classifies to its expected type from `eval/classification.json`, no ties, and a handful of `unknown` cases.
-- `TaxonomyLoader` **(v2)**, rejects duplicate ids, unknown purpose references, synonyms equal to ids.
+- `TaxonomyLoader` **(v2)**, rejects duplicate ids, ids used as both a type and a purpose, unknown purpose references, synonyms equal to ids.
 - `DocumentFusion` and `ResultOrdering` **(v2)**, both shapes, label tier before untagged, mention not in `I` still inserted, `I minus mention` has no duplicate, empty residual yields clients only, order is total.
 - `Chunker`, offsets, overlap, single chunk, surrogate pairs.
 - Request validation, `ApiKeyFilter`.

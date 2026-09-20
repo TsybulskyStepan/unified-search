@@ -58,6 +58,7 @@ public class TaxonomyLoader {
 
     Map<String, Taxonomy.Purpose> purposes = parsePurposes(root, source);
     Map<String, Taxonomy.DocumentType> types = parseTypes(root, source, purposes);
+    checkIdsDisjoint(types, purposes, source);
     types.put(Taxonomy.UNKNOWN_TYPE, unknownType());
 
     checkSynonymCollisions(types, purposes, source);
@@ -120,6 +121,21 @@ public class TaxonomyLoader {
   private static void requireNotReserved(String id, String source, String kind) {
     if (Taxonomy.UNKNOWN_TYPE.equals(id)) {
       throw new IllegalStateException(source + ": '" + id + "' is a reserved " + kind + " id");
+    }
+  }
+
+  /**
+   * The planner splits a query's intent ids into types and purposes by looking each up in the
+   * matching map, so an id in both would be counted and matched as each.
+   */
+  private static void checkIdsDisjoint(
+      Map<String, Taxonomy.DocumentType> types,
+      Map<String, Taxonomy.Purpose> purposes,
+      String source) {
+    for (String id : types.keySet()) {
+      if (purposes.containsKey(id)) {
+        throw new IllegalStateException(source + ": '" + id + "' is both a type and a purpose id");
+      }
     }
   }
 
