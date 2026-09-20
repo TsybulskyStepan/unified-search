@@ -2,6 +2,9 @@ package com.example.searchapp;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import com.example.searchapp.onboarding.exception.PermanentSummarizationException;
 import com.example.searchapp.onboarding.exception.TransientSummarizationException;
 import com.example.searchapp.onboarding.service.StubSummarizer;
@@ -17,6 +20,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.web.server.LocalServerPort;
@@ -176,6 +180,32 @@ class SummaryApiIntegrationTest extends IntegrationTest {
     String ready = awaitStatus(clientId, documentId, "ready");
     assertThat(ready).contains("\"summary\":\"" + StubSummarizer.DEFAULT_SUMMARY + "\"");
     assertThat(summarizer.callCount()).isEqualTo(2);
+  }
+
+  @Test
+  void aFailedSummaryLogsTheReasonSoAnOperatorCanDiagnoseIt() throws Exception {
+    summarizer.reset();
+    String clientId = createClient("Log", "Reason", "log.reason@example.com");
+    String documentId = createDocument(clientId, "Bill", "Account 333");
+
+    var workerLogger = (Logger) LoggerFactory.getLogger(SummaryWorker.class);
+    var events = new ListAppender<ILoggingEvent>();
+    events.start();
+    workerLogger.addAppender(events);
+    try {
+      summarizer.queueFailure(
+          new PermanentSummarizationException("Gemini rejected the request (403)"));
+      requestSummary(clientId, documentId);
+      awaitStatus(clientId, documentId, "failed");
+
+      assertThat(events.list)
+          .anySatisfy(
+              event ->
+                  assertThat(event.getFormattedMessage())
+                      .contains("outcome=failed", "reason=Gemini rejected the request (403)"));
+    } finally {
+      workerLogger.detachAppender(events);
+    }
   }
 
   @Test
