@@ -118,6 +118,10 @@ class ObservabilityIntegrationTest extends IntegrationTest {
             "summary.outcome",
             "classification.outcome");
 
+    var summaryOutcomes = get(port, "/metrics/summary.outcome?tag=status:failed", TEST_API_KEY);
+    assertThat(summaryOutcomes.statusCode()).isEqualTo(200);
+    assertThat(summaryOutcomes.body()).contains("COUNT");
+
     var classificationOutcomes =
         get(
             port,
@@ -125,10 +129,6 @@ class ObservabilityIntegrationTest extends IntegrationTest {
             TEST_API_KEY);
     assertThat(classificationOutcomes.statusCode()).isEqualTo(200);
     assertThat(classificationOutcomes.body()).contains("COUNT");
-
-    var summaryOutcomes = get(port, "/metrics/summary.outcome?tag=status:failed", TEST_API_KEY);
-    assertThat(summaryOutcomes.statusCode()).isEqualTo(200);
-    assertThat(summaryOutcomes.body()).contains("COUNT");
   }
 
   @Test

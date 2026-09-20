@@ -30,8 +30,8 @@ public class DocumentService {
   private final DocumentClassifier classifier;
   private final Embedder embedder;
   private final SummaryWorker summaryWorker;
+  private final ClassificationOutcomeMetrics classificationOutcomes;
   private final Timer embeddingTimer;
-  private final MeterRegistry meterRegistry;
 
   public DocumentService(
       ClientRepository clients,
@@ -39,14 +39,15 @@ public class DocumentService {
       DocumentClassifier classifier,
       Embedder embedder,
       SummaryWorker summaryWorker,
+      ClassificationOutcomeMetrics classificationOutcomes,
       MeterRegistry meterRegistry) {
     this.clients = clients;
     this.documents = documents;
     this.classifier = classifier;
     this.embedder = embedder;
     this.summaryWorker = summaryWorker;
+    this.classificationOutcomes = classificationOutcomes;
     embeddingTimer = meterRegistry.timer("document.embed");
-    this.meterRegistry = meterRegistry;
   }
 
   public Document create(UUID clientId, CreateDocumentRequest request) {
@@ -57,6 +58,7 @@ public class DocumentService {
     Classification classification =
         classifier.classify(
             request.title(), request.content(), request.documentType(), request.purposes());
+    classificationOutcomes.record(classification);
 
     List<Chunk> chunks = Chunker.split(request.content());
     // Content is non-blank (@NotBlank), so the chunker always yields at least one chunk (§3.2).
@@ -99,14 +101,6 @@ public class DocumentService {
             labelEmbedding,
             embeddedChunks,
             embedder.modelId());
-    meterRegistry
-        .counter(
-            "classification.outcome",
-            "type",
-            document.documentType(),
-            "source",
-            document.classificationSource())
-        .increment();
     log.info(
         "Document indexed document_id={} document_type={} classification_source={}"
             + " chunk_count={} embed_ms={}",
