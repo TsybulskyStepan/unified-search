@@ -7,7 +7,7 @@ import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
 import com.example.searchapp.onboarding.service.DocumentService;
 import com.example.searchapp.onboarding.service.SummaryWorker;
-import com.example.searchapp.search.service.SearchService;
+import com.example.searchapp.search.service.SearchTelemetry;
 import java.net.http.HttpResponse;
 import java.time.Instant;
 import java.util.List;
@@ -30,7 +30,7 @@ class ObservabilityIntegrationTest extends IntegrationTest {
 
   @BeforeEach
   void attachAppenders() {
-    searchLogger = (Logger) LoggerFactory.getLogger(SearchService.class);
+    searchLogger = (Logger) LoggerFactory.getLogger(SearchTelemetry.class);
     documentLogger = (Logger) LoggerFactory.getLogger(DocumentService.class);
     summaryLogger = (Logger) LoggerFactory.getLogger(SummaryWorker.class);
     searchEvents = attach(searchLogger);

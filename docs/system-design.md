@@ -99,7 +99,8 @@ com.example.searchapp
 │   ├── dto/               SearchRequest, SearchResult, match types
 │   ├── planner/           QueryPlanner, QueryPlan, ClientMention (v2)
 │   ├── repository/        ClientSearchRepository, DocumentSearchRepository (SQL only)
-│   └── service/           SearchService, DocumentRetriever, DocumentFusion, ResultOrdering
+│   └── service/           SearchService, DocumentRetriever, SearchTelemetry, DocumentFusion,
+│                          ResultOrdering
 └── shared/
     ├── embedding/         Embedder, one bean, warmed at startup
     ├── taxonomy/          Taxonomy, TaxonomyLoader (v2)
@@ -647,7 +648,7 @@ On request only. `POST …/summary` moves `none` or `failed` to `pending` and re
 | Signal | Content |
 |---|---|
 | Logs | Structured JSON, `request_id` from `X-Cloud-Trace-Context` or generated, echoed as `X-Request-Id` |
-| Search audit line | `request_id`, `query_length`, **(v2)** `plan_shape` (`identity`, `compound`, `document`), `intent_count`, `mention_present`, per-retriever hit counts, `returned`, per-stage timings. Query text is never logged by the service, it is routinely PII. The eval's report (§11.3) logs its synthetic fixture queries |
+| Search audit line | `request_id`, `query_length`, **(v2)** `plan_shape` (`identity`, `compound`, `document`), `intent_count`, `mention_present`, per-retriever hit counts, `returned`, per-stage timings. Query text is never logged by the service, it is routinely PII, so the line is written by one module that is handed only the query length. The eval's report (§11.3) logs its synthetic fixture queries |
 | Write lines | IDs, `document_type`, `classification_source`, chunk count, embed time. Never names, emails, titles or content |
 | Worker lines | `document_id`, attempt, outcome, error class, latency |
 | Metrics | Timers `search.plan`, `search.clients`, `search.label`, `search.lexical`, `search.embed_query`, `search.semantic`, `search.total`, `document.embed`, `summary.call`. Counters `summary.outcome{status}`, **(v2)** `classification.outcome{type,source}` |
