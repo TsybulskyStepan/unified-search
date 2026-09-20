@@ -16,16 +16,16 @@ it never had.
 
 **Blocked by:** 14 — The taxonomy.
 
-**Status:** ready-for-agent
+**Status:** complete
 
-- [ ] The query is normalised before anything reads it: case, Unicode form, possessives, whitespace, and hyphenated forms such as `w-9`
-- [ ] The plan carries at most one mentioned client, the residual text, and the set of matched intents
-- [ ] A possessive client name scopes the query
-- [ ] A bare category word that is also a client's first name does not scope the query
-- [ ] That same word scopes the query when written as a possessive, or alongside a surname that matches the same client
-- [ ] Two clients matching means no mention, and neither one's documents are promoted
-- [ ] A name-only query leaves an empty residual
-- [ ] Intent matching takes the longest phrase, so a multi-word type name is not shadowed by a single word inside it
-- [ ] A query matching no intent still searches, on the remaining signals
-- [ ] The planner is a pure function, tested from a table covering every worked example in §6.5
-- [ ] A query that scoped to a client before this ticket still scopes to that client after it
+- [x] The query is normalised before anything reads it: case, Unicode form, possessives, whitespace, and hyphenated forms such as `w-9`
+- [x] The plan carries at most one mentioned client, the residual text, and the set of matched intents
+- [x] A possessive client name scopes the query
+- [x] A bare category word that is also a client's first name does not scope the query
+- [x] That same word scopes the query when written as a possessive, or alongside a surname that matches the same client
+- [x] Two clients matching means no mention, and neither one's documents are promoted
+- [x] A name-only query leaves an empty residual
+- [x] Intent matching takes the longest phrase, so a multi-word type name is not shadowed by a single word inside it
+- [x] A query matching no intent still searches, on the remaining signals
+- [x] The planner is a pure function, tested from a table covering every worked example in §6.5
+- [x] A query that scoped to a client before this ticket still scopes to that client after it
