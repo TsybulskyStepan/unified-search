@@ -17,19 +17,19 @@ invariants that belong to everyone belong to no one.
 
 **Blocked by:** 07 — Add documents to search.
 
-**Status:** ready-for-agent
+**Status:** complete
 
-- [ ] Timers exist for the lexical query, the query embedding, the semantic query, total search, document embedding and summary calls
-- [ ] Summary outcomes are counted by terminal status
-- [ ] Each search emits one audit line carrying its request id, query length, per-retriever hit counts, returned count and stage timings
-- [ ] A test asserts that query text, names, emails, titles and document content never appear in log output, across the search, write and worker paths
-- [ ] Metrics are reachable for inspection on a running instance
+- [x] Timers exist for the lexical query, the query embedding, the semantic query, total search, document embedding and summary calls
+- [x] Summary outcomes are counted by terminal status
+- [x] Each search emits one audit line carrying its request id, query length, per-retriever hit counts, returned count and stage timings
+- [x] A test asserts that query text, names, emails, titles and document content never appear in log output, across the search, write and worker paths
+- [x] Metrics are reachable for inspection on a running instance
 
 v2 additions (§9). The audit line has to describe the *decision*, not just the cost — a wrong ranking
 is diagnosed from which shape the planner chose and how many intents it found, and none of that is
 recoverable from timings.
 
-- [ ] Timers exist for planning, the label query and the lexical query
-- [ ] The audit line records the plan shape, the intent count and whether a client was mentioned
-- [ ] Classification outcomes are counted by type and source
-- [ ] The added fields carry no query text, no label text and no client identifiers beyond ids
+- [x] Timers exist for planning, the label query and the lexical query
+- [x] The audit line records the plan shape, the intent count and whether a client was mentioned
+- [x] Classification outcomes are counted by type and source
+- [x] The added fields carry no query text, no label text and no client identifiers beyond ids
