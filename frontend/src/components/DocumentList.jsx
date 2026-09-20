@@ -12,7 +12,6 @@ export default function DocumentList({ documents, clientId }) {
 
   return (
     <div className="document-list">
-      <h3>Documents ({documents.length})</h3>
       {documents.map((doc) => (
         <Link
           key={doc.id}
