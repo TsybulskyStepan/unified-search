@@ -254,7 +254,7 @@ Twelve document types, seven purposes, one `unknown`. Purposes are the KYC quest
 
 Each type and purpose has a human-readable `label` in the YAML (`utility bill`, `w-9 form`, `proof of address`). Labels are what `label_text` and the label chunk are built from. Each type also has query synonyms, which are its title patterns plus short forms (`bill` → `utility_bill` and `council_tax_bill`, `statement` → `bank_statement`, `licence` → `driving_licence`, `ips` → `investment_policy_statement`).
 
-Two mappings are product decisions, not mistakes. `bank_statement` and `tax_return` are *not* tagged `source_of_funds`, and `driving_licence` is *not* tagged `proof_of_address`, because the eval set defines "proof of address" as the seven address documents and "source of funds" as the completion statement. If compliance wants them counted, change the YAML and the eval together.
+Two mappings are product decisions, not mistakes. `bank_statement` and `tax_return` are *not* tagged `source_of_funds`, and `driving_licence` is *not* tagged `proof_of_address`, because the eval set defines "proof of address" as utility bills, council tax bills, bank and savings statements and tenancy documents, and "source of funds" as the completion statements. If compliance wants them counted, change the YAML and the eval together.
 
 ### 3.2 File
 
@@ -503,7 +503,7 @@ LIMIT 200;
 
 - Exact scan, no index. ~10⁴ documents × ~4 chunks is ~4×10⁴ distance computations.
 - `embedding_model` is bound from the live `Embedder`. A model change without re-index matches nothing, loudly.
-- `semanticFloor` is a **recall gate**, currently 0.266, re-derived by the eval over both label and body chunks as the midpoint between the lowest positive and highest negative cosine (§11.3). With label and lexical admission it is no longer the only thing standing between a relevant document and the result list, which is the point.
+- `semanticFloor` is a **recall gate**, currently 0.238, re-derived by the eval over both label and body chunks as the midpoint between the lowest positive and highest negative cosine (§11.3). With label and lexical admission it is no longer the only thing standing between a relevant document and the result list, which is the point.
 - Future path when the scan exceeds budget, HNSW plus a top-K rewrite.
 
 ### 6.4 Fusion **(v2)**
@@ -565,7 +565,7 @@ Properties. Total and deterministic, so pagination is a slice. No score is compa
 | `bill` | ambiguity rule blocks the mention, whole-query identity hit on Bill Carter, intents {utility_bill, council_tax_bill} | Bill Carter, then the four bills |
 | `tax residency` | intents {tax_status} | Mary's W-9, Bill's Tax Return, then Council Tax Bills (untagged for this intent), zero clients |
 | `source of funds` | intents {source_of_funds} | Elena's Property Sale Completion Statement, zero clients |
-| `proof of address` | intents {proof_of_address} | all seven tagged documents, zero clients |
+| `proof of address` | intents {proof_of_address} | every tagged document (53 in the seed corpus), zero clients |
 | `advisory fees` | intents {fees_and_terms} | two Advisory Engagement Letters, then Grace Kim (context tier, description) |
 
 ### 6.6 Hydration
@@ -623,7 +623,7 @@ On request only. `POST …/summary` moves `none` or `failed` to `pending` and re
 | Signal | Content |
 |---|---|
 | Logs | Structured JSON, `request_id` from `X-Cloud-Trace-Context` or generated, echoed as `X-Request-Id` |
-| Search audit line | `request_id`, `query_length`, **(v2)** `plan_shape` (`identity`, `compound`, `document`), `intent_count`, `mention_present`, per-retriever hit counts, `returned`, per-stage timings. Query text is never logged, it is routinely PII |
+| Search audit line | `request_id`, `query_length`, **(v2)** `plan_shape` (`identity`, `compound`, `document`), `intent_count`, `mention_present`, per-retriever hit counts, `returned`, per-stage timings. Query text is never logged by the service, it is routinely PII. The eval's report (§11.3) logs its synthetic fixture queries |
 | Write lines | IDs, `document_type`, `classification_source`, chunk count, embed time. Never names, emails, titles or content |
 | Worker lines | `document_id`, attempt, outcome, error class, latency |
 | Metrics | Timers `search.plan`, `search.clients`, `search.label`, `search.lexical`, `search.embed_query`, `search.semantic`, `search.total`, `document.embed`, `summary.call`. Counters `summary.outcome{status}`, **(v2)** `classification.outcome{type,source}` |
@@ -668,11 +668,11 @@ Local is the only built target. `docker compose up` starts `pgvector/pgvector:pg
 | Test | Asserts |
 |---|---|
 | J1 | `NevisWealth` → John first, `match.field = email`, `tier = identity` |
-| J2 | `address proof` → all seven address documents in the first seven positions, no client above any of them |
+| J2 | `address proof` → every address document (53 in the seed corpus) in the first 53 positions, no client above any of them |
 | J3 | `Hendersen` → Mary first |
 | Identity over documents | A query hitting a client's email and a document lexically returns the client first |
 | Context under documents **(v2)** | `advisory fees` → engagement letters lead, Grace Kim present and below them |
-| Compound **(v2)** | `John's bill` and `John utility bill` → John's utility bill first, John second, other bills after |
+| Compound **(v2)** | `John Doe utility bill`, `Bill's statement`, `Mary's tax form` → the named client's expected document first, then only that client's own documents, then the client, then other clients' documents (§6.5 tier 1 then tier 2) |
 | Ambiguity rule **(v2)** | `bill` → Bill Carter first, bills after. `Bill's statement` → Bill's statement first |
 | Label admission **(v2)** | A document tagged `proof_of_address` whose text contains none of the query words is returned for `proof of address` |
 | Label chunk **(v2)** | A paraphrase absent from the synonym list still returns the tagged document through the semantic signal |
@@ -695,14 +695,23 @@ Each query declares one expectation shape.
 |---|---|
 | `first` | The named client or document is at position 1 |
 | `all_within` (n expected items) | Every expected item appears in the first n positions, i.e. recall@n = 1 |
-| `compound` | Expected document first, expected client second |
+| `compound` | Expected document first, then only that client's own documents, then the expected client. A client's other documents that clear a signal are tier 1 (§6.5) and may sit between the two, so "second" holds only when no other document of that client qualified |
 | `none` | Zero results |
 
 Every document query additionally asserts **no client is ranked above any expected document**. This generalises v1's zero-client guard and still lets a context-tier client appear below the answers. MRR and recall@n are logged for every run.
 
-Queries. `NevisWealth`, `John`, `Hendersen` (first). `address proof`, `proof of address` (all_within 7). `utility bill` (all_within 2). `tax residency` (all_within 2). `source of funds` (first). `advisory fees` (all_within 2). `proof of identity` (all_within 2). `risk tolerance`, `trust restructuring`, `W-9` (first). `John's bill`, `John utility bill`, `Bill's statement`, `Mary's tax form`, `Priya tenancy` (compound). `bill` (first, Bill Carter). Five out-of-domain negatives (none).
+Expected items are hand-labelled from the taxonomy's definition of what answers the question (§3.1), never read back from a search result. `queries.json` names shared answer sets (`proof_of_address` is 53 documents, so `address proof` and `proof of address` are `all_within 53`) and lets an entry name a title alone, meaning every document with that title.
 
-`semanticFloor` is set by this test as the midpoint of the gap between the lowest positive and highest negative cosine, and the build fails if the gap closes. `lexicalFloor` stays 0.6 and is guarded in both directions. The classifier must reach 100% on `classification.json`.
+Queries at the current 50-client, 126-document corpus.
+
+- `first`: `NevisWealth` (John Doe), `Hendersen` (Mary Henderson), `bill` (Bill Carter), `letter of authority`.
+- `all_within`: `John` (both Johns, 2), `address proof` and `proof of address` (53), `utility bill` (13), `tax residency` (14), `source of funds` (5), `advisory fees` (12), `proof of identity` (22), `risk tolerance` (8), `trust restructuring` (6), `W-9` (2).
+- `compound`: possessive `Bill's statement`, `Mary's tax form`, `Elena's completion statement`, and bare `John Doe utility bill`, `Priya Shah tenancy`. Mentions are unambiguous on purpose. `John's bill` and `Priya tenancy` tie two clients (John Doe and John Whitfield, Priya Shah and Priyanka Raman), so §6.1 correctly yields no mention.
+- `none`: five out-of-domain queries. `weather forecast for the weekend` was replaced by `how to bake sourdough bread` because `weather` is a substring of the client Zoë Fairweather and trigram `word_similarity` admits her on the email. This is a known limit of the lexical floor, not a fixed bug, and the old eval only asserted "no documents" so it never saw it.
+
+`semanticFloor` is set by this test as the midpoint of the gap between the lowest positive and highest negative cosine (currently 0.2917 and 0.1836, midpoint 0.2377), and the build fails if the gap closes or if `application.yaml` drifts from the midpoint. `lexicalFloor` stays 0.6 and is guarded from both sides at the endpoint: `Hendersen` (0.70) is admitted and `joe` (0.50) is not. The classifier must reach 100% on `classification.json`.
+
+**Known gap.** The two Broadband and Landline bills are genuine address evidence but classify `unknown` (§3.1), so they are not in the `proof_of_address` set and never surface for that query. Adding `broadband` to the `utility_bill` title patterns would close it, together with `classification.json` and the eval.
 
 ---
 

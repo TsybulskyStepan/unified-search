@@ -1,96 +1,453 @@
 {
-  "positives": [
+  "sets": {
+    "proof_of_address": [
+      {
+        "title": "2024 Utility Bill"
+      },
+      {
+        "title": "Coastline Power Statement June 2025"
+      },
+      {
+        "title": "Electricity Bill Apr to Jun 2024"
+      },
+      {
+        "title": "Electricity Bill Jan to Mar 2024"
+      },
+      {
+        "title": "Electricity Bill Oct to Dec 2024"
+      },
+      {
+        "title": "Electricity Bill Oct to Dec 2026"
+      },
+      {
+        "title": "Hebridean Power Statement September 2024"
+      },
+      {
+        "title": "Kestrel Energy Statement December 2025"
+      },
+      {
+        "title": "Severn Light & Power Statement December 2025"
+      },
+      {
+        "title": "Water Services Bill 2024/25"
+      },
+      {
+        "title": "Water Services Bill 2025/26"
+      },
+      {
+        "title": "Council Tax Adjustment Notice 2024"
+      },
+      {
+        "title": "Council Tax Adjustment Notice 2025"
+      },
+      {
+        "title": "Council Tax Bill 2024/25"
+      },
+      {
+        "title": "Council Tax Bill 2025/26"
+      },
+      {
+        "title": "Council Tax Bill 2026/27"
+      },
+      {
+        "title": "Bank Statement February 2024"
+      },
+      {
+        "title": "Bank Statement February 2025"
+      },
+      {
+        "title": "Bank Statement July 2024"
+      },
+      {
+        "title": "Bank Statement October 2025"
+      },
+      {
+        "title": "Current Account Statement"
+      },
+      {
+        "title": "Current Account Statement April 2026"
+      },
+      {
+        "title": "Current Account Statement August 2025"
+      },
+      {
+        "title": "Current Account Statement January 2024"
+      },
+      {
+        "title": "Current Account Statement January 2025"
+      },
+      {
+        "title": "Current Account Statement June 2024"
+      },
+      {
+        "title": "Current Account Statement June 2025"
+      },
+      {
+        "title": "Current Account Statement November 2026"
+      },
+      {
+        "title": "Current Account Statement October 2025"
+      },
+      {
+        "title": "Current Account Statement September 2024"
+      },
+      {
+        "title": "Joint Current Account Statement December 2024"
+      },
+      {
+        "title": "Savings Account Statement Q2 2026"
+      },
+      {
+        "title": "Savings Account Statement Q3 2024"
+      },
+      {
+        "title": "Savings Account Statement Q3 2025"
+      },
+      {
+        "title": "Assured Shorthold Tenancy Agreement"
+      },
+      {
+        "title": "Residential Lease Agreement (huurovereenkomst) Summary"
+      },
+      {
+        "title": "Tenancy Renewal Memorandum"
+      }
+    ],
+    "utility_bill": [
+      {
+        "title": "2024 Utility Bill"
+      },
+      {
+        "title": "Coastline Power Statement June 2025"
+      },
+      {
+        "title": "Electricity Bill Apr to Jun 2024"
+      },
+      {
+        "title": "Electricity Bill Jan to Mar 2024"
+      },
+      {
+        "title": "Electricity Bill Oct to Dec 2024"
+      },
+      {
+        "title": "Electricity Bill Oct to Dec 2026"
+      },
+      {
+        "title": "Hebridean Power Statement September 2024"
+      },
+      {
+        "title": "Kestrel Energy Statement December 2025"
+      },
+      {
+        "title": "Severn Light & Power Statement December 2025"
+      },
+      {
+        "title": "Water Services Bill 2024/25"
+      },
+      {
+        "title": "Water Services Bill 2025/26"
+      }
+    ],
+    "proof_of_identity": [
+      {
+        "title": "Passport Bio-Data Summary"
+      },
+      {
+        "title": "Passport Bio-Data Summary (Estonian)"
+      },
+      {
+        "title": "Passport Bio-Data Summary (French)"
+      },
+      {
+        "title": "Passport Bio-Data Summary (German)"
+      },
+      {
+        "title": "Passport Bio-Data Summary (Italian)"
+      },
+      {
+        "title": "Passport Bio-Data Summary (Japanese)"
+      },
+      {
+        "title": "Passport Bio-Data Summary (Portuguese)"
+      },
+      {
+        "title": "Passport Bio-Data Summary (Spanish)"
+      },
+      {
+        "title": "Passport Bio-Data Summary (Swedish)"
+      },
+      {
+        "title": "Driving Licence Summary"
+      },
+      {
+        "title": "Driving Licence Summary (Ireland)"
+      }
+    ],
+    "tax_status": [
+      {
+        "title": "W-9 Request for Taxpayer Identification"
+      },
+      {
+        "title": "Form W-9 (US Person Certification)"
+      },
+      {
+        "title": "2023 Income Tax Return Summary (Netherlands)"
+      },
+      {
+        "title": "2023 Self Assessment Tax Return Summary"
+      },
+      {
+        "title": "2024 Income Tax Return Summary (Germany)"
+      },
+      {
+        "title": "2024 Self Assessment Tax Return Summary"
+      },
+      {
+        "title": "2025 Self Assessment Tax Return Summary"
+      },
+      {
+        "title": "Tax Calculation Summary 2023/24"
+      },
+      {
+        "title": "Tax Calculation Summary 2024/25"
+      }
+    ],
+    "source_of_funds": [
+      {
+        "title": "Completion Statement, Sale of Shares in Patel Pharmacy (Belgrave) Ltd"
+      },
+      {
+        "title": "Completion Statement, Sale of Shares in Thornton Freight Holdings Ltd"
+      },
+      {
+        "title": "Property Sale Completion Statement"
+      }
+    ],
+    "fees_and_terms": [
+      {
+        "title": "Advisory Engagement Letter"
+      },
+      {
+        "title": "Terms of Business and Fee Agreement"
+      },
+      {
+        "title": "Fee Schedule Variation Letter"
+      }
+    ],
+    "investment_mandate": [
+      {
+        "title": "Investment Policy Statement"
+      },
+      {
+        "title": "Investment Policy Statement, Annual Review 2025"
+      },
+      {
+        "title": "Investment Policy Statement, Annual Review 2026"
+      }
+    ],
+    "trust_structure": [
+      {
+        "title": "Declaration of Trust Summary"
+      },
+      {
+        "title": "Deed of Appointment and Retirement of Trustees"
+      },
+      {
+        "title": "Trust Deed Amendment"
+      }
+    ],
+    "w9": [
+      {
+        "title": "W-9 Request for Taxpayer Identification"
+      },
+      {
+        "title": "Form W-9 (US Person Certification)"
+      }
+    ]
+  },
+  "queries": [
     {
-      "query": "proof of address",
-      "clientEmail": "john.doe@neviswealth.com",
-      "documentTitle": "2024 Utility Bill"
+      "query": "NevisWealth",
+      "shape": "first",
+      "expected": [
+        {
+          "client": "john.doe@neviswealth.com"
+        }
+      ]
+    },
+    {
+      "query": "Hendersen",
+      "shape": "first",
+      "expected": [
+        {
+          "client": "mary.henderson@example.com"
+        }
+      ]
+    },
+    {
+      "query": "bill",
+      "shape": "first",
+      "expected": [
+        {
+          "client": "bill.carter@example.com"
+        }
+      ]
+    },
+    {
+      "query": "letter of authority",
+      "shape": "first",
+      "expected": [
+        {
+          "title": "Letter of Authority"
+        }
+      ]
+    },
+    {
+      "query": "John",
+      "shape": "all_within",
+      "expected": [
+        {
+          "client": "john.doe@neviswealth.com"
+        },
+        {
+          "client": "j.whitfield@whitfield-consulting.example"
+        }
+      ]
+    },
+    {
+      "query": "address proof",
+      "shape": "all_within",
+      "expectedSet": "proof_of_address"
     },
     {
       "query": "proof of address",
-      "clientEmail": "samuel.okafor@example.com",
-      "documentTitle": "2024 Utility Bill"
+      "shape": "all_within",
+      "expectedSet": "proof_of_address"
     },
     {
-      "query": "proof of address",
-      "clientEmail": "bill.carter@example.com",
-      "documentTitle": "Current Account Statement"
+      "query": "utility bill",
+      "shape": "all_within",
+      "expectedSet": "utility_bill"
     },
     {
-      "query": "proof of address",
-      "clientEmail": "samuel.okafor@example.com",
-      "documentTitle": "Current Account Statement"
-    },
-    {
-      "query": "proof of address",
-      "clientEmail": "mary.henderson@example.com",
-      "documentTitle": "Council Tax Bill 2024/25"
-    },
-    {
-      "query": "proof of address",
-      "clientEmail": "grace.kim@example.com",
-      "documentTitle": "Council Tax Bill 2024/25"
-    },
-    {
-      "query": "proof of address",
-      "clientEmail": "priya.shah@example.com",
-      "documentTitle": "Assured Shorthold Tenancy Agreement"
-    },
-    {
-      "query": "proof of identity",
-      "clientEmail": "robert.nguyen@example.com",
-      "documentTitle": "Passport Bio-Data Summary"
-    },
-    {
-      "query": "proof of identity",
-      "clientEmail": "elena.petrova@example.com",
-      "documentTitle": "Driving Licence Summary"
+      "query": "tax residency",
+      "shape": "all_within",
+      "expectedSet": "tax_status"
     },
     {
       "query": "source of funds",
-      "clientEmail": "elena.petrova@example.com",
-      "documentTitle": "Property Sale Completion Statement"
-    },
-    {
-      "query": "tax residency",
-      "clientEmail": "mary.henderson@example.com",
-      "documentTitle": "W-9 Request for Taxpayer Identification"
-    },
-    {
-      "query": "tax residency",
-      "clientEmail": "bill.carter@example.com",
-      "documentTitle": "2023 Self Assessment Tax Return Summary"
-    },
-    {
-      "query": "trust restructuring",
-      "clientEmail": "robert.nguyen@example.com",
-      "documentTitle": "Trust Deed Amendment"
+      "shape": "all_within",
+      "expectedSet": "source_of_funds"
     },
     {
       "query": "advisory fees",
-      "clientEmail": "john.doe@neviswealth.com",
-      "documentTitle": "Advisory Engagement Letter"
+      "shape": "all_within",
+      "expectedSet": "fees_and_terms"
     },
     {
-      "query": "advisory fees",
-      "clientEmail": "grace.kim@example.com",
-      "documentTitle": "Advisory Engagement Letter"
+      "query": "proof of identity",
+      "shape": "all_within",
+      "expectedSet": "proof_of_identity"
     },
     {
       "query": "risk tolerance",
-      "clientEmail": "priya.shah@example.com",
-      "documentTitle": "Investment Policy Statement"
+      "shape": "all_within",
+      "expectedSet": "investment_mandate"
+    },
+    {
+      "query": "trust restructuring",
+      "shape": "all_within",
+      "expectedSet": "trust_structure"
     },
     {
       "query": "W-9",
-      "clientEmail": "mary.henderson@example.com",
-      "documentTitle": "W-9 Request for Taxpayer Identification"
+      "shape": "all_within",
+      "expectedSet": "w9"
+    },
+    {
+      "query": "John Doe utility bill",
+      "shape": "compound",
+      "expected": [
+        {
+          "client": "john.doe@neviswealth.com",
+          "title": "2024 Utility Bill"
+        },
+        {
+          "client": "john.doe@neviswealth.com"
+        }
+      ]
+    },
+    {
+      "query": "Bill's statement",
+      "shape": "compound",
+      "expected": [
+        {
+          "client": "bill.carter@example.com",
+          "title": "Current Account Statement"
+        },
+        {
+          "client": "bill.carter@example.com"
+        }
+      ]
+    },
+    {
+      "query": "Mary's tax form",
+      "shape": "compound",
+      "expected": [
+        {
+          "client": "mary.henderson@example.com",
+          "title": "W-9 Request for Taxpayer Identification"
+        },
+        {
+          "client": "mary.henderson@example.com"
+        }
+      ]
+    },
+    {
+      "query": "Priya Shah tenancy",
+      "shape": "compound",
+      "expected": [
+        {
+          "client": "priya.shah@example.com",
+          "title": "Assured Shorthold Tenancy Agreement"
+        },
+        {
+          "client": "priya.shah@example.com"
+        }
+      ]
+    },
+    {
+      "query": "Elena's completion statement",
+      "shape": "compound",
+      "expected": [
+        {
+          "client": "elena.petrova@example.com",
+          "title": "Property Sale Completion Statement"
+        },
+        {
+          "client": "elena.petrova@example.com"
+        }
+      ]
+    },
+    {
+      "query": "best pizza recipes in Naples",
+      "shape": "none"
+    },
+    {
+      "query": "how to bake sourdough bread",
+      "shape": "none"
+    },
+    {
+      "query": "how to train a puppy to sit",
+      "shape": "none"
+    },
+    {
+      "query": "tips for growing tomatoes at home",
+      "shape": "none"
+    },
+    {
+      "query": "recommend a good sci-fi movie",
+      "shape": "none"
     }
-  ],
-  "negatives": [
-    "best pizza recipes in Naples",
-    "weather forecast for the weekend",
-    "how to train a puppy to sit",
-    "tips for growing tomatoes at home",
-    "recommend a good sci-fi movie"
   ]
 }
