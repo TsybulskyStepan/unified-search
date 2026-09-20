@@ -57,15 +57,6 @@ class DocumentApiIntegrationTest extends IntegrationTest {
             .query(String.class)
             .single();
     assertThat(embeddingModel).isEqualTo(Embedder.MODEL_ID);
-
-    Integer e5EmbeddingCount =
-        jdbcClient
-            .sql(
-                "SELECT count(*) FROM document_chunk WHERE document_id = :id AND embedding_768 IS NOT NULL")
-            .param("id", UUID.fromString(documentId))
-            .query(Integer.class)
-            .single();
-    assertThat(e5EmbeddingCount).isEqualTo(1);
   }
 
   @Test

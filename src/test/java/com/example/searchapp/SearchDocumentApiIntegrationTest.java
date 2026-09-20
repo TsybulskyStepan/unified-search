@@ -41,7 +41,7 @@ class SearchDocumentApiIntegrationTest extends IntegrationTest {
         .contains("\"type\":\"document\"")
         .contains("\"title\":\"2024 Utility Bill\"")
         .contains("\"client_name\":\"Jane Doe\"")
-        .contains("confirms occupancy at the registered address")
+        .contains("\"passage\":\"account holder's name and confirms occupancy")
         .doesNotContain("\"type\":\"client\"")
         .doesNotContain("\"content\"");
   }
