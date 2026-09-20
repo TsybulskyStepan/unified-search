@@ -7,8 +7,10 @@ One Spring Boot service (Java 25) on one PostgreSQL 17 database with `pgvector`,
 `citext`. No broker, no vector service, no second datastore. Embeddings run inside the process, so a
 clean clone needs no credentials and no network.
 
-Every response below was copied from a run of this code on a fresh database. Nothing here is
-illustrative.
+Every response below was copied from a run of this code against a freshly seeded database. Where a
+response is long it is trimmed, never edited: `…` marks elided prose, and the JSON blocks drop
+`id`, `client_id`, `created_at`, `summary` and `social_links` to keep the shape readable. Send the
+request yourself and you get the same values with those fields present.
 
 ## Why it is not a thin wrapper around an embedding model
 
@@ -46,6 +48,9 @@ First start takes a minute or two: it builds the image, runs migrations and seed
 ```bash
 docker compose down -v && docker compose up -d   # reset to a clean database
 ```
+
+Everything below was produced this way: a `down -v` onto an empty volume, then one `docker compose
+up -d` with no `.env` and no credentials of any kind.
 
 You need that reset if **`NevisWealth` returns `[]`**. The seeder deliberately skips a database that
 already has clients in it, so a single client created before the first successful seed leaves the
@@ -100,27 +105,38 @@ curl -s "localhost:8080/search?q=address%20proof&limit=10" \
   -H "X-API-Key: dev-only-insecure-key-do-not-use-in-production-env"
 ```
 
-The brief asks that `address proof` also return documents containing "utility bill". It does, and the
-first page is bank statements, tenancy agreements and utility bills:
+The brief asks that `address proof` also return documents containing "utility bill". It does. The
+response is an array; the first page is bank statements, tenancy agreements and utility bills, and
+the eighth entry is the one the brief names:
 
 ```json
-{
-  "type": "document",
-  "score": 0.026621,
-  "match": {
-    "passage": "account holder's name and confirms occupancy at the registered address for the period shown above.",
-    "signals": ["label", "lexical", "semantic"],
-    "labels": ["purpose:proof_of_address"]
-  },
-  "document": {
-    "title": "2024 Utility Bill",
-    "client_name": "John Doe",
-    "document_type": "utility_bill",
-    "purposes": ["proof_of_address"],
-    "classification_source": "rule",
-    "summary_status": "none"
-  }
-}
+[
+  { "type": "document", "score": 0.030214,
+    "match": { "signals": ["label", "lexical", "semantic"], "labels": ["purpose:proof_of_address"] },
+    "document": { "title": "Bank Statement February 2024", "document_type": "bank_statement" } },
+
+  { "type": "document", "score": 0.028405,
+    "match": { "signals": ["label", "lexical", "semantic"], "labels": ["purpose:proof_of_address"] },
+    "document": { "title": "Assured Shorthold Tenancy Agreement", "document_type": "tenancy_agreement" } },
+```
+
+Entries 1 and 3 to 6 are four more statements and a second tenancy, all scoring between those two.
+Entry 7 is the document the brief asks for:
+
+```json
+
+  { "type": "document", "score": 0.026621,
+    "match": {
+      "passage": "account holder's name and confirms occupancy at the registered address for the period shown above.",
+      "signals": ["label", "lexical", "semantic"],
+      "labels": ["purpose:proof_of_address"]
+    },
+    "document": {
+      "title": "2024 Utility Bill", "client_name": "John Doe",
+      "document_type": "utility_bill", "purposes": ["proof_of_address"],
+      "classification_source": "rule", "summary_status": "none"
+    } }
+]
 ```
 
 `X-Total-Count` is `70`; 53 of those carry the `proof_of_address` label and the rest are lexical or
@@ -136,11 +152,18 @@ matched, so a surprising ranking can be explained from the response alone.
 
 ## Other query shapes
 
+Each of these sends the same header as above. It is written `-H "X-API-Key: $KEY"` for width; export
+it once and every command here is copy-pasteable:
+
+```bash
+export KEY=dev-only-insecure-key-do-not-use-in-production-env
+```
+
 **A fuzzy name.** A misspelling still finds the client, through trigram similarity rather than an
 index of corrections:
 
 ```bash
-curl -s "localhost:8080/search?q=Hendersen&limit=3" -H "X-API-Key: …"
+curl -s "localhost:8080/search?q=Hendersen&limit=3" -H "X-API-Key: $KEY"
 ```
 
 ```json
@@ -149,35 +172,76 @@ curl -s "localhost:8080/search?q=Hendersen&limit=3" -H "X-API-Key: …"
     "client": { "first_name": "Mary", "last_name": "Henderson", "email": "mary.henderson@example.com" } } ]
 ```
 
-**An identity query** returns people, not their paperwork. `?q=John` returns both Johns and nothing
-else:
+**An identity query** returns people, not their paperwork:
 
+```bash
+curl -s "localhost:8080/search?q=John&limit=5" -H "X-API-Key: $KEY"
 ```
-client   John Doe          score=1.0  tier=identity
-client   John Whitfield    score=1.0  tier=identity
+
+```json
+[
+  { "type": "client", "score": 1.0,
+    "match": { "field": "name", "tier": "identity" },
+    "client": { "first_name": "John", "last_name": "Doe", "email": "john.doe@neviswealth.com" } },
+  { "type": "client", "score": 1.0,
+    "match": { "field": "name", "tier": "identity" },
+    "client": { "first_name": "John", "last_name": "Whitfield", "email": "j.whitfield@whitfield-consulting.example" } }
+]
 ```
+
+Both Johns, and no documents: an identity query is answered by people.
 
 **A category query** returns documents and no clients at all, even though a client named *Bill Carter*
-exists. `?q=utility%20bill`:
+exists:
 
+```bash
+curl -s "localhost:8080/search?q=utility%20bill&limit=5" -H "X-API-Key: $KEY"
 ```
-document 2024 Utility Bill                 client=John Doe        score=0.032787
-document 2024 Utility Bill                 client=Samuel Okafor   score=0.032258
-document Electricity Bill Oct to Dec 2024  client=Daniel Okafor   score=0.030798
-document Water Services Bill 2024/25       client=Zoë Fairweather score=0.030798
-document Electricity Bill Apr to Jun 2024  client=Abdul Rahman    score=0.030777
+
+```json
+[
+  { "type": "document", "score": 0.032787,
+    "match": { "signals": ["label", "lexical", "semantic"], "labels": ["type:utility_bill"] },
+    "document": { "title": "2024 Utility Bill", "client_name": "John Doe", "document_type": "utility_bill" } },
+  { "type": "document", "score": 0.032258,
+    "match": { "signals": ["label", "lexical", "semantic"], "labels": ["type:utility_bill"] },
+    "document": { "title": "2024 Utility Bill", "client_name": "Samuel Okafor", "document_type": "utility_bill" } },
+  { "type": "document", "score": 0.030798,
+    "match": { "signals": ["label", "lexical", "semantic"], "labels": ["type:utility_bill"] },
+    "document": { "title": "Electricity Bill Oct to Dec 2024", "client_name": "Daniel Okafor", "document_type": "utility_bill" } }
+]
 ```
 
 **A compound query** names a person *and* a category, and the person is treated as a qualifier rather
-than the answer. `?q=John%20Doe%20utility%20bill`:
+than the answer:
 
+```bash
+curl -s "localhost:8080/search?q=John%20Doe%20utility%20bill&limit=5" -H "X-API-Key: $KEY"
 ```
-document 2024 Utility Bill             client=John Doe        ← the answer
-document Advisory Engagement Letter    client=John Doe        ← his other qualifying documents
-client   John Doe                                             ← who was recognised
-document 2024 Utility Bill             client=Samuel Okafor   ← everyone else's
-document Electricity Bill Oct to Dec   client=Daniel Okafor
+
+```json
+[
+  { "type": "document", "score": 0.032787,
+    "match": { "signals": ["label", "lexical", "semantic"], "labels": ["type:utility_bill"] },
+    "document": { "title": "2024 Utility Bill", "client_name": "John Doe", "document_type": "utility_bill" } },
+  { "type": "document", "score": 0.009174,
+    "match": { "signals": ["semantic"], "labels": [] },
+    "document": { "title": "Advisory Engagement Letter", "client_name": "John Doe", "document_type": "engagement_letter" } },
+  { "type": "client", "score": 1.0,
+    "match": { "field": "email", "tier": "identity" },
+    "client": { "first_name": "John", "last_name": "Doe", "email": "john.doe@neviswealth.com" } },
+  { "type": "document", "score": 0.032258,
+    "match": { "signals": ["label", "lexical", "semantic"], "labels": ["type:utility_bill"] },
+    "document": { "title": "2024 Utility Bill", "client_name": "Samuel Okafor", "document_type": "utility_bill" } },
+  { "type": "document", "score": 0.030798,
+    "match": { "signals": ["label", "lexical", "semantic"], "labels": ["type:utility_bill"] },
+    "document": { "title": "Electricity Bill Oct to Dec 2024", "client_name": "Daniel Okafor", "document_type": "utility_bill" } }
+]
 ```
+
+Read the order: John's bill, then his other qualifying document, then John himself, then everyone
+else's bills. The person he named is a filter on the answer, not the answer — and note the second
+entry was admitted by the semantic signal alone, with no label and no shared words.
 
 **A query with no honest answer** returns `[]` rather than the nearest thing in the corpus.
 `?q=how%20to%20bake%20sourdough%20bread` and `?q=sdfewferdvrevrennfg` both return `[]` — the second
@@ -189,18 +253,38 @@ threshold can do.
 Summaries are the one feature that sends document text to a third party, so they are **off unless you
 opt in**. They are also fully observable without a key, because the failure is a state, not an error.
 
-With no key — the default — request one and watch the state machine:
+With no key — the default — request one and watch the state machine. Seeded ids are random per
+volume, so find one first:
+
+```bash
+export KEY=dev-only-insecure-key-do-not-use-in-production-env
+CID=$(curl -s "localhost:8080/search?q=NevisWealth" -H "X-API-Key: $KEY" \
+      | python3 -c 'import sys,json; print(json.load(sys.stdin)[0]["client"]["id"])')
+DID=$(curl -s "localhost:8080/clients/$CID/documents" -H "X-API-Key: $KEY" \
+      | python3 -c 'import sys,json; print(json.load(sys.stdin)[0]["id"])')
+```
 
 ```bash
 # 1. before
-curl -s ".../clients/{id}/documents/{docId}" -H "X-API-Key: …"
+curl -s "localhost:8080/clients/$CID/documents/$DID" -H "X-API-Key: $KEY"
+```
+```json
 { "title": "2024 Utility Bill", "summary": null, "summary_status": "none" }
+```
 
+```bash
 # 2. request it → HTTP 202
-curl -s -X POST ".../clients/{id}/documents/{docId}/summary" -H "X-API-Key: …"
+curl -s -X POST "localhost:8080/clients/$CID/documents/$DID/summary" -H "X-API-Key: $KEY"
+```
+```json
 { "title": "2024 Utility Bill", "summary": null, "summary_status": "pending" }
+```
 
-# 3. about a second later
+```bash
+# 3. read it again about a second later
+curl -s "localhost:8080/clients/$CID/documents/$DID" -H "X-API-Key: $KEY"
+```
+```json
 { "title": "2024 Utility Bill", "summary": null, "summary_status": "failed" }
 ```
 
@@ -335,7 +419,9 @@ do not correspond one-to-one with spans of the original text, though the passage
 always do.
 
 **Pagination and an API key** were added: `limit`/`offset` with `X-Total-Count`, and `X-API-Key` on
-everything except health and the docs.
+every data endpoint. Health, the OpenAPI document, Swagger UI and the SPA's own static assets
+(`/`, `/index.html`, `/assets/*`, `.js`, `.css`, images) are exempt, because a browser cannot attach
+a header when fetching them.
 
 ## Known limits
 
@@ -368,18 +454,12 @@ Queries of one or two characters, non-English synonyms and non-English stemming 
 benchmarked.** They are budget arithmetic from the stages the timers cover, recorded so the design can
 be argued about; the real numbers would come from the Micrometer timers in operation.
 
-| Stage | Estimated |
-|---|---|
-| Plan | < 1 ms |
-| Query embedding | 5 to 15 ms (parallel with the rest) |
-| Client SQL | 5 to 15 ms |
-| Label / lexical SQL | < 2 ms / 1 to 5 ms |
-| Semantic SQL | 25 to 75 ms (exact scan) |
-| Fusion, ordering, hydration | 3 to 8 ms |
-| **Total** | **about 45 to 110 ms**, against a p99 budget of 300 ms |
-
-Document creation is embedding plus one transaction: an estimated 10 to 50 ms typically, and up to
-about a second for a document at the 64 000-character cap, because cost is linear in length.
+A search is estimated at **about 45 to 110 ms** against a p99 budget of 300 ms, dominated by the
+semantic scan at 25 to 75 ms. Document creation is embedding plus one transaction: an estimated 10 to
+50 ms typically, and up to about a second for a document at the 64 000-character cap, because cost is
+linear in length. The per-stage breakdown lives in
+[the system design](docs/system-design.md#performance-and-capacity) so the figures have one home
+rather than two.
 
 ## Tests
 
@@ -390,10 +470,17 @@ about a second for a document at the 64 000-character cap, because cost is linea
 Integration tests need Docker; they run the real schema on `pgvector/pgvector:pg17` through
 Testcontainers and the real embedding model, not stubs.
 
-Relevance is guarded by an evaluation set rather than by taste: 28 queries with declared expectations
-(exact first result, or full recall within *n* positions), asserting among other things that no client
-ever outranks an expected document. It also re-derives the semantic floor and fails the build if the
-margin it depends on disappears. The four failures in the table at the top are all in it.
+Relevance is guarded by an evaluation set rather than by taste. It holds **34 queries**: 26 declare a
+positive expectation (an exact first result, full recall within *n* positions, or a compound
+ordering) and 8 are negatives that must return nothing. Every document query also asserts that no
+client outranks an expected document. The last run logged:
+
+```
+eval summary queries=34 MRR=1.0 meanRecall@n=0.9615384615384616
+```
+
+It also re-derives the semantic floor and fails the build if the margin it depends on disappears. The
+four failures in the table at the top of this file are all in it.
 
 ## Layout
 
