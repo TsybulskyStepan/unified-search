@@ -323,6 +323,8 @@ JSON is `snake_case`. Errors are RFC 9457 `application/problem+json`. IDs are UU
 | `GET /` | shared | `200` `index.html` | | Serves the React SPA |
 | `GET /api/*` | shared | Rewritten to `/*` | | `ApiRewriteFilter` maps `/api/search` → `/search` etc. |
 
+The SPA home route lists all clients as responsive tiles (with a create-client tile first) until a query is supplied through the persistent header search field. A query calls `GET /api/search`; a client tile opens its detail route. The create-client route writes the client, then each optional title/content document entry through the existing onboarding endpoints. It intentionally does not upload files: the API accepts document content as text (§4.2).
+
 A missing id is `404`. A malformed UUID in a path is `400`, a bad request rather than a missing record. An unknown route is `404` with the same generic body as any other.
 
 ### 4.2 Validation
@@ -680,6 +682,7 @@ For local development without Docker, run `cd frontend && npm run build` first (
 - `DocumentFusion` and `ResultOrdering` **(v2)**, both shapes, label tier before untagged, mention not in `I` still inserted, `I minus mention` has no duplicate, empty residual yields clients only, order is total.
 - `Chunker`, offsets, overlap, single chunk, surrogate pairs.
 - Request validation, `ApiKeyFilter`.
+- Frontend API client: client listing and the client-then-document write sequence, run with `cd frontend && npm test`.
 - Embedding-backed (one model load per JVM), the 126 word-piece bound and the semantic floor gap.
 
 ### 11.2 Integration (Testcontainers, full context, real model)
@@ -792,4 +795,4 @@ Each step leaves a runnable system with a green build. Steps 1-7 are v2, step 8 
 5. **Fusion and ordering.** `DocumentFusion` (RRF), `ResultOrdering` v2, hydration with best body chunk, response schema changes (`tier`, `signals`, `labels`, document type fields).
 6. **Eval v2.** `queries.json` with expectation shapes, the no-client-above-answers guard, recall@n and MRR, floor re-derivation. Every v1 failure in §0.1 must pass.
 7. **Docs.** README examples for identity, category and compound queries, the taxonomy file as the place to add a document type, and the reclassification behaviour.
-8. **Frontend (React SPA).** Vite + React Router SPA served from the Spring Boot jar. Three pages: search (`/`), client detail (`/clients/:id`), document detail (`/clients/:id/documents/:docId`). API calls through `/api/*` prefix. `ApiRewriteFilter` rewrites `/api/search` → `/search` etc. `WebMvcConfig` serves `index.html` for SPA routes. `ApiKeyFilter` allowlists static assets. `GET /clients/{id}/documents` added to list a client's documents.
+8. **Frontend (React SPA).** Vite + React Router SPA served from the Spring Boot jar. The persistent header search calls `/api/search`; its home route shows responsive client tiles and a create-client tile. Four pages: home/search (`/`), create client (`/clients/new`), client detail (`/clients/:id`), document detail (`/clients/:id/documents/:docId`). API calls through `/api/*` prefix. `ApiRewriteFilter` rewrites `/api/search` → `/search` etc. `WebMvcConfig` serves `index.html` for SPA routes. `ApiKeyFilter` allowlists static assets. `GET /clients/{id}/documents` added to list a client's documents.

@@ -54,8 +54,21 @@ export async function search(query, { limit, offset } = {}) {
 
 // ── Clients ─────────────────────────────────────────────────────────
 
+export async function getClients() {
+  const res = await request('/clients');
+  return res.json();
+}
+
 export async function getClient(clientId) {
   const res = await request(`/clients/${clientId}`);
+  return res.json();
+}
+
+export async function createClient(client) {
+  const res = await request('/clients', {
+    method: 'POST',
+    body: JSON.stringify(client),
+  });
   return res.json();
 }
 
@@ -63,6 +76,14 @@ export async function getClient(clientId) {
 
 export async function getClientDocuments(clientId) {
   const res = await request(`/clients/${clientId}/documents`);
+  return res.json();
+}
+
+export async function createDocument(clientId, document) {
+  const res = await request(`/clients/${clientId}/documents`, {
+    method: 'POST',
+    body: JSON.stringify(document),
+  });
   return res.json();
 }
 

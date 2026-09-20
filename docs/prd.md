@@ -57,7 +57,7 @@ Neither retrieval method subsumes the other. The system must run both and merge 
 - LLM-generated document summaries, generated on explicit request (§5.7) — **optional**: the brief lists summarization as optional, and nothing else in the system depends on it
 - API-key authentication
 - Pagination on search — **optional**: the brief does not ask for it
-- Local, reproducible deployment via `docker compose up`, with Swagger UI as the interactive surface
+- Local, reproducible deployment via `docker compose up`, with a React UI for advisor workflows and Swagger UI for API exploration
 
 ### 3.2 Out of scope — and why
 
@@ -65,7 +65,6 @@ Neither retrieval method subsumes the other. The system must run both and merge 
 |---|---|
 | Production deployment (GCP) | **Iteration 2, not built.** The graded deliverable runs locally; §7 records the shape it would take |
 | Lexical retrieval over documents | The brief scopes documents to similarity matching. Named as a cut, not an oversight (§8.3) |
-| Demo UI (React SPA) | Swagger UI and a seeded corpus make every endpoint executable. Planned as separate work (§8.3) |
 | Load testing | Latency is stated as reasoning and instrumented, not benchmarked (§6, §8.3) |
 | Multi-tenancy (firm isolation), advisor accounts, RBAC | Considered and deliberately excluded — see §8.3. A single shared API key and a single tenant are sufficient for the demo |
 | Document update and delete | No API is exposed; documents are only created (§4) |
@@ -247,7 +246,7 @@ Static API key by header, supplied via environment. Requests without a valid key
 
 ### 5.9 Client surface
 
-No frontend is built (§8.3). The API is exercised through Swagger UI, served unauthenticated with an API-key scheme so every endpoint is executable in a browser, against a seeded corpus. The README carries J1, J2 and J3 as worked request/response examples.
+A React SPA is the primary advisor surface. Its home page lists clients and provides unified search; client details, documents, and client creation are available as separate routes. Advisors supply the API key in the UI. Swagger UI remains unauthenticated for API exploration, and the README carries J1, J2 and J3 as worked request/response examples.
 
 ---
 
@@ -310,7 +309,6 @@ Type is the ordering key: clients always precede documents, and scores are never
 - **General entity resolution** — delimiter tokenization is the right-sized answer at 10³ clients (§5.2).
 - **Lexical retrieval over documents** — would make documents findable by firm name and give the ranking real multi-list evidence to fuse. Cut because the brief scopes documents to similarity matching, and following it exactly is worth more here than a superset nobody asked for.
 - **Deployment** — the brief calls it a "plus", not a requirement. §7 records the shape; the hours go to the graded artifact instead. Named as a scoping decision, since the brief says it grades scoping.
-- **Demo UI** — a React SPA is the largest item the brief never asks for, and it competes with the eval set and the tests it does. Swagger UI plus a seeded corpus makes every endpoint executable in a browser. The cost is real and worth naming: the ranked mixed-type list, which is the product thesis in §1, is only ever visible as JSON. A frontend is planned as separate work against this API.
 - **Load testing** — the brief asks for tests of core logic and edge cases, not a benchmark harness. Latency is stated as reasoning with its assumptions exposed (§6), and instrumented so it can be measured in operation.
 
 ---

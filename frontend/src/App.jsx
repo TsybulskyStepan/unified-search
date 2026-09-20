@@ -34,7 +34,7 @@ export default function App() {
               <circle cx="11" cy="11" r="8" />
               <path d="m21 21-4.35-4.35" />
             </svg>
-            Nevis Search
+            Search System
           </Link>
 
           <form className="header-search" onSubmit={handleSubmit}>
@@ -70,6 +70,9 @@ export default function App() {
               <path d="M7 11V7a5 5 0 0 1 10 0v4" />
             </svg>
           </button>
+          <a className="swagger-link" href="/swagger-ui/index.html">
+            Swagger
+          </a>
         </div>
       </header>
 

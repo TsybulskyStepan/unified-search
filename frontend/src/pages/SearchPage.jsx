@@ -1,37 +1,25 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { search } from '../api/client';
-import SearchResults from '../components/SearchResults';
-import LoadingSpinner from '../components/LoadingSpinner';
+import { getClients, search } from '../api/client';
+import ClientGrid from '../components/ClientGrid';
 import ErrorMessage from '../components/ErrorMessage';
-
-const DEBOUNCE_MS = 300;
+import LoadingSpinner from '../components/LoadingSpinner';
+import SearchResults from '../components/SearchResults';
 
 export default function SearchPage() {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const queryFromUrl = searchParams.get('q') || '';
-
-  const [query, setQuery] = useState(queryFromUrl);
+  const [searchParams] = useSearchParams();
+  const query = searchParams.get('q') || '';
   const [results, setResults] = useState(null);
   const [total, setTotal] = useState(0);
+  const [clients, setClients] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const debounceRef = useRef(null);
 
-  const performSearch = useCallback(async (q) => {
-    if (!q.trim()) {
-      setResults(null);
-      setTotal(0);
-      setLoading(false);
-      setError(null);
-      return;
-    }
-
+  const performSearch = useCallback(async (value) => {
     setLoading(true);
     setError(null);
-
     try {
-      const data = await search(q, { limit: 50 });
+      const data = await search(value, { limit: 50 });
       setResults(data.results);
       setTotal(data.total);
     } catch (err) {
@@ -43,73 +31,39 @@ export default function SearchPage() {
     }
   }, []);
 
-  // Sync query from URL on mount
+  const loadClients = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      setClients(await getClients());
+    } catch (err) {
+      setError(err);
+      setClients(null);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
-    if (queryFromUrl) {
-      setQuery(queryFromUrl);
-      performSearch(queryFromUrl);
+    if (query.trim()) {
+      performSearch(query);
+    } else {
+      setResults(null);
+      setTotal(0);
+      loadClients();
     }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [loadClients, performSearch, query]);
 
-  const handleInputChange = (e) => {
-    const value = e.target.value;
-    setQuery(value);
-
-    if (debounceRef.current) {
-      clearTimeout(debounceRef.current);
-    }
-
-    debounceRef.current = setTimeout(() => {
-      setSearchParams(value ? { q: value } : {}, { replace: true });
-      performSearch(value);
-    }, DEBOUNCE_MS);
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (debounceRef.current) {
-      clearTimeout(debounceRef.current);
-    }
-    setSearchParams(query ? { q: query } : {}, { replace: true });
-    performSearch(query);
-  };
+  const retry = query.trim() ? () => performSearch(query) : loadClients;
 
   return (
     <div className="search-page">
-      <form className="search-form" onSubmit={handleSubmit}>
-        <div className="search-input-wrapper">
-          <svg
-            className="search-icon"
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <circle cx="11" cy="11" r="8" />
-            <path d="m21 21-4.35-4.35" />
-          </svg>
-          <input
-            type="search"
-            className="search-input main-search-input"
-            placeholder="Search by name, email, or document content…"
-            value={query}
-            onChange={handleInputChange}
-            autoFocus
-          />
-        </div>
-      </form>
-
-      {loading && <LoadingSpinner text="Searching…" />}
-
-      {error && <ErrorMessage error={error} onRetry={() => performSearch(query)} />}
-
-      {!loading && !error && (
+      {loading && <LoadingSpinner text="Loading…" />}
+      {error && <ErrorMessage error={error} onRetry={retry} />}
+      {!loading && !error && query.trim() && (
         <SearchResults results={results} total={total} query={query} />
       )}
+      {!loading && !error && !query.trim() && <ClientGrid clients={clients} />}
     </div>
   );
 }

@@ -5,6 +5,7 @@ import App from './App';
 import SearchPage from './pages/SearchPage';
 import ClientDetailPage from './pages/ClientDetailPage';
 import DocumentDetailPage from './pages/DocumentDetailPage';
+import ClientCreatePage from './pages/ClientCreatePage';
 import './styles.css';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
@@ -13,6 +14,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
       <Routes>
         <Route element={<App />}>
           <Route path="/" element={<SearchPage />} />
+          <Route path="/clients/new" element={<ClientCreatePage />} />
           <Route path="/clients/:clientId" element={<ClientDetailPage />} />
           <Route
             path="/clients/:clientId/documents/:documentId"
