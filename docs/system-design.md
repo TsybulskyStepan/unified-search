@@ -421,7 +421,9 @@ If any retriever fails the request returns `500`. Partial results would make doc
 
 **Normalisation.** Lowercase, Unicode NFKC, strip possessives (`john's`, `john’s` → `john`), collapse whitespace, keep intra-token hyphens (`w-9`) and also index the de-hyphenated form (`w9`).
 
-**Plan.** `QueryPlanner.plan(q)` returns `mention`, `residual`, `intents`.
+**Plan.** `QueryPlanner.plan(q)` returns the normalised whole-query text, `mention`, `residual`,
+and `intents`. The client retriever reads the whole query; every document retriever reads the
+residual.
 
 - **Mention.** Tokens are compared in order against every client's `first_name || ' ' || last_name` and `email` with `word_similarity ≥ 0.69` (just under the measured `Hendersen → Henderson` 0.70). Only the leading contiguous run of matching tokens counts, so in `john utility bill` matching stops at `utility` and a later `bill` can never become a client named Bill. Tokens under three characters are skipped. Exactly one client → `mention`. Two or more → ambiguous, `mention = null`, and the client retriever still surfaces them.
 - **Ambiguity rule.** A single-token mention whose token is also a taxonomy synonym (`bill`, `statement`, `trust`) counts as a mention only if the token was possessive (`bill's`) or a second token also matched the same client (`bill carter`). Otherwise the token is treated as category text.

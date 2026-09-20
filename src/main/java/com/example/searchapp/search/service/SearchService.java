@@ -4,8 +4,12 @@ import com.example.searchapp.search.dto.SearchMatch;
 import com.example.searchapp.search.dto.SearchRequest;
 import com.example.searchapp.search.dto.SearchResult;
 import com.example.searchapp.search.entity.SearchClient;
+import com.example.searchapp.search.planner.MentionCandidate;
+import com.example.searchapp.search.planner.NormalizedQuery;
+import com.example.searchapp.search.planner.NormalizedToken;
+import com.example.searchapp.search.planner.QueryPlan;
+import com.example.searchapp.search.planner.QueryPlanner;
 import com.example.searchapp.search.repository.ClientMatch;
-import com.example.searchapp.search.repository.ClientMention;
 import com.example.searchapp.search.repository.ClientSearchRepository;
 import com.example.searchapp.search.repository.DocumentMatch;
 import com.example.searchapp.search.repository.DocumentSearchRepository;
@@ -37,6 +41,8 @@ public class SearchService {
   private final ClientSearchRepository clients;
   private final DocumentSearchRepository documents;
   private final Embedder embedder;
+  private final QueryPlanner queryPlanner;
+  private final Timer planTimer;
   private final Timer lexicalTimer;
   private final Timer queryEmbeddingTimer;
   private final Timer semanticTimer;
@@ -47,10 +53,13 @@ public class SearchService {
       ClientSearchRepository clients,
       DocumentSearchRepository documents,
       Embedder embedder,
+      QueryPlanner queryPlanner,
       MeterRegistry meterRegistry) {
     this.clients = clients;
     this.documents = documents;
     this.embedder = embedder;
+    this.queryPlanner = queryPlanner;
+    planTimer = meterRegistry.timer("search.plan");
     lexicalTimer = meterRegistry.timer("search.lexical");
     queryEmbeddingTimer = meterRegistry.timer("search.embed_query");
     semanticTimer = meterRegistry.timer("search.semantic");
@@ -63,26 +72,43 @@ public class SearchService {
     int lexicalHits = 0;
     int semanticHits = 0;
     int returned = 0;
+    String planShape = "document";
+    int intentCount = 0;
+    boolean mentionPresent = false;
     try {
-      List<String> queryTokens = queryTokens(request.query());
+      QueryPlan plan =
+          time(
+              planTimer,
+              timings::setPlanNanos,
+              () -> {
+                NormalizedQuery normalizedQuery = queryPlanner.normalize(request.query());
+                List<MentionCandidate> mentionCandidates =
+                    clients.findMentionCandidates(
+                        normalizedQuery.tokens().stream().map(NormalizedToken::text).toList());
+                return queryPlanner.plan(normalizedQuery, mentionCandidates);
+              });
+      mentionPresent = plan.mention() != null;
+      intentCount = plan.intents().size();
+      planShape = mentionPresent ? (plan.hasResidual() ? "compound" : "identity") : "document";
       CompletableFuture<List<ClientMatch>> clientMatches =
           CompletableFuture.supplyAsync(
               () ->
                   time(
                       lexicalTimer,
                       timings::setLexicalNanos,
-                      () -> clients.findMatches(request.query())),
+                      () -> clients.findMatches(plan.query())),
               searchExecutor);
-      CompletableFuture<List<ClientMention>> clientMentions =
-          CompletableFuture.supplyAsync(() -> clients.findMentions(queryTokens), searchExecutor);
       CompletableFuture<List<DocumentMatch>> documentMatches =
           CompletableFuture.supplyAsync(
               () -> {
+                if (!plan.hasResidual()) {
+                  return List.of();
+                }
                 float[] queryVector =
                     time(
                         queryEmbeddingTimer,
                         timings::setQueryEmbeddingNanos,
-                        () -> embedder.embed(request.query()));
+                        () -> embedder.embed(plan.residual()));
                 return time(
                     semanticTimer,
                     timings::setSemanticNanos,
@@ -90,15 +116,14 @@ public class SearchService {
               },
               searchExecutor);
 
-      CompletableFuture.allOf(clientMatches, clientMentions, documentMatches).join();
+      CompletableFuture.allOf(clientMatches, documentMatches).join();
       List<ClientMatch> clientResults = clientMatches.join();
-      List<ClientMention> mentionResults = clientMentions.join();
       List<DocumentMatch> documentResults = documentMatches.join();
       lexicalHits = clientResults.size();
       semanticHits = documentResults.size();
 
       List<ResultOrdering.Candidate> candidates =
-          ResultOrdering.order(clientResults, documentResults, mentionResults);
+          ResultOrdering.order(clientResults, documentResults, plan);
       if (request.offset() >= candidates.size()) {
         return new SearchPage(List.of(), candidates.size());
       }
@@ -123,13 +148,18 @@ public class SearchService {
       long totalNanos = System.nanoTime() - totalStartNanos;
       totalTimer.record(totalNanos, java.util.concurrent.TimeUnit.NANOSECONDS);
       log.info(
-          "Search audit request_id={} query_length={} lexical_hits={} semantic_hits={} returned={}"
-              + " lexical_ms={} embed_query_ms={} semantic_ms={} total_ms={}",
+          "Search audit request_id={} query_length={} plan_shape={} intent_count={}"
+              + " mention_present={} lexical_hits={} semantic_hits={} returned={}"
+              + " plan_ms={} lexical_ms={} embed_query_ms={} semantic_ms={} total_ms={}",
           MDC.get("request_id"),
           request.query().length(),
+          planShape,
+          intentCount,
+          mentionPresent,
           lexicalHits,
           semanticHits,
           returned,
+          millis(timings.planNanos()),
           millis(timings.lexicalNanos()),
           millis(timings.queryEmbeddingNanos()),
           millis(timings.semanticNanos()),
@@ -192,18 +222,17 @@ public class SearchService {
     searchExecutor.close();
   }
 
-  private static List<String> queryTokens(String query) {
-    return java.util.Arrays.stream(query.split("\\s+"))
-        .filter(token -> token.length() >= 3)
-        .toList();
-  }
-
   private record PageMatches(List<UUID> clientIds, List<DocumentMatch> documentMatches) {}
 
   private static final class SearchTimings {
+    private volatile long planNanos;
     private volatile long lexicalNanos;
     private volatile long queryEmbeddingNanos;
     private volatile long semanticNanos;
+
+    private void setPlanNanos(long elapsedNanos) {
+      planNanos = elapsedNanos;
+    }
 
     private void setLexicalNanos(long elapsedNanos) {
       lexicalNanos = elapsedNanos;
@@ -215,6 +244,10 @@ public class SearchService {
 
     private void setSemanticNanos(long elapsedNanos) {
       semanticNanos = elapsedNanos;
+    }
+
+    private long planNanos() {
+      return planNanos;
     }
 
     private long lexicalNanos() {

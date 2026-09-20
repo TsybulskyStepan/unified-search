@@ -2,8 +2,9 @@ package com.example.searchapp.search.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.example.searchapp.search.planner.ClientMention;
+import com.example.searchapp.search.planner.QueryPlan;
 import com.example.searchapp.search.repository.ClientMatch;
-import com.example.searchapp.search.repository.ClientMention;
 import com.example.searchapp.search.repository.DocumentMatch;
 import java.util.List;
 import java.util.UUID;
@@ -21,28 +22,26 @@ class ResultOrderingTest {
         ResultOrdering.order(
             List.of(client(MARY), client(JOHN)),
             List.of(document(MARYS_BILL, MARY), document(JOHNS_BILL, JOHN)),
-            List.of(new ClientMention(JOHN, "name", 1.0, true)));
+            plan(JOHN, "utility bill"));
 
     assertThat(candidates)
         .extracting(ResultOrdering.Candidate::id)
-        .containsExactly(JOHNS_BILL, JOHN, MARY, MARYS_BILL);
+        .containsExactly(JOHNS_BILL, JOHN, MARYS_BILL, MARY);
   }
 
   @Test
-  void keepsDefaultOrderingWhenTheMentionHasNoResidualTerm() {
+  void keepsTheMentionedClientsDocumentsAheadOfTheRecognizedClient() {
     var candidates =
         ResultOrdering.order(
-            List.of(client(JOHN)),
-            List.of(document(JOHNS_BILL, JOHN)),
-            List.of(new ClientMention(JOHN, "name", 1.0, false)));
+            List.of(client(JOHN)), List.of(document(JOHNS_BILL, JOHN)), plan(JOHN, ""));
 
     assertThat(candidates)
         .extracting(ResultOrdering.Candidate::id)
-        .containsExactly(JOHN, JOHNS_BILL);
+        .containsExactly(JOHNS_BILL, JOHN);
   }
 
   @Test
-  void keepsDefaultOrderingWhenTheMentionIsAmbiguousOrHasNoQualifiedDocument() {
+  void keepsDefaultOrderingForAmbiguousMentionsAndInsertsARecognizedClientWithoutDocuments() {
     var clients = List.of(client(MARY), client(JOHN));
     var documents = List.of(document(MARYS_BILL, MARY));
 
@@ -50,16 +49,12 @@ class ResultOrderingTest {
             ResultOrdering.order(
                 clients,
                 documents,
-                List.of(
-                    new ClientMention(JOHN, "name", 1.0, true),
-                    new ClientMention(MARY, "name", 1.0, true))))
+                new QueryPlan("john mary", null, "john mary", java.util.Set.of())))
         .extracting(ResultOrdering.Candidate::id)
         .containsExactly(MARY, JOHN, MARYS_BILL);
-    assertThat(
-            ResultOrdering.order(
-                clients, documents, List.of(new ClientMention(JOHN, "name", 1.0, true))))
+    assertThat(ResultOrdering.order(clients, documents, plan(JOHN, "utility bill")))
         .extracting(ResultOrdering.Candidate::id)
-        .containsExactly(MARY, JOHN, MARYS_BILL);
+        .containsExactly(JOHN, MARYS_BILL, MARY);
   }
 
   private static ClientMatch client(UUID id) {
@@ -68,5 +63,13 @@ class ResultOrderingTest {
 
   private static DocumentMatch document(UUID documentId, UUID clientId) {
     return new DocumentMatch(documentId, clientId, 0, 1, 1.0);
+  }
+
+  private static QueryPlan plan(UUID clientId, String residual) {
+    return new QueryPlan(
+        residual.isEmpty() ? "john" : "john " + residual,
+        new ClientMention(clientId, "name", 1.0),
+        residual,
+        java.util.Set.of());
   }
 }

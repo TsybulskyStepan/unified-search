@@ -1,7 +1,8 @@
 package com.example.searchapp.search.service;
 
+import com.example.searchapp.search.planner.ClientMention;
+import com.example.searchapp.search.planner.QueryPlan;
 import com.example.searchapp.search.repository.ClientMatch;
-import com.example.searchapp.search.repository.ClientMention;
 import com.example.searchapp.search.repository.DocumentMatch;
 import java.util.ArrayList;
 import java.util.List;
@@ -11,20 +12,16 @@ final class ResultOrdering {
   private ResultOrdering() {}
 
   static List<Candidate> order(
-      List<ClientMatch> clients, List<DocumentMatch> documents, List<ClientMention> mentions) {
-    if (mentions.size() != 1 || !mentions.getFirst().hasResidual()) {
+      List<ClientMatch> clients, List<DocumentMatch> documents, QueryPlan plan) {
+    if (plan.mention() == null) {
       return defaultOrder(clients, documents);
     }
 
-    ClientMention mention = mentions.getFirst();
+    ClientMention mention = plan.mention();
     List<DocumentMatch> mentionedDocuments =
         documents.stream()
             .filter(document -> document.clientId().equals(mention.clientId()))
             .toList();
-    if (mentionedDocuments.isEmpty()) {
-      return defaultOrder(clients, documents);
-    }
-
     List<Candidate> ordered = new ArrayList<>(clients.size() + documents.size() + 1);
     mentionedDocuments.forEach(document -> ordered.add(new DocumentCandidate(document)));
     ClientMatch mentionedClient =
@@ -33,12 +30,12 @@ final class ResultOrdering {
             .findFirst()
             .orElse(new ClientMatch(mention.clientId(), mention.field(), mention.score()));
     ordered.add(new ClientCandidate(mentionedClient));
-    clients.stream()
-        .filter(client -> !client.clientId().equals(mention.clientId()))
-        .forEach(client -> ordered.add(new ClientCandidate(client)));
     documents.stream()
         .filter(document -> !document.clientId().equals(mention.clientId()))
         .forEach(document -> ordered.add(new DocumentCandidate(document)));
+    clients.stream()
+        .filter(client -> !client.clientId().equals(mention.clientId()))
+        .forEach(client -> ordered.add(new ClientCandidate(client)));
     return ordered;
   }
 
