@@ -7,13 +7,33 @@
     },
     {
       "query": "proof of address",
+      "clientEmail": "samuel.okafor@example.com",
+      "documentTitle": "2024 Utility Bill"
+    },
+    {
+      "query": "proof of address",
       "clientEmail": "bill.carter@example.com",
+      "documentTitle": "Current Account Statement"
+    },
+    {
+      "query": "proof of address",
+      "clientEmail": "samuel.okafor@example.com",
       "documentTitle": "Current Account Statement"
     },
     {
       "query": "proof of address",
       "clientEmail": "mary.henderson@example.com",
       "documentTitle": "Council Tax Bill 2024/25"
+    },
+    {
+      "query": "proof of address",
+      "clientEmail": "grace.kim@example.com",
+      "documentTitle": "Council Tax Bill 2024/25"
+    },
+    {
+      "query": "proof of address",
+      "clientEmail": "priya.shah@example.com",
+      "documentTitle": "Assured Shorthold Tenancy Agreement"
     },
     {
       "query": "proof of identity",
@@ -48,6 +68,11 @@
     {
       "query": "advisory fees",
       "clientEmail": "john.doe@neviswealth.com",
+      "documentTitle": "Advisory Engagement Letter"
+    },
+    {
+      "query": "advisory fees",
+      "clientEmail": "grace.kim@example.com",
       "documentTitle": "Advisory Engagement Letter"
     },
     {
