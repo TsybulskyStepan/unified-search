@@ -8,6 +8,7 @@ import ch.qos.logback.core.read.ListAppender;
 import com.example.searchapp.SearchApplication;
 import com.example.searchapp.onboarding.seed.DemoSeeder;
 import com.example.searchapp.shared.taxonomy.Taxonomy;
+import io.micrometer.core.instrument.MeterRegistry;
 import java.sql.Array;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -68,12 +69,20 @@ class ReclassifierIntegrationTest {
             List.of(),
             "unknown");
 
-    try (ConfigurableApplicationContext ignored = boot(false)) {
-      assertThat(taxonomyVersionOf(documentId)).isEqualTo(currentTaxonomyVersion(ignored));
+    try (ConfigurableApplicationContext context = boot(false)) {
+      assertThat(taxonomyVersionOf(documentId)).isEqualTo(currentTaxonomyVersion(context));
       assertThat(documentTypeOf(documentId)).isEqualTo("utility_bill");
       assertThat(purposesOf(documentId)).containsExactly("proof_of_address");
       assertThat(classificationSourceOf(documentId)).isEqualTo("rule");
       assertThat(labelChunkCount(documentId)).isEqualTo(1);
+      assertThat(
+              context
+                  .getBean(MeterRegistry.class)
+                  .find("classification.outcome")
+                  .tags("type", "utility_bill", "source", "rule")
+                  .counter()
+                  .count())
+          .isEqualTo(1);
     }
   }
 

@@ -30,6 +30,7 @@ public class DocumentService {
   private final DocumentClassifier classifier;
   private final Embedder embedder;
   private final SummaryWorker summaryWorker;
+  private final ClassificationOutcomeMetrics classificationOutcomes;
   private final Timer embeddingTimer;
 
   public DocumentService(
@@ -38,12 +39,14 @@ public class DocumentService {
       DocumentClassifier classifier,
       Embedder embedder,
       SummaryWorker summaryWorker,
+      ClassificationOutcomeMetrics classificationOutcomes,
       MeterRegistry meterRegistry) {
     this.clients = clients;
     this.documents = documents;
     this.classifier = classifier;
     this.embedder = embedder;
     this.summaryWorker = summaryWorker;
+    this.classificationOutcomes = classificationOutcomes;
     embeddingTimer = meterRegistry.timer("document.embed");
   }
 
@@ -55,6 +58,7 @@ public class DocumentService {
     Classification classification =
         classifier.classify(
             request.title(), request.content(), request.documentType(), request.purposes());
+    classificationOutcomes.record(classification);
 
     List<Chunk> chunks = Chunker.split(request.content());
     // Content is non-blank (@NotBlank), so the chunker always yields at least one chunk (§3.2).
