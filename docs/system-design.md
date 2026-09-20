@@ -649,6 +649,8 @@ On request only. `POST …/summary` moves `none` or `failed` to `pending` and re
 
 Local is the only built target. `docker compose up` starts `pgvector/pgvector:pg17` with a healthcheck and the app depending on it. Three-stage Dockerfile: a Node 22 Alpine stage builds the React SPA, a `gradle:9.7.1-jdk25` stage builds the jar, and `eclipse-temurin:25-jre` is the runtime. Non-root, `-XX:MaxRAMPercentage=60`. The model and the SPA are inside the jar.
 
+`./gradlew composeBuild` rebuilds the images with `--no-cache --pull`. `./gradlew composeRedeploy` runs that, then `docker compose up -d --force-recreate --wait`. The Postgres volume is kept; use `docker compose down -v` to reset data.
+
 For local development without Docker, run `cd frontend && npm run build` first (or `./gradlew buildFrontend`), then `./gradlew bootRun`. During frontend development, `cd frontend && npm run dev` starts a Vite dev server on port 3000 that proxies `/api` to the backend on port 8080.
 
 | Env var | Default | Purpose |
