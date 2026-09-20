@@ -42,6 +42,34 @@ class ClientApiIntegrationTest extends IntegrationTest {
   }
 
   @Test
+  void listsEveryClientWithItsIdOldestFirst() throws Exception {
+    String first = createdId("list-first@example.com");
+    String second = createdId("list-second@example.com");
+
+    var response = get(port, "/clients", TEST_API_KEY);
+
+    assertThat(response.statusCode()).isEqualTo(200);
+    assertThat(response.body())
+        .contains("\"id\":\"" + first + "\"")
+        .contains("\"id\":\"" + second + "\"")
+        .contains("\"email\":\"list-first@example.com\"");
+    assertThat(response.body().indexOf(first)).isLessThan(response.body().indexOf(second));
+    assertThat(get(port, "/clients", "wrong-key").statusCode()).isEqualTo(401);
+  }
+
+  private String createdId(String email) throws Exception {
+    var created =
+        post(
+            port,
+            "/clients",
+            TEST_API_KEY,
+            "{\"first_name\":\"List\",\"last_name\":\"Test\",\"email\":\"" + email + "\"}");
+    assertThat(created.statusCode()).isEqualTo(201);
+    String location = created.headers().firstValue("Location").orElseThrow();
+    return location.substring(location.lastIndexOf('/') + 1);
+  }
+
+  @Test
   void reportsValidationAndRejectsMalformedIds() throws Exception {
     var invalid =
         post(

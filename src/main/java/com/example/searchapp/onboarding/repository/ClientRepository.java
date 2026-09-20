@@ -55,6 +55,17 @@ public class ClientRepository {
         .optional();
   }
 
+  public List<Client> findAll() {
+    return jdbc.sql(
+            """
+            SELECT id, first_name, last_name, email, description, social_links, created_at
+            FROM client
+            ORDER BY created_at, id
+            """)
+        .query(ClientRepository::map)
+        .list();
+  }
+
   /**
    * Existence check for callers that don't need the row (§5.2: {@code SELECT 1 ... WHERE id=?}).
    */

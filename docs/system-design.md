@@ -311,6 +311,7 @@ JSON is `snake_case`. Errors are RFC 9457 `application/problem+json`. IDs are UU
 | Method and path | Module | Success | Errors | Notes |
 |---|---|---|---|---|
 | `POST /clients` | onboarding | `201`, `Location`, `Client` | `400`, `401`, `409` | |
+| `GET /clients` | onboarding | `200` `Client[]` | `401` | Debugging aid: every client, oldest first, unpaginated |
 | `GET /clients/{id}` | onboarding | `200` `Client` | `400`, `401`, `404` | |
 | `GET /clients/{id}/documents` | onboarding | `200` `Document[]` | `400`, `401`, `404` | Lists all documents for a client, newest first |
 | `POST /clients/{id}/documents` | onboarding | `201`, `Location`, `Document` | `400`, `401`, `404` | Optional `document_type`, `purposes` **(v2)**. Never calls a model |

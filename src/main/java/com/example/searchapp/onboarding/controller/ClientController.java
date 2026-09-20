@@ -7,6 +7,7 @@ import com.example.searchapp.onboarding.repository.ClientRepository;
 import com.example.searchapp.shared.web.RequestValidationException;
 import jakarta.validation.Valid;
 import java.net.URI;
+import java.util.List;
 import java.util.UUID;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -33,6 +34,11 @@ public class ClientController {
     Client client = clients.insert(request);
     URI location = URI.create("/clients/" + client.id());
     return ResponseEntity.created(location).body(client);
+  }
+
+  @GetMapping
+  List<Client> list() {
+    return clients.findAll();
   }
 
   @GetMapping("/{id}")
