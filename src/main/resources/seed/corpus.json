@@ -25,7 +25,9 @@
       "lastName": "Henderson",
       "email": "mary.henderson@example.com",
       "description": "Recently retired schoolteacher consolidating two workplace pensions into a single drawdown arrangement. Cautious risk profile, prioritises capital preservation over growth.",
-      "socialLinks": ["https://www.linkedin.com/in/mary-henderson-retired"],
+      "socialLinks": [
+        "https://www.linkedin.com/in/mary-henderson-retired"
+      ],
       "documents": [
         {
           "title": "Council Tax Bill 2024/25",
@@ -42,7 +44,9 @@
       "lastName": "Carter",
       "email": "bill.carter@example.com",
       "description": "Small business owner, sole trader in commercial landscaping, building up a personal pension alongside irregular business income.",
-      "socialLinks": ["https://www.linkedin.com/in/bill-carter-landscaping"],
+      "socialLinks": [
+        "https://www.linkedin.com/in/bill-carter-landscaping"
+      ],
       "documents": [
         {
           "title": "Current Account Statement",
@@ -59,7 +63,9 @@
       "lastName": "Shah",
       "email": "priya.shah@example.com",
       "description": "Mid-career software engineer building a growth-focused ISA and pension alongside a first-time buy-to-let purchase.",
-      "socialLinks": ["https://www.linkedin.com/in/priya-shah-eng"],
+      "socialLinks": [
+        "https://www.linkedin.com/in/priya-shah-eng"
+      ],
       "documents": [
         {
           "title": "Assured Shorthold Tenancy Agreement",
@@ -76,7 +82,9 @@
       "lastName": "Nguyen",
       "email": "robert.nguyen@example.com",
       "description": "Family office client managing a multi-generational trust structure alongside personal investments; works closely with the firm's trust and estate planning team.",
-      "socialLinks": ["https://www.linkedin.com/in/robert-nguyen-familyoffice"],
+      "socialLinks": [
+        "https://www.linkedin.com/in/robert-nguyen-familyoffice"
+      ],
       "documents": [
         {
           "title": "Passport Bio-Data Summary",
@@ -93,7 +101,9 @@
       "lastName": "Petrova",
       "email": "elena.petrova@example.com",
       "description": "Recently sold a residential investment property and is redeploying the proceeds into a diversified portfolio; also completing routine identity refresh ahead of the new tax year.",
-      "socialLinks": ["https://www.linkedin.com/in/elena-petrova-invest"],
+      "socialLinks": [
+        "https://www.linkedin.com/in/elena-petrova-invest"
+      ],
       "documents": [
         {
           "title": "Driving Licence Summary",
@@ -110,7 +120,9 @@
       "lastName": "Okafor",
       "email": "samuel.okafor@example.com",
       "description": "Recently relocated for work and setting up UK banking and investment relationships for the first time; documentation reflects a new address and new employment.",
-      "socialLinks": ["https://www.linkedin.com/in/samuel-okafor-eng"],
+      "socialLinks": [
+        "https://www.linkedin.com/in/samuel-okafor-eng"
+      ],
       "documents": [
         {
           "title": "2024 Utility Bill",
@@ -127,7 +139,9 @@
       "lastName": "Kim",
       "email": "grace.kim@example.com",
       "description": "Established client with a well-diversified portfolio, currently focused on inheritance tax planning and updating advisory arrangements ahead of retirement in three years.",
-      "socialLinks": ["https://www.linkedin.com/in/grace-kim-planning"],
+      "socialLinks": [
+        "https://www.linkedin.com/in/grace-kim-planning"
+      ],
       "documents": [
         {
           "title": "Council Tax Bill 2024/25",
@@ -136,6 +150,898 @@
         {
           "title": "Advisory Engagement Letter",
           "content": "This letter confirms the renewed terms on which the firm will continue to act as investment adviser following the client's periodic review. Scope covers ongoing discretionary management, an annual face-to-face review, and ad hoc telephone support during market hours. Charges remain unchanged from the prior arrangement: 0.75% per annum on the first GBP 1,000,000 of assets under management, tapering to 0.45% thereafter, calculated quarterly and deducted from the account, with underlying fund charges disclosed separately in the annual costs and charges statement. No setup charge applies on renewal. Either party may terminate this arrangement in writing with thirty days' notice. This engagement continues to be governed by the firm's standard terms of business and the regulatory disclosures previously provided, which remain unchanged and in effect."
+        }
+      ]
+    },
+    {
+      "firstName": "John",
+      "lastName": "Whitfield",
+      "email": "j.whitfield@whitfield-consulting.example",
+      "description": "Management consultant, the second John on the book. Holds a general investment account and a SIPP; wants a low-cost passive core with a small satellite of thematic funds.",
+      "socialLinks": [
+        "https://www.linkedin.com/in/john-whitfield-consulting",
+        "https://www.linkedin.com/company/whitfield-consulting"
+      ],
+      "documents": [
+        {
+          "title": "Electricity Bill Oct to Dec 2026",
+          "content": "Severn Light & Power electricity statement for supply account 4350-1951-773, billing period 01/10/2026 to 31/12/2026, supply address 105 Ferndale Close, Leeds, LS3 3WG, United Kingdom. Meter serial K78527963, previous reading 24753 kWh, present reading 26087 kWh, consumption 1334 kWh charged at 29.85p per kWh plus a daily standing charge of 50.64p over 92 days, giving GBP 444.79 before VAT at 5% and GBP 467.03 in total. Payments received by direct debit during the period: GBP 189.00. Balance carried forward GBP 278.03, to be collected on 14/01/2027 under mandate reference DD-2026-6132. Tariff Smart Tracker, estimated annual consumption 5336 kWh. Emergency and meter fault line 0161 266 1667. This statement is addressed to the named account holder at the supply address and is accepted by most institutions as evidence of residence at that address for the period it covers. Keep it with your household records."
+        },
+        {
+          "title": "Passport Bio-Data Summary",
+          "content": "Certified copy of the biographical data page of a British passport, passport number 229598566, issued by HM Passport Office on 15/03/2016 and expiring 15/03/2026. Surname WHITFIELD, given names JOHN JAMES, nationality British Citizen, date of birth 21/12/1965, place of birth Lagos. Machine readable zone checked against the visual inspection zone; check digits consistent. Photograph compared with the client in person at the Edinburgh office on 28 December 2016 and certified as a true likeness and a true copy of the original by the relationship manager. Security features present: holographic laminate, UV-reactive fibres, perforated passport number on all visa pages. No signs of tampering. Retained on file for customer due diligence under the firm's anti-money laundering policy, retention period five years after the end of the relationship. Copy certified 2 August 2017."
+        },
+        {
+          "title": "Advisory Engagement Letter",
+          "content": "This letter confirms the terms on which NevisWealth Asset Management will act on behalf of the client named above. Our remit covers discretionary management of the portfolio held in custody with our nominated depositary, quarterly performance reporting and an annual suitability review. Charges are calculated as a percentage of assets under management, billed quarterly in arrears and deducted directly from the account: 0.70% per annum on the first GBP 1,000,000.00, tapering to 0.40% thereafter, plus underlying fund costs disclosed separately in the cost and charges statement. No setup charge applies. Either party may terminate this arrangement in writing with thirty days' notice, at which point any accrued but unbilled amount becomes payable immediately. The client confirms that the risk profile recorded in the investment policy statement remains accurate and will notify us of any change in circumstances. This engagement is governed by the firm's standard terms of business, a copy of which has been provided separately, and by the regulatory disclosures required under the firm's licence."
+        }
+      ]
+    },
+    {
+      "firstName": "Sarah",
+      "lastName": "Lindqvist",
+      "email": "sarah.lindqvist@example.com",
+      "description": "Swedish national living in Edinburgh, product manager at a payments company. Saving toward a flat purchase in two years, holding cash and short-dated bonds.",
+      "socialLinks": [
+        "https://www.linkedin.com/in/sarah-lindqvist"
+      ],
+      "documents": [
+        {
+          "title": "Current Account Statement August 2025",
+          "content": "Statement of account for Ridgeway Bank plc current account ending 2225, sort code 20-33-14, for 01/08/2025 to 31/08/2025. Opening balance GBP 8,365.05. Credits: salary GBP 5,203.22 from ST BEDES NHS TRUST on 30/08/2025. Debits: mortgage payment GBP 967.00 to Halcyon Home Loans on 03/08/2025; direct debits GBP 259.35 to Albion Gas & Electric, Meridian Life Assurance, Pennine Energy; card payments GBP 412.20 across 9 transactions; cash withdrawals GBP 90.00. Closing balance GBP 11,839.72. Arranged overdraft GBP 600.00, not used. This statement was posted to the account holder at 70 Meadow View, Edinburgh, EH13 3AJ, United Kingdom, the correspondence address held for the account, and may be relied upon as evidence of that address as at the statement date. Report unrecognised transactions within 13 months on 01273 330 4840. Ridgeway Bank plc is authorised by the Prudential Regulation Authority."
+        },
+        {
+          "title": "Assured Shorthold Tenancy Agreement",
+          "content": "Agreement made between the landlord, Silvermere Residential, and the tenant named above, for the letting of 70 Meadow View, Edinburgh, EH13 3AJ, United Kingdom, for a fixed term of 12 months commencing 1 January 2025. Monthly rent of GBP 1,825.00 payable in advance on the first day of each month by standing order to the landlord's designated client account. A deposit of GBP 2,107.00, equivalent to five weeks' rent, has been registered with the Tenancy Deposit Scheme, certificate reference DPS-2025-1826. The tenant is named as the sole occupier for the purposes of this agreement and confirms this address as their principal residence for the duration of the term. Break clause permits either party to terminate after month six with two months' written notice. Gas safety certificate, electrical installation condition report and energy performance certificate rating D have been provided prior to occupation. Pets are not permitted; the property is let unfurnished. Council tax and utilities are the tenant's responsibility."
+        },
+        {
+          "title": "Passport Bio-Data Summary (Swedish)",
+          "content": "Certified copy of the data page of a Swedish passport, passport number X69960935, issued by Polisen (Swedish Police Authority) on 17/06/2022, valid until 17/06/2032. Holder LINDQVIST, SARAH, nationality Swedish, date of birth 04/03/1976, place of birth Uppsala, sex M. Biometric chip read successfully and matched to the printed data. Original inspected by the relationship manager during the onboarding meeting on 28 December 2023; the client's likeness confirmed against the photograph and the document confirmed as genuine using the firm's document verification tool, reference DV-2024-1481. The client's UK immigration status was verified separately through the Home Office share code service where applicable. This copy is retained under the firm's customer due diligence procedures and must be refreshed on renewal of the document or on a change of name. Any discrepancy between the passport name and the name on the account must be resolved before trading is enabled."
+        }
+      ]
+    },
+    {
+      "firstName": "Sarah",
+      "lastName": "Achebe",
+      "email": "sarah.achebe@example.org",
+      "description": "Barrister, higher-rate taxpayer, uses VCT and EIS investments for tax efficiency. Reviews advisory fees annually and expects a written breakdown of every charge.",
+      "socialLinks": [
+        "https://www.linkedin.com/in/sarah-achebe-kc"
+      ],
+      "documents": [
+        {
+          "title": "2023 Self Assessment Tax Return Summary",
+          "content": "Summary of self assessment submission for the year ending 5 April 2023, unique taxpayer reference 3536 247 972. Property income from let residential property: turnover GBP 71,800.00, allowable expenses GBP 26,117.00, net profit GBP 45,683.00. Class 4 national insurance GBP 2,741.00. Personal allowance applied in full. Total income tax and national insurance liability for the year GBP 8,969.00, of which GBP 4,484.00 was paid on account in January 2023 and the balance falls due by 31 January 2024, with a further payment on account due the same date. Declared domicile and residence: United Kingdom throughout the year, with overseas bank interest of GBP 290.00 declared on the foreign pages. Filed online via the self assessment portal on 28 December 2023. Agent reference AG-2026-7529. Retained as evidence of declared income for affordability and source of wealth assessment."
+        },
+        {
+          "title": "Terms of Business and Fee Agreement",
+          "content": "These terms of business set out the basis on which NevisWealth Asset Management provides advice-only services to the client named above. We will prepare an initial financial plan and a written suitability report for a fixed fee of GBP 2,400.00, payable half on engagement and half on delivery of the report. Implementation of recommendations is charged at GBP 250.00 per hour, estimated in advance and capped in writing. Ongoing service, if selected, is charged at 0.35% per annum of assets under management with a minimum of GBP 1,200.00 per year, invoiced quarterly. We do not receive commission from product providers; any that arises is rebated to the client. Fees are exclusive of VAT where applicable and of third-party platform and fund charges. Either party may terminate this arrangement in writing with thirty days' notice; work completed to the termination date is billed pro rata. Complaints are handled under our published procedure and may be referred to the Financial Ombudsman Service. By signing, the client confirms receipt of our key facts document, privacy notice and conflicts of interest policy."
+        }
+      ]
+    },
+    {
+      "firstName": "Oliver",
+      "lastName": "Banks",
+      "email": "oliver.banks@example.com",
+      "description": "Sole director of a small architecture practice, remunerated by dividends. Building a company-funded pension and keeping twelve months of expenses in cash.",
+      "socialLinks": [
+        "https://www.linkedin.com/in/oliver-banks-architect",
+        "https://www.banks-studio.example"
+      ],
+      "documents": [
+        {
+          "title": "Current Account Statement January 2025",
+          "content": "Statement of account for Halcyon Bank plc current account ending 8420, sort code 60-84-21, for 01/01/2025 to 31/01/2025. Opening balance GBP 3,034.79. Credits: salary GBP 3,995.35 from THE ROYAL BOROUGH SCHOOLS on 29/01/2025. Debits: mortgage payment GBP 1,615.00 to Halcyon Home Loans on 01/01/2025; direct debits GBP 138.29 to Cityline Mobile, Pennine Energy, Northgate Insurance; card payments GBP 1,186.33 across 32 transactions; cash withdrawals GBP 110.00. Closing balance GBP 3,980.52. Arranged overdraft GBP 2,100.00, not used. This statement was posted to the account holder at Flat 7, 106 Orchard Way, Leicester, LE14 5GR, United Kingdom, the correspondence address held for the account, and may be relied upon as evidence of that address as at the statement date. Report unrecognised transactions within 13 months on 0345 733 0019. Halcyon Bank plc is authorised by the Prudential Regulation Authority."
+        },
+        {
+          "title": "Council Tax Bill 2024/25",
+          "content": "Ellerby Borough Council Council Tax demand notice for Flat 7, 106 Orchard Way, Leicester, LE14 5GR, United Kingdom, account CT-2024-2161, for the financial year 1 April 2024 to 31 March 2025. Valuation band F. Annual charge GBP 2,587.00, made up of the Ellerby Borough element GBP 2,017.86, the police and crime commissioner precept GBP 284.57, the fire authority precept GBP 103.48 and the adult social care precept GBP 181.09. A 25% disregard applies as one occupant is a full-time student; evidence has been received. Payable in ten instalments of GBP 258.70 on the first of each month from April to January by direct debit. The liable person named above is registered at this property as their sole or main residence for the whole of the charging year. Appeals against banding go to the Valuation Office Agency; changes of circumstance must be reported within 21 days on 0800 017 8119 or through the council's online account, quoting your account number."
+        }
+      ]
+    },
+    {
+      "firstName": "Aoife",
+      "lastName": "Fee",
+      "email": "aoife.fee@example.net",
+      "description": "Dublin-based hospital pharmacist, Irish tax resident, investing through a personal retirement savings account and a euro-denominated advisory portfolio.",
+      "socialLinks": [
+        "https://www.linkedin.com/in/aoife-fee-pharm"
+      ],
+      "documents": [
+        {
+          "title": "Bank Statement February 2025",
+          "content": "Liffey Bank plc account statement, IBAN IE00 LIFF 0239 5703 67, for 01/02/2025 to 28/02/2025, issued to the account holder at 14 Ranelagh Terrace, Dublin 6, D06 X2Y3, Ireland. Opening balance EUR 12,968.22. Incoming: salary EUR 5,540.70 from VOS ADVOCATEN NV on 24/02/2025. Outgoing: rent EUR 1,525.00 by standing order on 04/02/2025; direct debits EUR 351.23 for health insurance, energy and telecoms; card payments EUR 650.90 across 23 transactions; international transfer EUR 400.00 to a GBP account in the account holder's own name, reference SAVINGS. Closing balance EUR 15,981.79. Statements are issued monthly and can be downloaded as certified PDF from online banking. Deposits are protected under the applicable national guarantee scheme up to EUR 100,000. Report unauthorised transactions without delay on +353 88 915 2082."
+        },
+        {
+          "title": "Driving Licence Summary (Ireland)",
+          "content": "Certified copy of an Irish driving licence issued by the National Driver Licence Service, licence number 217628478, valid from 21/05/2022 to 21/05/2032. Holder Aoife Fee, date of birth 10/02/1990, place of birth Cork. Entitlement categories B and W, with category A restricted to 35 kW. Address on the licence 14 Ranelagh Terrace, Dublin 6, D06 X2Y3, Ireland. Photograph and signature compared with the client and with the passport held on file; consistent. The licence is a credit card format polycarbonate document with a laser-engraved photograph, microtext and a changeable laser image, all present. It is accepted as a secondary identity document under the firm's customer due diligence procedures but not as a primary one for a non-UK licence, so the passport remains the primary identification document on this file. Verified on 3 February 2023."
+        },
+        {
+          "title": "Advisory Engagement Letter",
+          "content": "This letter confirms the terms on which NevisWealth Asset Management will act on behalf of the client named above. Our remit covers discretionary management of the portfolio held in custody with our nominated depositary, quarterly performance reporting and an annual suitability review. Charges are calculated as a percentage of assets under management, billed quarterly in arrears and deducted directly from the account: 0.70% per annum on the first GBP 1,000,000.00, tapering to 0.40% thereafter, plus underlying fund costs disclosed separately in the cost and charges statement. A one-off setup charge of GBP 500.00 applies to new mandates. Either party may terminate this arrangement in writing with thirty days' notice, at which point any accrued but unbilled amount becomes payable immediately. The client confirms that the risk profile recorded in the investment policy statement remains accurate and will notify us of any change in circumstances. This engagement is governed by the firm's standard terms of business, a copy of which has been provided separately, and by the regulatory disclosures required under the firm's licence."
+        }
+      ]
+    },
+    {
+      "firstName": "Siobhán",
+      "lastName": "O'Neill",
+      "email": "siobhan.oneill@example.com",
+      "description": "Nurse manager who relocated from Belfast to Manchester in 2025; UK address evidence refreshed after the move. Shares a household with Patrick Murphy.",
+      "socialLinks": [
+        "https://www.linkedin.com/in/siobhan-oneill-rn"
+      ],
+      "documents": [
+        {
+          "title": "Severn Light & Power Statement December 2025",
+          "content": "Dual fuel supply statement from Severn Light & Power for account 7012-4326-633 covering 01/10/2025 to 31/12/2025. Electricity 866 kWh at 25.64p per kWh, standing charge 61.88p per day. Gas 4652 kWh, converted from 419.1 cubic metres at calorific value 39.4, at 6.90p per kWh, standing charge 27.42p per day. Total energy charges GBP 623.40 plus VAT GBP 31.17, total GBP 654.57. Your account was in credit by GBP 40.00 at the start of the period and payments of GBP 286.00 were received, leaving GBP 328.57 due, which will be collected on 21/01/2026 by direct debit. Registered supply address 33 Castle Hill, Manchester, M12 5EB, United Kingdom, MPAN 4099329658611, MPRN 6110656468. Smart meter readings were taken automatically on 31/12/2025; no estimated readings were used. Your current tariff ends on 11/03/2026; we will write to you with renewal options six weeks before then. To switch tariff, report a supply fault or query a meter reading call 01865 300 4812 or use the Severn Light & Power app."
+        },
+        {
+          "title": "Tenancy Renewal Memorandum",
+          "content": "Memorandum of renewal of the assured shorthold tenancy of 33 Castle Hill, Manchester, M12 5EB, United Kingdom between Cityline Lettings Ltd as agent for the landlord and the tenant named above. The original agreement dated 1 February 2025 is renewed for a further fixed term of twelve months from 1 February 2026. Rent increases from GBP 1,175.00 to GBP 1,228.00 per calendar month, payable on the first day of each month; all other terms remain unchanged. The deposit of GBP 1,357.00 continues to be protected under the original certificate. The tenant confirms that they continue to occupy the property as their only or principal home, that no additional adults have moved in, and that the inventory remains accurate save for fair wear and tear. Right to rent checks were re-verified on 12 January 2026 against the tenant's passport. The landlord confirms that the gas safety record dated 23 December 2025 and the smoke and carbon monoxide alarms were checked at the same visit. Signed in counterpart by both parties."
+        }
+      ]
+    },
+    {
+      "firstName": "Anne-Marie",
+      "lastName": "Dubois",
+      "email": "am.dubois@example.com",
+      "description": "French national, London-based art dealer with irregular income and a large cash buffer. Moving from advice-only to a discretionary mandate this year.",
+      "socialLinks": [
+        "https://www.linkedin.com/in/anne-marie-dubois-art",
+        "https://www.dubois-fine-art.example"
+      ],
+      "documents": [
+        {
+          "title": "Passport Bio-Data Summary (French)",
+          "content": "Certified copy of the data page of a French passport, passport number Y42707066, issued by Préfecture de Police, Paris on 14/08/2018, valid until 14/08/2028. Holder DUBOIS, ANNE-MARIE, nationality French, date of birth 19/04/1967, place of birth Lyon, sex M. Biometric chip read successfully and matched to the printed data. Original inspected by the relationship manager during the onboarding meeting on 19 October 2020; the client's likeness confirmed against the photograph and the document confirmed as genuine using the firm's document verification tool, reference DV-2026-3479. The client's UK immigration status was verified separately through the Home Office share code service where applicable. This copy is retained under the firm's customer due diligence procedures and must be refreshed on renewal of the document or on a change of name. Any discrepancy between the passport name and the name on the account must be resolved before trading is enabled."
+        },
+        {
+          "title": "Investment Policy Statement",
+          "content": "Investment policy statement agreed between the client named above and NevisWealth Asset Management. Objective: long-term real growth of capital with moderate volatility. Time horizon 7 years. Risk profile balanced on the firm's seven-point scale, assessed by questionnaire on 5 August 2025 and confirmed in discussion; the client accepts a maximum peak-to-trough drawdown of around 25% in a stressed year. Strategic asset allocation 60% global equities, 30% investment grade and government bonds, 10% diversifiers including listed infrastructure and gold, with rebalancing bands of plus or minus 5 percentage points reviewed quarterly. Constraints: employer stock limited to 10% and sold down on vesting; liquidity requirement of GBP 20,000.00 available within five working days. Benchmark a composite of MSCI ACWI and the Bloomberg Global Aggregate in the same proportions, hedged to sterling. Reviewed annually or on a material change in circumstances."
+        },
+        {
+          "title": "Current Account Statement November 2026",
+          "content": "Statement of account for Forth Valley Building Society current account ending 4175, sort code 80-22-60, for 01/11/2026 to 30/11/2026. Opening balance GBP 1,441.09. Credits: salary GBP 5,689.14 from THE ROYAL BOROUGH SCHOOLS on 26/11/2026; faster payment GBP 155.00 received from GIFT MUM. Debits: standing order GBP 1,472.00 to Brackenwood Estates on 04/11/2026; direct debits GBP 350.08 to Meridian Life Assurance, Cityline Mobile, Albion Gas & Electric; card payments GBP 1,209.51 across 27 transactions; cash withdrawals GBP 10.00. Closing balance GBP 4,088.64. Arranged overdraft GBP 900.00, not used. This statement was posted to the account holder at 7 Larkspur Avenue, London, SW19 3AQ, United Kingdom, the correspondence address held for the account, and may be relied upon as evidence of that address as at the statement date. Report unrecognised transactions within 13 months on 0131 773 7931. Forth Valley Building Society is authorised by the Prudential Regulation Authority."
+        }
+      ]
+    },
+    {
+      "firstName": "Zoë",
+      "lastName": "Fairweather",
+      "email": "zoe.fairweather@example.com",
+      "description": "Junior doctor with student debt and a modest ISA. Priority is an emergency fund before investing; reviews once a year around rotation changes.",
+      "socialLinks": [],
+      "documents": [
+        {
+          "title": "Water Services Bill 2024/25",
+          "content": "Brightwater Utilities annual water and wastewater charges for the property at Flat 1, 103 Bramble Hill, Belfast, BT19 9LY, United Kingdom, customer reference WS-2026-6660, for the charging year 1 April 2024 to 31 March 2025. Metered supply, meter serial 944587314: previous reading 507 cubic metres, current reading 602 cubic metres, consumption 95 cubic metres. Water supply GBP 205.00, wastewater collection and treatment GBP 196.00, surface water drainage GBP 45.00, fixed charges GBP 34.00. Total for the year GBP 480.00, payable in 8 monthly instalments of GBP 60.00 from 1 April by direct debit. This bill is issued to the occupier named above as the person responsible for water charges at the supply address; keep it with your household records, since it is commonly requested as proof that you live at the property. Leaks on your side of the meter are your responsibility; our free leak repair scheme applies once per property. Social tariff and WaterSure support are available on request. Account queries 0345 906 1450."
+        },
+        {
+          "title": "Driving Licence Summary",
+          "content": "Certified copy of the front and back of a UK photocard driving licence, licence number FAIRW712204ZF9BG, issued by the DVLA and valid from 02/07/2020 to 02/07/2030. Holder Zoë Fairweather, date of birth 20/12/1974, address printed on the licence Flat 1, 103 Bramble Hill, Belfast, BT19 9LY, United Kingdom, which matches the address held on the client record. Entitlement categories AM, A, B, B1, BE, f, k, l, n, p, q; no endorsements or penalty points recorded on the summary obtained from the DVLA view-your-licence service on 17 February 2021, check code shared by the client. Photograph compared with the client in person and confirmed as a true likeness. Security features checked: tactile surface, optically variable ink, changing colour hologram. Retained under the firm's customer due diligence procedures. The photocard expires ten years after issue and must be renewed with a current photograph; the client has been reminded of the renewal date."
+        }
+      ]
+    },
+    {
+      "firstName": "Jonas",
+      "lastName": "Müller",
+      "email": "jonas.mueller@example.com",
+      "description": "German engineer seconded to Bristol for three years, retaining a Berlin apartment. Cross-border tax residency questions dominate every review.",
+      "socialLinks": [
+        "https://www.linkedin.com/in/jonas-mueller-eng"
+      ],
+      "documents": [
+        {
+          "title": "2024 Income Tax Return Summary (Germany)",
+          "content": "Summary of the German income tax return (Einkommensteuererklärung) for 2024 filed with the Finanzamt Berlin Charlottenburg, tax identification number redacted. Income from employment EUR 163,420.00 under a secondment agreement with continued German payroll, income from letting the Berlin apartment EUR 19,620.00 after deductible costs, and capital income below the saver's allowance. Assessed income tax including solidarity surcharge EUR 58,831.00, wage tax withheld EUR 55,563.00, refund EUR 3,268.00. The taxpayer declared unlimited tax liability in Germany with a residence in Bristol under the secondment; the double taxation agreement centre-of-vital-interests test was documented by the tax adviser. Filed on 27 June 2025. Provided to the firm as evidence of declared income and of tax residence position for the purposes of the CRS self-certification held on file."
+        },
+        {
+          "title": "Assured Shorthold Tenancy Agreement",
+          "content": "Agreement made between the landlord, Brackenwood Estates, and the tenant named above, for the letting of 84 Mill Lane, Bristol, BS8 3UQ, United Kingdom, for a fixed term of 6 months commencing 1 July 2024. Monthly rent of GBP 2,075.00 payable in advance on the first day of each month by standing order to the landlord's designated client account. A deposit of GBP 2,396.00, equivalent to five weeks' rent, has been registered with the Deposit Protection Service, certificate reference DPS-2024-5485. The tenant is named as the sole occupier for the purposes of this agreement and confirms this address as their principal residence for the duration of the term. Break clause permits either party to terminate after month six with two months' written notice. Gas safety certificate, electrical installation condition report and energy performance certificate rating D have been provided prior to occupation. Pets are not permitted; the property is let unfurnished. Council tax and utilities are the tenant's responsibility."
+        },
+        {
+          "title": "Passport Bio-Data Summary (German)",
+          "content": "Certified copy of the data page of a German passport, passport number B40800077, issued by Stadt Berlin, Bürgeramt Charlottenburg on 18/12/2020, valid until 18/12/2030. Holder MÜLLER, JONAS, nationality German, date of birth 25/09/1975, place of birth Potsdam, sex M. Biometric chip read successfully and matched to the printed data. Original inspected by the relationship manager during the onboarding meeting on 5 November 2022; the client's likeness confirmed against the photograph and the document confirmed as genuine using the firm's document verification tool, reference DV-2024-3964. The client's UK immigration status was verified separately through the Home Office share code service where applicable. This copy is retained under the firm's customer due diligence procedures and must be refreshed on renewal of the document or on a change of name. Any discrepancy between the passport name and the name on the account must be resolved before trading is enabled."
+        }
+      ]
+    },
+    {
+      "firstName": "José",
+      "lastName": "Álvarez",
+      "email": "jose.alvarez@example.com",
+      "description": "Spanish restaurateur in Brighton with two sites and a cash-heavy business. Enhanced due diligence on source of funds completed in 2025; monthly statements reviewed.",
+      "socialLinks": [
+        "https://www.linkedin.com/in/jose-alvarez-brighton"
+      ],
+      "documents": [
+        {
+          "title": "Current Account Statement June 2025",
+          "content": "Statement of account for Halcyon Bank plc current account ending 2541, sort code 60-84-21, for 01/06/2025 to 30/06/2025. Opening balance GBP 6,314.63. Credits: salary GBP 4,857.35 from ST BEDES NHS TRUST on 28/06/2025; faster payment GBP 174.00 received from H PRICE. Debits: standing order GBP 1,584.00 to Silvermere Residential on 02/06/2025; direct debits GBP 399.79 to Fibrelink Broadband, Wessex Water Services, Northgate Insurance; card payments GBP 1,419.11 across 23 transactions; cash withdrawals GBP 30.00. Closing balance GBP 7,739.08. Arranged overdraft GBP 700.00, not used. This statement was posted to the account holder at Flat 11, 87 Station Approach, Brighton, BN9 3TF, United Kingdom, the correspondence address held for the account, and may be relied upon as evidence of that address as at the statement date. Report unrecognised transactions within 13 months on 0117 637 8784. Halcyon Bank plc is authorised by the Prudential Regulation Authority."
+        },
+        {
+          "title": "2025 Self Assessment Tax Return Summary",
+          "content": "Summary of self assessment submission for the year ending 5 April 2025, unique taxpayer reference 6650 734 862. Employment income plus dividends from a personal company: turnover GBP 102,300.00, allowable expenses GBP 31,739.00, net profit GBP 70,561.00. Class 4 national insurance GBP 4,234.00. Personal allowance applied in full. Total income tax and national insurance liability for the year GBP 18,387.00, of which GBP 9,194.00 was paid on account in January 2025 and the balance falls due by 31 January 2026, with a further payment on account due the same date. Declared domicile and residence: United Kingdom throughout the year, with overseas bank interest of GBP 736.00 declared on the foreign pages. Filed online via the self assessment portal on 6 December 2025. Agent reference AG-2024-5055. Retained as evidence of declared income for affordability and source of wealth assessment."
+        },
+        {
+          "title": "Council Tax Adjustment Notice 2025",
+          "content": "Revised Council Tax bill from Castlebrook Borough Council for account CT-2026-1357, property Flat 11, 87 Station Approach, Brighton, BN9 3TF, United Kingdom, valuation band C, following your notification of a change in occupancy on 19 July 2025. Charge from 1 April 2025 to 18 July 2025 with single-person discount GBP 505.73. Charge from 19 July 2025 to 31 March 2026 at the full rate GBP 1,577.51, reflecting the removal of the discount. Amount already paid GBP 1,394.00. Revised balance GBP 689.24, spread over the remaining 6 instalments of GBP 114.87 collected on the 28th of each month by direct debit reference DD-2026-0311. Your property reference for the Valuation Office Agency is 1450-02-312. If you believe the banding is incorrect you may make a proposal to the VOA within six months of becoming the taxpayer. Contact the revenues team on 029 663 4021 or write to the address shown, quoting your account number. Failure to pay an instalment within seven days of a reminder makes the full balance due."
+        }
+      ]
+    },
+    {
+      "firstName": "Priyanka",
+      "lastName": "Raman",
+      "email": "priyanka.raman@example.com",
+      "description": "Data scientist who inherited from her grandmother in 2025 and wants the inheritance invested cautiously. First-time investor beyond a workplace pension.",
+      "socialLinks": [
+        "https://www.linkedin.com/in/priyanka-raman-data"
+      ],
+      "documents": [
+        {
+          "title": "Estate Distribution Statement",
+          "content": "Final estate accounts and distribution statement prepared by Pemberton & Rowe Solicitors as solicitors to the executors of the estate of the late Raj Raman, who died on 27 April 2024. Grant of probate issued 16 October 2024. Gross estate GBP 685,000.00, comprising the deceased's residence, cash at bank, National Savings and a portfolio of quoted shares. Less inheritance tax paid GBP 0.00, funeral, legal and valuation costs GBP 14,800.00 and settled liabilities. Net distributable estate GBP 670,200.00. Under the will dated 25 July 2011, Priyanka Raman receives the whole residue, GBP 670,200.00, paid to the beneficiary's nominated account on 1 April 2025, reference EST-2025-2860. Interim distributions already made are shown in the accounts. The beneficiary has signed a receipt and release. This statement is provided to the firm as documentary evidence of the origin of the funds now being invested. Any income arising during the administration period is reported on form R185."
+        },
+        {
+          "title": "Savings Account Statement Q3 2024",
+          "content": "Forth Valley Building Society instant access savings account ending 6580, sort code 80-22-60, statement period 01/07/2024 to 30/09/2024, account holder correspondence address 29 Priory Road, Oxford, OX7 5NB, United Kingdom. Opening balance GBP 44,779.31. Deposits: GBP 400.00 on 03/09/2024, GBP 1,200.00 on 15/07/2024. Withdrawals: GBP 1,600.00 on 10/08/2024. Gross interest credited GBP 464.59 at a variable rate of 4.15% AER. Closing balance GBP 45,243.90. Interest is paid gross; any tax due above your Personal Savings Allowance is your responsibility. FSCS protection applies up to GBP 85,000 per depositor per institution. Notice period none. This account has no debit card; transfers go to the nominated account ending 8656 only. Manage the account online, in the app or on 0117 286 8117. Rates may change; we will give 14 days' notice of any reduction."
+        }
+      ]
+    },
+    {
+      "firstName": "Tomasz",
+      "lastName": "Kowalski",
+      "email": "tomasz.kowalski@example.com",
+      "description": "Self-employed electrician in Leeds with irregular income, saving into a Lifetime ISA and a personal pension. Prefers plain-English reports.",
+      "socialLinks": [],
+      "documents": [
+        {
+          "title": "2024 Self Assessment Tax Return Summary",
+          "content": "Summary of self assessment submission for the year ending 5 April 2024, unique taxpayer reference 1862 848 277. Employment income plus dividends from a personal company: turnover GBP 102,010.00, allowable expenses GBP 26,561.00, net profit GBP 75,449.00. Class 4 national insurance GBP 4,527.00. Personal allowance applied in full. Total income tax and national insurance liability for the year GBP 21,339.00, of which GBP 10,670.00 was paid on account in January 2024 and the balance falls due by 31 January 2025, with a further payment on account due the same date. Declared domicile and residence: United Kingdom throughout the year, with overseas bank interest of GBP 703.00 declared on the foreign pages. Filed online via the self assessment portal on 13 December 2024. Agent reference AG-2025-1344. Retained as evidence of declared income for affordability and source of wealth assessment."
+        },
+        {
+          "title": "Broadband and Landline Bill August 2024",
+          "content": "Fibrelink Broadband monthly bill for account 610855697, bill date 31/08/2024, covering services from 01/08/2024 to 31/08/2024 at the installation address Flat 1, 105 Kingsley Gardens, Leeds, LS10 5WX, United Kingdom. Full fibre broadband 500 Mb GBP 38.00, landline rental GBP 16.00, itemised calls GBP 3.49, total including VAT GBP 57.49. Paid in full by direct debit on 10/09/2024; no action is needed. Your minimum term ends on 25/12/2025, after which the price may change with 30 days' notice. Router serial T5137975564, static IP not enabled, average download speed measured at the router 393 Mb. This bill shows the address at which the service is installed and the account holder responsible for it. Faults can be reported around the clock on 01273 236 7005; compensation applies automatically for outages over two working days under the voluntary code."
+        }
+      ]
+    },
+    {
+      "firstName": "Helen",
+      "lastName": "Price",
+      "email": "helen.price@example.com",
+      "description": "Retired GP in drawdown, gifting regularly to grandchildren. Interested in inheritance tax planning and has settled a discretionary trust for the family.",
+      "socialLinks": [
+        "https://www.linkedin.com/in/dr-helen-price"
+      ],
+      "documents": [
+        {
+          "title": "Declaration of Trust Summary",
+          "content": "Summary of the declaration of trust establishing The Price Grandchildren's Trust, executed 21 May 2025. Settlor Helen Price. Initial trust fund GBP 165,000.00 transferred from the settlor's account at Halcyon Bank plc on 2 June 2025. Trustees Helen Price and the settlor's brother. Beneficiaries the settlor's nieces in equal shares absolutely. The trust is a discretionary trust; the trustees hold the fund on trust to apply income and capital among the class at their discretion. The trustees have delegated investment management to NevisWealth Asset Management under a separate agreement and have agreed an investment policy consistent with the beneficiaries' ages. The trust has been registered on the Trust Registration Service and the trustees have obtained a unique taxpayer reference. The settlor is excluded from benefit. This summary was prepared by the trustees' solicitors for the investment manager's records and is not the deed itself."
+        },
+        {
+          "title": "Council Tax Bill 2025/26",
+          "content": "Ellerby Borough Council Council Tax demand notice for Flat 10, 119 Ferndale Close, Harrogate, HG19 4QL, United Kingdom, account CT-2024-7114, for the financial year 1 April 2025 to 31 March 2026. Valuation band F. Annual charge GBP 1,662.00, made up of the Ellerby Borough element GBP 1,296.36, the police and crime commissioner precept GBP 182.82, the fire authority precept GBP 66.48 and the adult social care precept GBP 116.34. A single-person discount of 25% has been applied because one adult occupies the property. Payable in ten instalments of GBP 166.20 on the first of each month from April to January by direct debit. The liable person named above is registered at this property as their sole or main residence for the whole of the charging year. Appeals against banding go to the Valuation Office Agency; changes of circumstance must be reported within 21 days on 01603 917 0682 or through the council's online account, quoting your account number."
+        },
+        {
+          "title": "Advisory Engagement Letter",
+          "content": "This letter confirms the terms on which NevisWealth Asset Management will act on behalf of the client named above. Our remit covers discretionary management of the portfolio held in custody with our nominated depositary, quarterly performance reporting and an annual suitability review. Charges are calculated as a percentage of assets under management, billed quarterly in arrears and deducted directly from the account: 0.95% per annum on the first GBP 750,000.00, tapering to 0.65% thereafter, plus underlying fund costs disclosed separately in the cost and charges statement. A one-off setup charge of GBP 250.00 applies to new mandates. Either party may terminate this arrangement in writing with thirty days' notice, at which point any accrued but unbilled amount becomes payable immediately. The client confirms that the risk profile recorded in the investment policy statement remains accurate and will notify us of any change in circumstances. This engagement is governed by the firm's standard terms of business, a copy of which has been provided separately, and by the regulatory disclosures required under the firm's licence."
+        }
+      ]
+    },
+    {
+      "firstName": "Marcus",
+      "lastName": "Thornton",
+      "email": "marcus.thornton@thornton-holdings.example",
+      "description": "Founder who sold Thornton Freight Holdings in 2025; proceeds held in cash pending agreement of an investment policy. Wants a conservative first year.",
+      "socialLinks": [
+        "https://www.linkedin.com/in/marcus-thornton-freight",
+        "https://www.linkedin.com/company/thornton-holdings"
+      ],
+      "documents": [
+        {
+          "title": "Completion Statement, Sale of Shares in Thornton Freight Holdings Ltd",
+          "content": "Completion statement prepared by Ashby Legal LLP for the sale of the entire issued share capital of Thornton Freight Holdings Ltd to Halcyon Industrial Partners LLP, which completed on 7 October 2025. Headline consideration GBP 3,725,000.00. Less retention held in escrow for eighteen months against warranty claims GBP 372,500.00. Less repayment of director's loan and shareholder debt netted at completion GBP 495,085.97. Less legal, corporate finance and tax advisory fees GBP 93,125.00. Net completion proceeds paid to the seller GBP 2,764,289.03, transferred by CHAPS to the seller's nominated personal account on the completion date, reference SPA-2024-0245. An earn-out of up to GBP 558,750.00 is payable over two years subject to revenue targets. Business asset disposal relief has been claimed on the first GBP 1,000,000 of gain; the balance is subject to capital gains tax at the higher rate and has been reserved for. This document is provided to the firm as evidence of the source of funds for the investment mandate and confirms the completion date and net sale proceeds received."
+        },
+        {
+          "title": "Investment Policy Statement",
+          "content": "Investment policy statement agreed between the client named above and NevisWealth Asset Management. Objective: long-term real growth of capital with moderate volatility. Time horizon 15 years. Risk profile balanced on the firm's seven-point scale, assessed by questionnaire on 27 August 2025 and confirmed in discussion; the client accepts a maximum peak-to-trough drawdown of around 25% in a stressed year. Strategic asset allocation 70% global equities, 20% investment grade and government bonds, 10% diversifiers including listed infrastructure and gold, with rebalancing bands of plus or minus 5 percentage points reviewed quarterly. Constraints: no single position above 5% of the portfolio; liquidity requirement of GBP 35,000.00 available within five working days. Benchmark a composite of MSCI ACWI and the Bloomberg Global Aggregate in the same proportions, hedged to sterling. Reviewed annually or on a material change in circumstances."
+        },
+        {
+          "title": "Passport Bio-Data Summary",
+          "content": "Certified copy of the biographical data page of a British passport, passport number 660253101, issued by HM Passport Office on 10/07/2023 and expiring 10/07/2033. Surname THORNTON, given names MARCUS PATRICK, nationality British Citizen, date of birth 12/01/1998, place of birth Lagos. Machine readable zone checked against the visual inspection zone; check digits consistent. Photograph compared with the client in person at the Manchester office on 26 January 2025 and certified as a true likeness and a true copy of the original by the relationship manager. Security features present: holographic laminate, UV-reactive fibres, perforated passport number on all visa pages. No signs of tampering. Retained on file for customer due diligence under the firm's anti-money laundering policy, retention period five years after the end of the relationship. Copy certified 8 March 2025."
+        }
+      ]
+    },
+    {
+      "firstName": "Fatima",
+      "lastName": "Al-Sayed",
+      "email": "fatima.alsayed@example.com",
+      "description": "Consultant anaesthetist with a UK and UAE income history; makes large regular contributions to a general investment account and an ISA each April.",
+      "socialLinks": [
+        "https://www.linkedin.com/in/fatima-al-sayed-md"
+      ],
+      "documents": [
+        {
+          "title": "Current Account Statement October 2025",
+          "content": "Statement of account for Ridgeway Bank plc current account ending 6638, sort code 20-33-14, for 01/10/2025 to 31/10/2025. Opening balance GBP 7,300.02. Credits: salary GBP 2,088.12 from HALDANE MEDICAL GROUP on 30/10/2025. Debits: standing order GBP 790.00 to Oakridge Lettings Ltd on 02/10/2025; direct debits GBP 399.25 to Northgate Insurance, Kingsmere District Council, Albion Gas & Electric; card payments GBP 1,033.90 across 38 transactions; cash withdrawals GBP 50.00. Closing balance GBP 7,114.99. Arranged overdraft GBP 1,500.00, not used. This statement was posted to the account holder at 91 Cathedral Close, London, SW5 3GF, United Kingdom, the correspondence address held for the account, and may be relied upon as evidence of that address as at the statement date. Report unrecognised transactions within 13 months on 0161 624 1287. Ridgeway Bank plc is authorised by the Prudential Regulation Authority."
+        },
+        {
+          "title": "Passport Bio-Data Summary",
+          "content": "Certified copy of the biographical data page of a British passport, passport number 625521581, issued by HM Passport Office on 24/10/2022 and expiring 24/10/2032. Surname AL-SAYED, given names FATIMA ALEXANDER, nationality British Citizen, date of birth 27/12/1958, place of birth Birmingham. Machine readable zone checked against the visual inspection zone; check digits consistent. Photograph compared with the client in person at the London office on 10 December 2023 and certified as a true likeness and a true copy of the original by the relationship manager. Security features present: holographic laminate, UV-reactive fibres, perforated passport number on all visa pages. No signs of tampering. Retained on file for customer due diligence under the firm's anti-money laundering policy, retention period five years after the end of the relationship. Copy certified 7 April 2024."
+        },
+        {
+          "title": "Terms of Business and Fee Agreement",
+          "content": "These terms of business set out the basis on which NevisWealth Asset Management provides advice-only services to the client named above. We will prepare an initial financial plan and a written suitability report for a fixed fee of GBP 1,950.00, payable half on engagement and half on delivery of the report. Implementation of recommendations is charged at GBP 180.00 per hour, estimated in advance and capped in writing. Ongoing service, if selected, is charged at 0.55% per annum of assets under management with a minimum of GBP 1,200.00 per year, invoiced quarterly. We do not receive commission from product providers; any that arises is rebated to the client. Fees are exclusive of VAT where applicable and of third-party platform and fund charges. Either party may terminate this arrangement in writing with thirty days' notice; work completed to the termination date is billed pro rata. Complaints are handled under our published procedure and may be referred to the Financial Ombudsman Service. By signing, the client confirms receipt of our key facts document, privacy notice and conflicts of interest policy."
+        }
+      ]
+    },
+    {
+      "firstName": "Daniel",
+      "lastName": "Okafor",
+      "email": "daniel.okafor@example.com",
+      "description": "Brother of Samuel Okafor, referred by him. Accountant at a mid-tier firm, cautious, starting with an ISA and a small pension top-up each year.",
+      "socialLinks": [
+        "https://www.linkedin.com/in/daniel-okafor-aca"
+      ],
+      "documents": [
+        {
+          "title": "Electricity Bill Oct to Dec 2024",
+          "content": "Albion Gas & Electric electricity statement for supply account 6800-7727-264, billing period 01/10/2024 to 31/12/2024, supply address Flat 11, 47 Marlow Row, Manchester, M13 6TB, United Kingdom. Meter serial P54459921, previous reading 20329 kWh, present reading 21823 kWh, consumption 1494 kWh charged at 24.95p per kWh plus a daily standing charge of 50.37p over 92 days, giving GBP 419.09 before VAT at 5% and GBP 440.04 in total. Payments received by direct debit during the period: GBP 173.00. Balance carried forward GBP 267.04, to be collected on 14/01/2025 under mandate reference DD-2025-3134. Tariff Standard Variable, estimated annual consumption 5976 kWh. Emergency and meter fault line 029 120 1615. This statement is addressed to the named account holder at the supply address and is accepted by most institutions as evidence of residence at that address for the period it covers. Keep it with your household records."
+        },
+        {
+          "title": "Driving Licence Summary",
+          "content": "Certified copy of the front and back of a UK photocard driving licence, licence number OKAFO912021DO9AH, issued by the DVLA and valid from 08/11/2018 to 08/11/2028. Holder Daniel Okafor, date of birth 02/12/1991, address printed on the licence Flat 11, 47 Marlow Row, Manchester, M13 6TB, United Kingdom, which matches the address held on the client record. Entitlement categories AM, A, B, B1, BE, f, k, l, n, p, q; no endorsements or penalty points recorded on the summary obtained from the DVLA view-your-licence service on 10 May 2020, check code shared by the client. Photograph compared with the client in person and confirmed as a true likeness. Security features checked: tactile surface, optically variable ink, changing colour hologram. Retained under the firm's customer due diligence procedures. The photocard expires ten years after issue and must be renewed with a current photograph; the client has been reminded of the renewal date."
+        }
+      ]
+    },
+    {
+      "firstName": "Rebecca",
+      "lastName": "Bond",
+      "email": "rebecca.bond@example.com",
+      "description": "Fixed income portfolio manager investing personally in global equities to diversify away from her day job. Wants minimal contact and a clean annual pack.",
+      "socialLinks": [
+        "https://www.linkedin.com/in/rebecca-bond-cfa"
+      ],
+      "documents": [
+        {
+          "title": "Investment Policy Statement, Annual Review 2026",
+          "content": "Annual review of the investment policy statement for the client named above, conducted 19 May 2026. The client's objectives and time horizon are unchanged. The risk profile questionnaire was repeated and the client remains moderately adventurous; capacity for loss has increased following the mortgage redemption. Strategic asset allocation is amended from 50% to 60% global equities, with the reduction taken from short-dated bonds, on the grounds of the longer horizon now confirmed. Diversifiers remain at 10%. The concentration in UK mid-caps has been reduced from 14% to under 10% as agreed last year. Benchmark and rebalancing bands unchanged. Environmental, social and governance preferences were revisited; the client asked to exclude thermal coal producers, which has been added to the constraints. Next review in twelve months or earlier if the client's employment changes. Both parties have signed this review, which forms an annex to the investment policy statement dated 22 April 2024."
+        },
+        {
+          "title": "Savings Account Statement Q2 2026",
+          "content": "Halcyon Bank plc instant access savings account ending 6590, sort code 60-84-21, statement period 01/04/2026 to 30/06/2026, account holder correspondence address Flat 5, 29 Meadow View, London, E17 6FX, United Kingdom. Opening balance GBP 15,298.64. Deposits: GBP 600.00 on 03/04/2026, GBP 1,000.00 on 25/06/2026. Withdrawals: GBP 1,050.00 on 02/05/2026. Gross interest credited GBP 160.64 at a variable rate of 4.20% AER. Closing balance GBP 16,009.28. Interest is paid gross; any tax due above your Personal Savings Allowance is your responsibility. FSCS protection applies up to GBP 85,000 per depositor per institution. Notice period none. This account has no debit card; transfers go to the nominated account ending 9565 only. Manage the account online, in the app or on 0345 757 2903. Rates may change; we will give 14 days' notice of any reduction."
+        }
+      ]
+    },
+    {
+      "firstName": "Kenji",
+      "lastName": "Watanabe",
+      "email": "kenji.watanabe@example.com",
+      "description": "Japanese national on a skilled worker visa in Cambridge, biotech researcher. Opened UK accounts in 2025 and is building a first UK investment portfolio.",
+      "socialLinks": [
+        "https://www.linkedin.com/in/kenji-watanabe-bio"
+      ],
+      "documents": [
+        {
+          "title": "Assured Shorthold Tenancy Agreement",
+          "content": "Agreement made between the landlord, Oakridge Lettings Ltd, and the tenant named above, for the letting of 124 Castle Hill, Cambridge, CB11 2PR, United Kingdom, for a fixed term of 12 months commencing 1 October 2024. Monthly rent of GBP 1,800.00 payable in advance on the fifth day of each month by standing order to the landlord's designated client account. A deposit of GBP 2,079.00, equivalent to five weeks' rent, has been registered with the Tenancy Deposit Scheme, certificate reference DPS-2026-7104. The tenant is named as a joint occupier with one other named adult for the purposes of this agreement and confirms this address as their principal residence for the duration of the term. Break clause permits either party to terminate after month six with two months' written notice. Gas safety certificate, electrical installation condition report and energy performance certificate rating C have been provided prior to occupation. Pets are permitted with written consent; the property is let unfurnished. Council tax and utilities are the tenant's responsibility."
+        },
+        {
+          "title": "Passport Bio-Data Summary (Japanese)",
+          "content": "Certified copy of the data page of a Japanese passport, passport number A90956723, issued by Ministry of Foreign Affairs of Japan on 20/03/2023, valid until 20/03/2033. Holder WATANABE, KENJI, nationality Japanese, date of birth 25/11/1987, place of birth Sendai, sex M. Biometric chip read successfully and matched to the printed data. Original inspected by the relationship manager during the onboarding meeting on 19 August 2023; the client's likeness confirmed against the photograph and the document confirmed as genuine using the firm's document verification tool, reference DV-2024-9546. The client's UK immigration status was verified separately through the Home Office share code service where applicable. This copy is retained under the firm's customer due diligence procedures and must be refreshed on renewal of the document or on a change of name. Any discrepancy between the passport name and the name on the account must be resolved before trading is enabled."
+        },
+        {
+          "title": "Kestrel Energy Statement December 2025",
+          "content": "Dual fuel supply statement from Kestrel Energy for account 8140-2613-156 covering 01/10/2025 to 31/12/2025. Electricity 1247 kWh at 25.75p per kWh, standing charge 46.85p per day. Gas 1900 kWh, converted from 171.2 cubic metres at calorific value 39.4, at 6.77p per kWh, standing charge 31.90p per day. Total energy charges GBP 520.61 plus VAT GBP 26.03, total GBP 546.64. Your account was in credit by GBP 89.00 at the start of the period and payments of GBP 341.00 were received, leaving GBP 116.64 due, which will be collected on 21/01/2026 by direct debit. Registered supply address 124 Castle Hill, Cambridge, CB11 2PR, United Kingdom, MPAN 8759303350292, MPRN 8324953164. Smart meter readings were taken automatically on 31/12/2025; no estimated readings were used. Your current tariff ends on 14/06/2026; we will write to you with renewal options six weeks before then. To switch tariff, report a supply fault or query a meter reading call 0113 253 8174 or use the Kestrel Energy app."
+        }
+      ]
+    },
+    {
+      "firstName": "Margaret",
+      "lastName": "Ellery",
+      "email": "margaret.ellery@example.com",
+      "description": "Widow, 78, moved into sheltered housing in 2025. Portfolio managed for income, with her daughter Rachel acting under a lasting power of attorney.",
+      "socialLinks": [],
+      "documents": [
+        {
+          "title": "Council Tax Adjustment Notice 2024",
+          "content": "Revised Council Tax bill from Ravensholme City Council for account CT-2025-7443, property 43 Meadow View, St Albans, AL16 4LJ, United Kingdom, valuation band B, following your notification of a change in occupancy on 16 November 2024. Charge from 1 April 2024 to 15 November 2024 with single-person discount GBP 1,251.66. Charge from 16 November 2024 to 31 March 2025 at the full rate GBP 983.84, reflecting the removal of the discount. Amount already paid GBP 1,102.00. Revised balance GBP 1,133.50, spread over the remaining 2 instalments of GBP 566.75 collected on the 1st of each month by direct debit reference DD-2026-3295. Your property reference for the Valuation Office Agency is 0914-26-838. If you believe the banding is incorrect you may make a proposal to the VOA within six months of becoming the taxpayer. Contact the revenues team on 0131 033 1755 or write to the address shown, quoting your account number. Failure to pay an instalment within seven days of a reminder makes the full balance due."
+        },
+        {
+          "title": "Letter of Authority",
+          "content": "To whom it may concern. I, Margaret Ellery, of 43 Meadow View, St Albans, AL16 4LJ, United Kingdom, authorise NevisWealth Asset Management and its nominated employees to request and receive information about my policies and plans from Northbrook Investments, including plan values, contribution histories, fund holdings, charges, guarantees and transfer options. This authority does not permit the firm to give instructions, make withdrawals, change beneficiaries or alter the plan in any way; it is for information gathering only. Please copy me on any correspondence sent under this authority. Where I hold a lasting power of attorney arrangement, my attorney Rachel Ellery may also make requests under this letter and a certified copy of the power is enclosed. This authority is valid for twelve months from the date below and may be revoked by me in writing at any time. Signed 24 May 2025. Date of birth and policy numbers are set out on the attached schedule for identification purposes."
+        }
+      ]
+    },
+    {
+      "firstName": "Liam",
+      "lastName": "Fitzgerald",
+      "email": "liam.fitzgerald@example.com",
+      "description": "Software contractor operating through a limited company. Wants advice on extracting profits tax-efficiently and has consolidated two pensions into one mandate.",
+      "socialLinks": [
+        "https://www.linkedin.com/in/liam-fitzgerald-dev",
+        "https://github.example/lfitz"
+      ],
+      "documents": [
+        {
+          "title": "Current Account Statement September 2024",
+          "content": "Statement of account for Ridgeway Bank plc current account ending 6055, sort code 20-33-14, for 01/09/2024 to 30/09/2024. Opening balance GBP 2,735.38. Credits: salary GBP 3,924.29 from ORION ANALYTICS LTD on 26/09/2024. Debits: mortgage payment GBP 1,566.00 to Halcyon Home Loans on 01/09/2024; direct debits GBP 322.17 to Ashfold Leisure Centre, Albion Gas & Electric, Kingsmere District Council; card payments GBP 1,345.89 across 21 transactions; cash withdrawals GBP 80.00. Closing balance GBP 3,345.61. Arranged overdraft GBP 800.00, not used. This statement was posted to the account holder at Flat 5, 81 Castle Hill, Leicester, LE1 1XF, United Kingdom, the correspondence address held for the account, and may be relied upon as evidence of that address as at the statement date. Report unrecognised transactions within 13 months on 0161 680 6211. Ridgeway Bank plc is authorised by the Prudential Regulation Authority."
+        },
+        {
+          "title": "Fee Schedule Variation Letter",
+          "content": "Further to our annual review meeting, this letter records the agreed variation to the fee schedule under your existing agreement with NevisWealth Asset Management, effective 1 June 2024. The annual management charge on assets under management reduces from 1.00% to 0.85% on the whole portfolio, reflecting the consolidation of the pension and general investment account into a single mandate above GBP 500,000.00. Charges continue to be calculated daily, billed quarterly in arrears and deducted from the account. Transaction charges, custody fees and underlying fund costs are unchanged and are itemised in the annual cost and charges statement. The right of either party to terminate this arrangement in writing with thirty days' notice is unaffected. All other terms of the engagement letter dated 19 August 2020 remain in force. Please countersign and return one copy; the variation takes effect from the date above regardless of the date of countersignature. A projection of the effect of charges over ten years is enclosed as required by the regulator."
+        },
+        {
+          "title": "Tax Calculation Summary 2023/24",
+          "content": "HMRC tax calculation (SA302 equivalent) for the tax year 6 April 2023 to 5 April 2024, unique taxpayer reference 9628820616, national insurance number redacted. Total income received GBP 50,260.00, comprising employment income GBP 35,182.00, dividends GBP 11,057.00 and bank interest GBP 4,021.00. Minus personal allowance GBP 12,570.00. Income tax charged after allowances and reliefs GBP 11,735.00, less tax deducted at source GBP 7,276.00, giving GBP 4,459.00 due by 31 January 2025. Gift aid payments of GBP 1,650.00 were made and have extended the basic rate band. Student loan repayments nil. This calculation is based on the Self Assessment return submitted on 15 July 2024 and may be amended within twelve months. Produced from the taxpayer's online account and provided to the adviser as evidence of income; lenders normally require the matching tax year overview alongside it."
+        }
+      ]
+    },
+    {
+      "firstName": "Chen",
+      "lastName": "Wei",
+      "email": "chen.wei@example.com",
+      "description": "Property investor with four buy-to-let flats, selling one in 2025 to reduce leverage and redeploying the proceeds into a diversified portfolio.",
+      "socialLinks": [
+        "https://www.linkedin.com/in/chen-wei-property"
+      ],
+      "documents": [
+        {
+          "title": "Property Sale Completion Statement",
+          "content": "Completion statement issued by Clearwater Conveyancing in respect of the sale of Flat 9, 3 Redcliffe Walk, Bristol, BS1 6QL, which completed on 28 June 2024. This statement evidences the origin of the funds subsequently paid into the client's account: the net proceeds of the client's former home. Gross sale price GBP 435,000.00. Less redemption of the outstanding mortgage to Halcyon Home Loans GBP 187,529.80. Less estate agent commission at 1.2% plus VAT GBP 6,264.00. Less conveyancing fees and disbursements including Land Registry and search fees GBP 1,864.73. Less apportioned council tax and utility adjustments to the completion date GBP 136.14. Net proceeds due to the seller GBP 239,205.33, transferred by same-day payment to the client's nominated account on the completion date, reference CMP-2026-5048. No capital gains tax was withheld at source; the client's tax adviser has been notified where a gain may arise. This statement forms part of the conveyancing file and confirms the source and amount of funds released to the client following completion."
+        },
+        {
+          "title": "Council Tax Bill 2025/26",
+          "content": "Thornbury and Dale Council Council Tax demand notice for Flat 2, 113 Alder Court, Bristol, BS10 8ES, United Kingdom, account CT-2025-4443, for the financial year 1 April 2025 to 31 March 2026. Valuation band B. Annual charge GBP 1,949.00, made up of the Thornbury and Dale element GBP 1,520.22, the police and crime commissioner precept GBP 214.39, the fire authority precept GBP 77.96 and the adult social care precept GBP 136.43. A 25% disregard applies as one occupant is a full-time student; evidence has been received. Payable in ten instalments of GBP 194.90 on the first of each month from April to January by direct debit. The liable person named above is registered at this property as their sole or main residence for the whole of the charging year. Appeals against banding go to the Valuation Office Agency; changes of circumstance must be reported within 21 days on 0131 661 7566 or through the council's online account, quoting your account number."
+        },
+        {
+          "title": "2023 Self Assessment Tax Return Summary",
+          "content": "Summary of self assessment submission for the year ending 5 April 2023, unique taxpayer reference 0515 502 161. Employment income plus dividends from a personal company: turnover GBP 63,100.00, allowable expenses GBP 24,270.00, net profit GBP 38,830.00. Class 4 national insurance GBP 2,330.00. Personal allowance applied in full. Total income tax and national insurance liability for the year GBP 9,264.00, of which GBP 4,632.00 was paid on account in January 2023 and the balance falls due by 31 January 2024, with a further payment on account due the same date. Declared domicile and residence: United Kingdom throughout the year, with overseas bank interest of GBP 404.00 declared on the foreign pages. Filed online via the self assessment portal on 23 December 2023. Agent reference AG-2025-0560. Retained as evidence of declared income for affordability and source of wealth assessment."
+        }
+      ]
+    },
+    {
+      "firstName": "Amara",
+      "lastName": "Diallo",
+      "email": "amara.diallo@example.com",
+      "description": "Senegalese-French translator at a UN agency in Geneva, opening UK arrangements to fund a London flat purchase. Salary paid in euros.",
+      "socialLinks": [
+        "https://www.linkedin.com/in/amara-diallo-translation"
+      ],
+      "documents": [
+        {
+          "title": "Passport Bio-Data Summary (French)",
+          "content": "Certified copy of the data page of a French passport, passport number Y85068751, issued by Consulat général de France à Genève on 28/09/2023, valid until 28/09/2033. Holder DIALLO, AMARA, nationality French, date of birth 16/08/1982, place of birth Dakar, sex F. Biometric chip read successfully and matched to the printed data. Original inspected by the relationship manager during the onboarding meeting on 20 June 2024; the client's likeness confirmed against the photograph and the document confirmed as genuine using the firm's document verification tool, reference DV-2024-2177. The client's UK immigration status was verified separately through the Home Office share code service where applicable. This copy is retained under the firm's customer due diligence procedures and must be refreshed on renewal of the document or on a change of name. Any discrepancy between the passport name and the name on the account must be resolved before trading is enabled."
+        },
+        {
+          "title": "Bank Statement October 2025",
+          "content": "Banque Léman SA account statement, IBAN CH06 LEMA 8148 0811 91, for 01/10/2025 to 31/10/2025, issued to the account holder at Rue de la Servette 61, 1202 Genève, Switzerland. Opening balance EUR 17,852.23. Incoming: salary EUR 5,301.52 from NORDIC SOFTWARE OY on 26/10/2025. Outgoing: rent EUR 1,782.00 by standing order on 04/10/2025; direct debits EUR 232.38 for health insurance, energy and telecoms; card payments EUR 1,196.26 across 14 transactions; international transfer EUR 500.00 to a GBP account in the account holder's own name, reference SAVINGS. Closing balance EUR 19,943.11. Statements are issued monthly and can be downloaded as certified PDF from online banking. Deposits are protected under the applicable national guarantee scheme up to EUR 100,000. Report unauthorised transactions without delay on +41 72 476 3064."
+        }
+      ]
+    },
+    {
+      "firstName": "Gareth",
+      "lastName": "Llewellyn",
+      "email": "gareth.llewellyn@example.com",
+      "description": "Cardiff-area dairy farmer, asset rich and cash poor. Succession planning for the farm is under way through the family trust; income is seasonal.",
+      "socialLinks": [],
+      "documents": [
+        {
+          "title": "Deed of Appointment and Retirement of Trustees",
+          "content": "By this deed dated 10 April 2025, made under the trust deed establishing The Llewellyn Farm Settlement, Hugh Llewellyn retires as trustee and Gareth Llewellyn and Ashby Trust Corporation are appointed trustees in their place, so that the trust property vests in the continuing and new trustees jointly. The settlor's letter of wishes dated 20 November 2017 is acknowledged by the new trustees and remains non-binding. The retiring trustee is released from liability for future acts but not for any breach of trust before the date of this deed. The trust property comprises let farmland, a portfolio managed by NevisWealth Asset Management and cash at bank, as scheduled. The beneficiaries are the settlor's children and remoter issue; no beneficiary is entitled to capital as of right. The new trustees undertake to update the Trust Registration Service within 90 days and to notify the investment manager, the land agent and the bank of the change of trustees. Executed as a deed by all parties and witnessed. Certified copy retained on the firm's file."
+        },
+        {
+          "title": "Water Services Bill 2024/25",
+          "content": "Brightwater Utilities annual water and wastewater charges for the property at Flat 10, 12 Linden Place, Cardiff, CF16 6LB, United Kingdom, customer reference WS-2024-5866, for the charging year 1 April 2024 to 31 March 2025. Metered supply, meter serial 428098499: previous reading 336 cubic metres, current reading 465 cubic metres, consumption 129 cubic metres. Water supply GBP 216.00, wastewater collection and treatment GBP 198.00, surface water drainage GBP 40.00, fixed charges GBP 42.00. Total for the year GBP 496.00, payable in 8 monthly instalments of GBP 62.00 from 1 April by direct debit. This bill is issued to the occupier named above as the person responsible for water charges at the supply address; keep it with your household records, since it is commonly requested as proof that you live at the property. Leaks on your side of the meter are your responsibility; our free leak repair scheme applies once per property. Social tariff and WaterSure support are available on request. Account queries 0131 471 7478."
+        },
+        {
+          "title": "2023 Self Assessment Tax Return Summary",
+          "content": "Summary of self assessment submission for the year ending 5 April 2023, unique taxpayer reference 7189 876 655. Employment income plus dividends from a personal company: turnover GBP 78,610.00, allowable expenses GBP 25,870.00, net profit GBP 52,740.00. Class 4 national insurance GBP 3,164.00. Personal allowance applied in full. Total income tax and national insurance liability for the year GBP 11,959.00, of which GBP 5,980.00 was paid on account in January 2023 and the balance falls due by 31 January 2024, with a further payment on account due the same date. Declared domicile and residence: United Kingdom throughout the year, with no overseas income or gains to report. Filed online via the self assessment portal on 8 December 2023. Agent reference AG-2026-3171. Retained as evidence of declared income for affordability and source of wealth assessment."
+        }
+      ]
+    },
+    {
+      "firstName": "Ingrid",
+      "lastName": "Vos",
+      "email": "ingrid.vos@vos-advocaten.example",
+      "description": "Amsterdam lawyer, partner at Vos Advocaten. Dutch tax resident investing through a Dutch brokerage account and holding a UK ISA from earlier years in London.",
+      "socialLinks": [
+        "https://www.linkedin.com/in/ingrid-vos-advocaat",
+        "https://www.linkedin.com/company/vos-advocaten"
+      ],
+      "documents": [
+        {
+          "title": "Residential Lease Agreement (huurovereenkomst) Summary",
+          "content": "English summary of the residential lease between the landlord, Vondel Vastgoed B.V., and the tenant named above for the apartment at Prinsengracht 412-2, 1016 HR Amsterdam, Netherlands, for an indefinite term commencing 1 June 2024 with a minimum period of twelve months. Basic rent EUR 2,850.00 per month plus service costs of EUR 140.00 for heating, cleaning of communal areas and the lift, payable in advance by SEPA direct debit. Deposit EUR 5,700.00, held by the landlord and returned within four weeks of the end of the lease less agreed deductions. Annual indexation follows the statutory maximum. The tenant undertakes to register at this address with the municipality (BRP) within five days of moving in and to use the apartment as their main residence. Subletting, including short stay platforms, is prohibited. The tenant has received the energy label C, the house rules of the owners' association and an inventory signed by both parties. Notice period for the tenant is one calendar month. Disputes may be brought before the Huurcommissie or the district court of Amsterdam."
+        },
+        {
+          "title": "Bank Statement February 2024",
+          "content": "Orbis Bank N.V. account statement, IBAN NL09 ORBS 7520 1400 54, for 01/02/2024 to 29/02/2024, issued to the account holder at Prinsengracht 412-2, 1016 HR Amsterdam, Netherlands. Opening balance EUR 17,227.05. Incoming: salary EUR 2,788.13 from NORDIC SOFTWARE OY on 26/02/2024. Outgoing: rent EUR 1,799.00 by standing order on 02/02/2024; direct debits EUR 372.11 for health insurance, energy and telecoms; card payments EUR 624.87 across 25 transactions; international transfer EUR 1,050.00 to a GBP account in the account holder's own name, reference SAVINGS. Closing balance EUR 17,219.20. Statements are issued monthly and can be downloaded as certified PDF from online banking. Deposits are protected under the applicable national guarantee scheme up to EUR 100,000. Report unauthorised transactions without delay on +31 48 548 8412."
+        },
+        {
+          "title": "2023 Income Tax Return Summary (Netherlands)",
+          "content": "Summary of the Dutch income tax return (aangifte inkomstenbelasting) for 2023 filed with the Belastingdienst, BSN redacted. Box 1 income from work and home EUR 102,580.00, including partnership profit share and the imputed rental value of the owner-occupied home at Prinsengracht 412-2, 1016 HR Amsterdam, Netherlands. Box 3 savings and investments taxable base EUR 193,300.00 after the tax-free allowance. Mortgage interest deducted EUR 5,600.00. Total assessed income tax and national insurance EUR 42,058.00, provisional assessments paid EUR 40,006.00, balance due EUR 2,052.00 by the date on the final assessment. The taxpayer declared Dutch tax residence for the whole year with no treaty tie-breaker claim; the UK ISA is reported in box 3 as a foreign account. Filed by the client's tax adviser on 6 April 2024. Provided to the firm as evidence of declared income and tax residence status."
+        }
+      ]
+    },
+    {
+      "firstName": "Patrick",
+      "lastName": "Murphy",
+      "email": "patrick.murphy@example.com",
+      "description": "Irish civil engineer living in Manchester with his partner Siobhán O'Neill; a joint mortgage application is in progress and both hold ISAs with the firm.",
+      "socialLinks": [
+        "https://www.linkedin.com/in/patrick-murphy-ceng"
+      ],
+      "documents": [
+        {
+          "title": "Joint Current Account Statement December 2024",
+          "content": "Statement of account for Forth Valley Building Society joint current account ending 9182, sort code 80-22-60, for 01/12/2024 to 31/12/2024. Opening balance GBP 967.73. Credits: salary GBP 2,037.27 from ST BEDES NHS TRUST on 27/12/2024; second salary credit GBP 2,037.27 from ST BEDES NHS TRUST; faster payment GBP 478.00 received from HMRC REPAYMENT. Debits: standing order GBP 1,204.00 to Oakridge Lettings Ltd on 02/12/2024; direct debits GBP 391.55 to Meridian Life Assurance, Pennine Energy, Ashfold Leisure Centre; card payments GBP 974.75 across 12 transactions; cash withdrawals GBP 100.00. Closing balance GBP 2,371.97. Arranged overdraft GBP 500.00, not used. This statement was posted to Patrick Murphy and Siobhán O'Neill at 33 Castle Hill, Manchester, M12 5EB, United Kingdom, the correspondence address held for the account, and may be relied upon as evidence of that address as at the statement date. Report unrecognised transactions within 13 months on 01603 747 2409. Forth Valley Building Society is authorised by the Prudential Regulation Authority."
+        },
+        {
+          "title": "Driving Licence Summary (Ireland)",
+          "content": "Certified copy of an Irish driving licence issued by the National Driver Licence Service, licence number 985236845, valid from 07/09/2022 to 07/09/2032. Holder Patrick Murphy, date of birth 02/06/1990, place of birth Limerick. Entitlement categories B and W, with category A restricted to 35 kW. Address on the licence 33 Castle Hill, Manchester, M12 5EB, United Kingdom. Photograph and signature compared with the client and with the passport held on file; consistent. The licence is a credit card format polycarbonate document with a laser-engraved photograph, microtext and a changeable laser image, all present. It is accepted as a secondary identity document under the firm's customer due diligence procedures but not as a primary one for a non-UK licence, so the passport remains the primary identification document on this file. Verified on 25 March 2023."
+        }
+      ]
+    },
+    {
+      "firstName": "Yasmin",
+      "lastName": "Haddad",
+      "email": "yasmin.haddad@example.com",
+      "description": "Dentist who owns her practice premises outright; considering a small self-administered scheme to hold the commercial property alongside her existing pension.",
+      "socialLinks": [
+        "https://www.linkedin.com/in/yasmin-haddad-bds"
+      ],
+      "documents": [
+        {
+          "title": "Council Tax Bill 2026/27",
+          "content": "Thornbury and Dale Council Council Tax demand notice for 106 Ferndale Close, Nottingham, NG14 1HE, United Kingdom, account CT-2024-5634, for the financial year 1 April 2026 to 31 March 2027. Valuation band F. Annual charge GBP 1,912.00, made up of the Thornbury and Dale element GBP 1,491.36, the police and crime commissioner precept GBP 210.32, the fire authority precept GBP 76.48 and the adult social care precept GBP 133.84. A single-person discount of 25% has been applied because one adult occupies the property. Payable in ten instalments of GBP 191.20 on the first of each month from April to January by direct debit. The liable person named above is registered at this property as their sole or main residence for the whole of the charging year. Appeals against banding go to the Valuation Office Agency; changes of circumstance must be reported within 21 days on 0345 046 6960 or through the council's online account, quoting your account number."
+        },
+        {
+          "title": "Advisory Engagement Letter",
+          "content": "This letter confirms the terms on which NevisWealth Asset Management will act on behalf of the client named above. Our remit covers discretionary management of the portfolio held in custody with our nominated depositary, quarterly performance reporting and an annual suitability review. Charges are calculated as a percentage of assets under management, billed quarterly in arrears and deducted directly from the account: 0.65% per annum on the first GBP 750,000.00, tapering to 0.35% thereafter, plus underlying fund costs disclosed separately in the cost and charges statement. A one-off setup charge of GBP 500.00 applies to new mandates. Either party may terminate this arrangement in writing with thirty days' notice, at which point any accrued but unbilled amount becomes payable immediately. The client confirms that the risk profile recorded in the investment policy statement remains accurate and will notify us of any change in circumstances. This engagement is governed by the firm's standard terms of business, a copy of which has been provided separately, and by the regulatory disclosures required under the firm's licence."
+        },
+        {
+          "title": "Passport Bio-Data Summary",
+          "content": "Certified copy of the biographical data page of a British passport, passport number 660520561, issued by HM Passport Office on 11/03/2019 and expiring 11/03/2029. Surname HADDAD, given names YASMIN JAMES, nationality British Citizen, date of birth 25/11/1973, place of birth Birmingham. Machine readable zone checked against the visual inspection zone; check digits consistent. Photograph compared with the client in person at the Manchester office on 26 January 2020 and certified as a true likeness and a true copy of the original by the relationship manager. Security features present: holographic laminate, UV-reactive fibres, perforated passport number on all visa pages. No signs of tampering. Retained on file for customer due diligence under the firm's anti-money laundering policy, retention period five years after the end of the relationship. Copy certified 2 April 2020."
+        }
+      ]
+    },
+    {
+      "firstName": "Edward",
+      "lastName": "Pemberton-Smythe",
+      "email": "edward.pemberton-smythe@example.com",
+      "description": "Third-generation landowner and beneficiary of a family trust. Income from let farmland and a forestry portfolio; the trustees delegate investment management to the firm.",
+      "socialLinks": [],
+      "documents": [
+        {
+          "title": "Trust Deed Amendment",
+          "content": "Deed of amendment to The Pemberton-Smythe 1998 Settlement, originally settled on 7 March 2010, executed on 20 December 2026 by the trustees in exercise of the power of amendment at clause 14 of the trust deed. The class of discretionary beneficiaries is widened to include the settlor's grandchildren and remoter issue, whether born before or after this deed. The trust period is extended to the maximum permitted by law. The trustees' investment powers are restated to permit investment in collective investment schemes and discretionary managed portfolios without restriction as to income yield, and to appoint a discretionary investment manager. Edward Pemberton-Smythe is confirmed as settlor and a non-beneficiary. Nothing in this deed shall confer any benefit on the settlor or the settlor's spouse. The deed has been reported to HMRC on the Trust Registration Service, reference redacted, and the trustees' resolution approving the amendment is annexed. Governing law England and Wales. Executed as a deed and witnessed; the original is held by the trustees' solicitors with a certified copy on the firm's file."
+        },
+        {
+          "title": "Investment Policy Statement",
+          "content": "Investment policy statement agreed between the client named above and NevisWealth Asset Management. Objective: capital preservation with income sufficient to meet drawdown requirements. Time horizon 7 years. Risk profile adventurous on the firm's seven-point scale, assessed by questionnaire on 13 March 2024 and confirmed in discussion; the client accepts a maximum peak-to-trough drawdown of around 15% in a stressed year. Strategic asset allocation 40% global equities, 50% investment grade and government bonds, 10% diversifiers including listed infrastructure and gold, with rebalancing bands of plus or minus 5 percentage points reviewed quarterly. Constraints: no single position above 5% of the portfolio; liquidity requirement of GBP 25,000.00 available within five working days. Benchmark a composite of MSCI ACWI and the Bloomberg Global Aggregate in the same proportions, hedged to sterling. Reviewed annually or on a material change in circumstances."
+        },
+        {
+          "title": "Savings Account Statement Q3 2024",
+          "content": "Meridian Bank plc instant access savings account ending 0496, sort code 30-11-02, statement period 01/07/2024 to 30/09/2024, account holder correspondence address 80 Larkspur Avenue, Harrogate, HG13 4BH, United Kingdom. Opening balance GBP 56,065.96. Deposits: GBP 950.00 on 27/08/2024, GBP 1,750.00 on 17/08/2024, GBP 1,700.00 on 20/09/2024, GBP 2,350.00 on 23/07/2024. Withdrawals: none. Gross interest credited GBP 567.67 at a variable rate of 4.05% AER. Closing balance GBP 63,383.63. Interest is paid gross; any tax due above your Personal Savings Allowance is your responsibility. FSCS protection applies up to GBP 85,000 per depositor per institution. Notice period none. This account has no debit card; transfers go to the nominated account ending 4873 only. Manage the account online, in the app or on 01273 556 5024. Rates may change; we will give 14 days' notice of any reduction."
+        }
+      ]
+    },
+    {
+      "firstName": "Nadia",
+      "lastName": "Petrov",
+      "email": "nadia.petrov@example.com",
+      "description": "Bulgarian-born hotel manager in Bath, unrelated to Elena Petrova. Saving for a first deposit; renting with a twelve-month agreement.",
+      "socialLinks": [
+        "https://www.linkedin.com/in/nadia-petrov-hospitality"
+      ],
+      "documents": [
+        {
+          "title": "Electricity Bill Jan to Mar 2024",
+          "content": "Coastline Power electricity statement for supply account 3950-8408-685, billing period 01/01/2024 to 31/03/2024, supply address Flat 5, 90 Coopers Lane, Bath, BA14 8QD, United Kingdom. Meter serial M53400911, previous reading 33379 kWh, present reading 34829 kWh, consumption 1450 kWh charged at 24.16p per kWh plus a daily standing charge of 46.61p over 91 days, giving GBP 392.74 before VAT at 5% and GBP 412.38 in total. Payments received by direct debit during the period: GBP 333.00. Balance carried forward GBP 79.38, to be collected on 14/04/2024 under mandate reference DD-2026-5018. Tariff Smart Tracker, estimated annual consumption 5800 kWh. Emergency and meter fault line 01865 243 9652. This statement is addressed to the named account holder at the supply address and is accepted by most institutions as evidence of residence at that address for the period it covers. Keep it with your household records."
+        },
+        {
+          "title": "Assured Shorthold Tenancy Agreement",
+          "content": "Agreement made between the landlord, Oakridge Lettings Ltd, and the tenant named above, for the letting of Flat 5, 90 Coopers Lane, Bath, BA14 8QD, United Kingdom, for a fixed term of 12 months commencing 1 April 2024. Monthly rent of GBP 1,550.00 payable in advance on the fifth day of each month by standing order to the landlord's designated client account. A deposit of GBP 1,790.00, equivalent to five weeks' rent, has been registered with the Deposit Protection Service, certificate reference DPS-2026-3896. The tenant is named as a joint occupier with one other named adult for the purposes of this agreement and confirms this address as their principal residence for the duration of the term. Break clause permits either party to terminate after month six with two months' written notice. Gas safety certificate, electrical installation condition report and energy performance certificate rating D have been provided prior to occupation. Pets are permitted with written consent; the property is let unfurnished. Council tax and utilities are the tenant's responsibility."
+        }
+      ]
+    },
+    {
+      "firstName": "Kwame",
+      "lastName": "Mensah",
+      "email": "kwame.mensah@example.com",
+      "description": "Bus driver paying into a workplace pension; opened a stocks and shares ISA in 2024 to fund his children's university costs. Meets once a year.",
+      "socialLinks": [],
+      "documents": [
+        {
+          "title": "Council Tax Bill 2024/25",
+          "content": "Kingsmere District Council Council Tax demand notice for Flat 2, 126 Chestnut Grove, Leeds, LS12 1LT, United Kingdom, account CT-2024-4963, for the financial year 1 April 2024 to 31 March 2025. Valuation band E. Annual charge GBP 2,957.00, made up of the Kingsmere District element GBP 2,306.46, the police and crime commissioner precept GBP 325.27, the fire authority precept GBP 118.28 and the adult social care precept GBP 206.99. A single-person discount of 25% has been applied because one adult occupies the property. Payable in ten instalments of GBP 295.70 on the first of each month from April to January by direct debit. The liable person named above is registered at this property as their sole or main residence for the whole of the charging year. Appeals against banding go to the Valuation Office Agency; changes of circumstance must be reported within 21 days on 0800 286 0670 or through the council's online account, quoting your account number."
+        },
+        {
+          "title": "Current Account Statement June 2024",
+          "content": "Statement of account for Northbrook Building Society current account ending 4124, sort code 09-01-57, for 01/06/2024 to 30/06/2024. Opening balance GBP 5,582.59. Credits: salary GBP 6,690.08 from KELVIN ENGINEERING PLC on 26/06/2024; faster payment GBP 283.00 received from EBAY SALE. Debits: standing order GBP 1,603.00 to Oakridge Lettings Ltd on 04/06/2024; direct debits GBP 312.56 to Kingsmere District Council, Ashfold Leisure Centre, Cityline Mobile; card payments GBP 745.68 across 20 transactions; cash withdrawals GBP 120.00. Closing balance GBP 9,491.43. Arranged overdraft GBP 900.00, not used. This statement was posted to the account holder at Flat 2, 126 Chestnut Grove, Leeds, LS12 1LT, United Kingdom, the correspondence address held for the account, and may be relied upon as evidence of that address as at the statement date. Report unrecognised transactions within 13 months on 0117 105 6969. Northbrook Building Society is authorised by the Prudential Regulation Authority."
+        }
+      ]
+    },
+    {
+      "firstName": "Lucia",
+      "lastName": "Ferreira",
+      "email": "lucia.ferreira@example.com",
+      "description": "Portuguese nurse in Norwich who sends money to family monthly. Wants a simple, low-fee portfolio and clear statements in plain English.",
+      "socialLinks": [
+        "https://www.linkedin.com/in/lucia-ferreira-rn"
+      ],
+      "documents": [
+        {
+          "title": "Passport Bio-Data Summary (Portuguese)",
+          "content": "Certified copy of the data page of a Portuguese passport, passport number A67909438, issued by Instituto dos Registos e do Notariado on 06/08/2020, valid until 06/08/2030. Holder FERREIRA, LUCIA, nationality Portuguese, date of birth 18/01/1976, place of birth Porto, sex F. Biometric chip read successfully and matched to the printed data. Original inspected by the relationship manager during the onboarding meeting on 12 March 2022; the client's likeness confirmed against the photograph and the document confirmed as genuine using the firm's document verification tool, reference DV-2025-1246. The client's UK immigration status was verified separately through the Home Office share code service where applicable. This copy is retained under the firm's customer due diligence procedures and must be refreshed on renewal of the document or on a change of name. Any discrepancy between the passport name and the name on the account must be resolved before trading is enabled."
+        },
+        {
+          "title": "Hebridean Power Statement September 2024",
+          "content": "Dual fuel supply statement from Hebridean Power for account 4943-8313-867 covering 01/07/2024 to 30/09/2024. Electricity 520 kWh at 27.92p per kWh, standing charge 59.02p per day. Gas 2885 kWh, converted from 259.9 cubic metres at calorific value 39.4, at 6.03p per kWh, standing charge 29.18p per day. Total energy charges GBP 398.53 plus VAT GBP 19.93, total GBP 418.46. Your account was in credit by GBP 43.00 at the start of the period and payments of GBP 320.00 were received, leaving GBP 55.46 due, which will be collected on 21/10/2024 by direct debit. Registered supply address Flat 9, 129 Mill Lane, Norwich, NR14 3XY, United Kingdom, MPAN 7948975471089, MPRN 5436941996. Smart meter readings were taken automatically on 30/09/2024; no estimated readings were used. Your current tariff ends on 10/05/2025; we will write to you with renewal options six weeks before then. To switch tariff, report a supply fault or query a meter reading call 0800 360 7365 or use the Hebridean Power app."
+        },
+        {
+          "title": "Terms of Business and Fee Agreement",
+          "content": "These terms of business set out the basis on which NevisWealth Asset Management provides advice-only services to the client named above. We will prepare an initial financial plan and a written suitability report for a fixed fee of GBP 1,950.00, payable half on engagement and half on delivery of the report. Implementation of recommendations is charged at GBP 180.00 per hour, estimated in advance and capped in writing. Ongoing service, if selected, is charged at 0.50% per annum of assets under management with a minimum of GBP 1,200.00 per year, invoiced quarterly. We do not receive commission from product providers; any that arises is rebated to the client. Fees are exclusive of VAT where applicable and of third-party platform and fund charges. Either party may terminate this arrangement in writing with thirty days' notice; work completed to the termination date is billed pro rata. Complaints are handled under our published procedure and may be referred to the Financial Ombudsman Service. By signing, the client confirms receipt of our key facts document, privacy notice and conflicts of interest policy."
+        }
+      ]
+    },
+    {
+      "firstName": "Hamish",
+      "lastName": "MacLeod",
+      "email": "hamish.macleod@example.com",
+      "description": "Distillery manager near Inverness who receives share options annually; concentration in employer stock is the main risk on the file.",
+      "socialLinks": [
+        "https://www.linkedin.com/in/hamish-macleod-distilling"
+      ],
+      "documents": [
+        {
+          "title": "Investment Policy Statement, Annual Review 2025",
+          "content": "Annual review of the investment policy statement for the client named above, conducted 2 August 2025. The client's objectives and time horizon are unchanged. The risk profile questionnaire was repeated and the client remains moderately adventurous; capacity for loss has increased following the mortgage redemption. Strategic asset allocation is amended from 60% to 70% global equities, with the reduction taken from short-dated bonds, on the grounds of the longer horizon now confirmed. Diversifiers remain at 10%. The concentration in UK mid-caps has been reduced from 16% to under 10% as agreed last year. Benchmark and rebalancing bands unchanged. Environmental, social and governance preferences were revisited; the client asked to exclude thermal coal producers, which has been added to the constraints. Next review in twelve months or earlier if the client's employment changes. Both parties have signed this review, which forms an annex to the investment policy statement dated 8 October 2023."
+        },
+        {
+          "title": "Driving Licence Summary",
+          "content": "Certified copy of the front and back of a UK photocard driving licence, licence number MACLE602047HM9EC, issued by the DVLA and valid from 28/11/2020 to 28/11/2030. Holder Hamish MacLeod, date of birth 04/02/1967, address printed on the licence Flat 8, 18 Priory Road, Inverness, IV10 3QQ, United Kingdom, which matches the address held on the client record. Entitlement categories AM, A, B, B1, BE, f, k, l, n, p, q; no endorsements or penalty points recorded on the summary obtained from the DVLA view-your-licence service on 1 November 2022, check code shared by the client. Photograph compared with the client in person and confirmed as a true likeness. Security features checked: tactile surface, optically variable ink, changing colour hologram. Retained under the firm's customer due diligence procedures. The photocard expires ten years after issue and must be renewed with a current photograph; the client has been reminded of the renewal date."
+        },
+        {
+          "title": "Savings Account Statement Q3 2025",
+          "content": "Ridgeway Bank plc instant access savings account ending 0293, sort code 20-33-14, statement period 01/07/2025 to 30/09/2025, account holder correspondence address Flat 8, 18 Priory Road, Inverness, IV10 3QQ, United Kingdom. Opening balance GBP 44,788.68. Deposits: GBP 550.00 on 12/08/2025, GBP 1,050.00 on 20/09/2025, GBP 1,000.00 on 16/08/2025, GBP 2,450.00 on 10/07/2025. Withdrawals: GBP 1,750.00 on 28/08/2025, GBP 650.00 on 17/07/2025. Gross interest credited GBP 447.89 at a variable rate of 4.00% AER. Closing balance GBP 47,886.57. Interest is paid gross; any tax due above your Personal Savings Allowance is your responsibility. FSCS protection applies up to GBP 85,000 per depositor per institution. Notice period none. This account has no debit card; transfers go to the nominated account ending 2503 only. Manage the account online, in the app or on 0345 694 6858. Rates may change; we will give 14 days' notice of any reduction."
+        }
+      ]
+    },
+    {
+      "firstName": "Beatrice",
+      "lastName": "Nwosu",
+      "email": "beatrice.nwosu@example.com",
+      "description": "US and UK dual citizen teaching at a London university. FATCA reporting applies and she holds a US brokerage sub-account through the custodian.",
+      "socialLinks": [
+        "https://www.linkedin.com/in/beatrice-nwosu-phd"
+      ],
+      "documents": [
+        {
+          "title": "Form W-9 (US Person Certification)",
+          "content": "Form W-9 completed to certify the taxpayer identification number and status of the account holder for a US brokerage sub-account held through the firm's custodian. Name as shown on income tax return Beatrice R Nwosu. Business name not applicable. Federal tax classification individual. Exemptions none. Address for tax purposes 88 Tannery Yard, London, N16 2TA, United Kingdom; the account holder is a US citizen resident abroad and is treated as a US person for federal tax purposes notwithstanding UK residence. Taxpayer identification number provided under penalties of perjury as correct. The signer certifies that they are not subject to backup withholding because they have not been notified by the IRS of a failure to report interest or dividends, and that the FATCA exemption code is not applicable to this account type. Signed and dated 18 December 2024 for submission to the custodian with the account opening pack. A copy of the client's most recent US federal return is held separately for FATCA reporting reconciliation."
+        },
+        {
+          "title": "2024 Self Assessment Tax Return Summary",
+          "content": "Summary of self assessment submission for the year ending 5 April 2024, unique taxpayer reference 9998 546 358. Self-employment income from restaurant trade: turnover GBP 138,340.00, allowable expenses GBP 42,235.00, net profit GBP 96,105.00. Class 4 national insurance GBP 5,766.00. Personal allowance applied in full. Total income tax and national insurance liability for the year GBP 22,036.00, of which GBP 11,018.00 was paid on account in January 2024 and the balance falls due by 31 January 2025, with a further payment on account due the same date. Declared domicile and residence: United Kingdom throughout the year, with no overseas income or gains to report. Filed online via the self assessment portal on 21 December 2024. Agent reference AG-2024-4780. Retained as evidence of declared income for affordability and source of wealth assessment."
+        },
+        {
+          "title": "Water Services Bill 2025/26",
+          "content": "Wessex Water Services annual water and wastewater charges for the property at 88 Tannery Yard, London, N16 2TA, United Kingdom, customer reference WS-2025-4878, for the charging year 1 April 2025 to 31 March 2026. Metered supply, meter serial 701860529: previous reading 513 cubic metres, current reading 660 cubic metres, consumption 147 cubic metres. Water supply GBP 217.00, wastewater collection and treatment GBP 264.00, surface water drainage GBP 39.00, fixed charges GBP 46.00. Total for the year GBP 566.00, payable in 10 monthly instalments of GBP 56.60 from 1 April by direct debit. This bill is issued to the occupier named above as the person responsible for water charges at the supply address; keep it with your household records, since it is commonly requested as proof that you live at the property. Leaks on your side of the meter are your responsibility; our free leak repair scheme applies once per property. Social tariff and WaterSure support are available on request. Account queries 01865 765 5937."
+        }
+      ]
+    },
+    {
+      "firstName": "Ravi",
+      "lastName": "Patel",
+      "email": "ravi.patel@patel-pharmacy.example",
+      "description": "Owner of three community pharmacies in Leicester, selling one to a national chain in 2026. Proceeds to fund early retirement planning.",
+      "socialLinks": [
+        "https://www.linkedin.com/in/ravi-patel-pharmacist",
+        "https://www.linkedin.com/company/patel-pharmacy-group"
+      ],
+      "documents": [
+        {
+          "title": "Completion Statement, Sale of Shares in Patel Pharmacy (Belgrave) Ltd",
+          "content": "Completion statement prepared by Ashby Legal LLP for the sale of the entire issued share capital of Patel Pharmacy (Belgrave) Ltd to Meridian Logistics Group plc, which completed on 11 August 2025. Headline consideration GBP 2,050,000.00. Less retention held in escrow for eighteen months against warranty claims GBP 205,000.00. Less repayment of director's loan and shareholder debt netted at completion GBP 239,567.83. Less legal, corporate finance and tax advisory fees GBP 51,250.00. Net completion proceeds paid to the seller GBP 1,554,182.17, transferred by CHAPS to the seller's nominated personal account on the completion date, reference SPA-2025-6701. An earn-out of up to GBP 307,500.00 is payable over two years subject to revenue targets. Business asset disposal relief has been claimed on the first GBP 1,000,000 of gain; the balance is subject to capital gains tax at the higher rate and has been reserved for. This document is provided to the firm as evidence of the source of funds for the investment mandate and confirms the completion date and net sale proceeds received."
+        },
+        {
+          "title": "Current Account Statement August 2025",
+          "content": "Statement of account for Forth Valley Building Society current account ending 5868, sort code 80-22-60, for 01/08/2025 to 31/08/2025. Opening balance GBP 4,295.31. Credits: salary GBP 2,275.95 from CASCADE SYSTEMS UK LTD on 30/08/2025. Debits: mortgage payment GBP 880.00 to Northbrook Building Society on 05/08/2025; direct debits GBP 360.09 to Northgate Insurance, Meridian Life Assurance, Kingsmere District Council; card payments GBP 1,317.70 across 28 transactions; cash withdrawals GBP 180.00. Closing balance GBP 3,833.47. Arranged overdraft GBP 700.00, not used. This statement was posted to the account holder at Flat 11, 129 Orchard Way, Leicester, LE17 5BD, United Kingdom, the correspondence address held for the account, and may be relied upon as evidence of that address as at the statement date. Report unrecognised transactions within 13 months on 0131 946 2953. Forth Valley Building Society is authorised by the Prudential Regulation Authority."
+        },
+        {
+          "title": "Advisory Engagement Letter",
+          "content": "This letter confirms the terms on which NevisWealth Asset Management will act on behalf of the client named above. Our remit covers discretionary management of the portfolio held in custody with our nominated depositary, quarterly performance reporting and an annual suitability review. Charges are calculated as a percentage of assets under management, billed quarterly in arrears and deducted directly from the account: 0.65% per annum on the first GBP 500,000.00, tapering to 0.35% thereafter, plus underlying fund costs disclosed separately in the cost and charges statement. A one-off setup charge of GBP 250.00 applies to new mandates. Either party may terminate this arrangement in writing with thirty days' notice, at which point any accrued but unbilled amount becomes payable immediately. The client confirms that the risk profile recorded in the investment policy statement remains accurate and will notify us of any change in circumstances. This engagement is governed by the firm's standard terms of business, a copy of which has been provided separately, and by the regulatory disclosures required under the firm's licence."
+        }
+      ]
+    },
+    {
+      "firstName": "Charlotte",
+      "lastName": "Ashworth",
+      "email": "charlotte.ashworth@ashworthcapital.example",
+      "description": "Family office principal and settlor of the Ashworth Discretionary Trust. Delegates day-to-day decisions to a trustee board; reviews strategy twice a year.",
+      "socialLinks": [
+        "https://www.linkedin.com/in/charlotte-ashworth-fo",
+        "https://www.linkedin.com/company/ashworth-capital"
+      ],
+      "documents": [
+        {
+          "title": "Declaration of Trust Summary",
+          "content": "Summary of the declaration of trust establishing The Ashworth Discretionary Trust, executed 2 December 2024. Settlor Charlotte Ashworth. Initial trust fund GBP 715,000.00 transferred from the settlor's account at Northbrook Building Society on 19 December 2024. Trustees Charlotte Ashworth and Pemberton & Rowe Trustees Ltd. Beneficiaries the settlor's children and their issue. The trust is an interest in possession trust with the settlor's spouse as life tenant. The trustees have delegated investment management to NevisWealth Asset Management under a separate agreement and have agreed an investment policy consistent with the beneficiaries' ages. The trust has been registered on the Trust Registration Service and the trustees have obtained a unique taxpayer reference. The settlor is excluded from benefit. This summary was prepared by the trustees' solicitors for the investment manager's records and is not the deed itself."
+        },
+        {
+          "title": "Investment Policy Statement",
+          "content": "Investment policy statement agreed between the client named above and NevisWealth Asset Management. Objective: long-term real growth of capital with moderate volatility. Time horizon 20 years. Risk profile balanced on the firm's seven-point scale, assessed by questionnaire on 7 January 2025 and confirmed in discussion; the client accepts a maximum peak-to-trough drawdown of around 15% in a stressed year. Strategic asset allocation 40% global equities, 50% investment grade and government bonds, 10% diversifiers including listed infrastructure and gold, with rebalancing bands of plus or minus 5 percentage points reviewed quarterly. Constraints: no single position above 5% of the portfolio; liquidity requirement of GBP 30,000.00 available within five working days. Benchmark a composite of MSCI ACWI and the Bloomberg Global Aggregate in the same proportions, hedged to sterling. Reviewed annually or on a material change in circumstances."
+        },
+        {
+          "title": "Passport Bio-Data Summary",
+          "content": "Certified copy of the biographical data page of a British passport, passport number 294765517, issued by HM Passport Office on 22/12/2016 and expiring 22/12/2026. Surname ASHWORTH, given names CHARLOTTE PATRICK, nationality British Citizen, date of birth 18/12/1963, place of birth Nairobi. Machine readable zone checked against the visual inspection zone; check digits consistent. Photograph compared with the client in person at the Edinburgh office on 19 October 2017 and certified as a true likeness and a true copy of the original by the relationship manager. Security features present: holographic laminate, UV-reactive fibres, perforated passport number on all visa pages. No signs of tampering. Retained on file for customer due diligence under the firm's anti-money laundering policy, retention period five years after the end of the relationship. Copy certified 27 December 2017."
+        }
+      ]
+    },
+    {
+      "firstName": "Dmitri",
+      "lastName": "Volkov",
+      "email": "dmitri.volkov@example.com",
+      "description": "Software architect from Estonia working remotely for a London fintech, splitting the year between Tallinn and London. Enhanced due diligence on source of wealth completed in 2025.",
+      "socialLinks": [
+        "https://www.linkedin.com/in/dmitri-volkov-arch"
+      ],
+      "documents": [
+        {
+          "title": "Passport Bio-Data Summary (Estonian)",
+          "content": "Certified copy of the data page of a Estonian passport, passport number C48344690, issued by Police and Border Guard Board on 22/04/2018, valid until 22/04/2028. Holder VOLKOV, DMITRI, nationality Estonian, date of birth 12/01/1973, place of birth Tartu, sex F. Biometric chip read successfully and matched to the printed data. Original inspected by the relationship manager during the onboarding meeting on 29 September 2018; the client's likeness confirmed against the photograph and the document confirmed as genuine using the firm's document verification tool, reference DV-2026-0361. The client's UK immigration status was verified separately through the Home Office share code service where applicable. This copy is retained under the firm's customer due diligence procedures and must be refreshed on renewal of the document or on a change of name. Any discrepancy between the passport name and the name on the account must be resolved before trading is enabled."
+        },
+        {
+          "title": "Bank Statement July 2024",
+          "content": "Balti Pank AS account statement, IBAN EE65 BALT 7227 4038 30, for 01/07/2024 to 31/07/2024, issued to the account holder at Pärnu maantee 142-7, 11317 Tallinn, Estonia. Opening balance EUR 19,049.32. Incoming: salary EUR 6,975.26 from UNOG PAYROLL on 29/07/2024. Outgoing: rent EUR 1,646.00 by standing order on 04/07/2024; direct debits EUR 299.04 for health insurance, energy and telecoms; card payments EUR 1,217.84 across 17 transactions; international transfer EUR 1,200.00 to a GBP account in the account holder's own name, reference SAVINGS. Closing balance EUR 22,861.70. Statements are issued monthly and can be downloaded as certified PDF from online banking. Deposits are protected under the applicable national guarantee scheme up to EUR 100,000. Report unauthorised transactions without delay on +372 27 430 7614."
+        },
+        {
+          "title": "Property Sale Completion Statement",
+          "content": "Completion statement issued by Ashby Legal LLP in respect of the sale of Kalamaja 18-3, 10415 Tallinn, which completed on 19 January 2026. This statement evidences the origin of the funds subsequently paid into the client's account: the net proceeds of the client's former home. Gross sale price EUR 345,000.00. Less redemption of the outstanding mortgage to Balti Pank AS EUR 137,346.32. Less estate agent commission at 1.2% plus VAT EUR 4,968.00. Less conveyancing fees and disbursements including notary and land register fees EUR 1,830.21. Less apportioned property tax and utility adjustments to the completion date EUR 120.95. Net proceeds due to the seller EUR 200,734.52, transferred by same-day payment to the client's nominated account on the completion date, reference CMP-2024-2157. No capital gains tax was withheld at source; the client's tax adviser has been notified where a gain may arise. This statement forms part of the conveyancing file and confirms the source and amount of funds released to the client following completion."
+        }
+      ]
+    },
+    {
+      "firstName": "Grace",
+      "lastName": "Whitmore",
+      "email": "grace.whitmore@example.com",
+      "description": "The second Grace on the book. Primary school headteacher approaching retirement, consolidating three pensions; a transfer value has been requested from the teachers' scheme.",
+      "socialLinks": [],
+      "documents": [
+        {
+          "title": "Pension Transfer Value Statement",
+          "content": "Statement from Halcyon Pensions for the member named above, membership number 59084843, produced 18 November 2024 at the member's request. Cash equivalent transfer value GBP 479,000.00, guaranteed for three months from the date of this statement. Pensionable service 11 years 4 months, normal pension age 67, accrued annual pension at date of leaving GBP 21,773.00 revalued in line with the scheme rules, with a spouse's pension of half that amount and a lump sum death benefit. The scheme is a defined benefit arrangement; transferring gives up a guaranteed income for life. Because the value exceeds GBP 30,000, the trustees require confirmation that appropriate independent advice has been received from an adviser with the pension transfer specialist permission before a transfer can proceed. No transfer has been requested. This statement is for information only and is not an offer. Contact the scheme administrator on 029 559 9414 with the membership number quoted above."
+        },
+        {
+          "title": "Council Tax Bill 2026/27",
+          "content": "Wyvern District Council Council Tax demand notice for 90 Copperfield Road, London, SW18 1ZQ, United Kingdom, account CT-2024-5955, for the financial year 1 April 2026 to 31 March 2027. Valuation band D. Annual charge GBP 2,250.00, made up of the Wyvern District element GBP 1,755.00, the police and crime commissioner precept GBP 247.50, the fire authority precept GBP 90.00 and the adult social care precept GBP 157.50. A 25% disregard applies as one occupant is a full-time student; evidence has been received. Payable in ten instalments of GBP 225.00 on the first of each month from April to January by direct debit. The liable person named above is registered at this property as their sole or main residence for the whole of the charging year. Appeals against banding go to the Valuation Office Agency; changes of circumstance must be reported within 21 days on 01273 925 4635 or through the council's online account, quoting your account number."
+        }
+      ]
+    },
+    {
+      "firstName": "Abdul",
+      "lastName": "Rahman",
+      "email": "abdul.rahman@example.com",
+      "description": "Private hire operator with a fleet of six vehicles, cash intensive; monthly statements are reviewed as part of ongoing anti-money laundering monitoring.",
+      "socialLinks": [],
+      "documents": [
+        {
+          "title": "Current Account Statement April 2026",
+          "content": "Statement of account for Northbrook Building Society current account ending 8340, sort code 09-01-57, for 01/04/2026 to 30/04/2026. Opening balance GBP 4,362.81. Credits: salary GBP 4,836.57 from ORION ANALYTICS LTD on 26/04/2026; faster payment GBP 312.00 received from HMRC REPAYMENT. Debits: standing order GBP 1,031.00 to Brackenwood Estates on 01/04/2026; direct debits GBP 307.08 to Cityline Mobile, Ashfold Leisure Centre, Kingsmere District Council; card payments GBP 1,059.87 across 33 transactions; cash withdrawals GBP 70.00. Closing balance GBP 6,731.43. Arranged overdraft GBP 1,800.00, not used. This statement was posted to the account holder at 77 Tannery Yard, Glasgow, G7 8XY, United Kingdom, the correspondence address held for the account, and may be relied upon as evidence of that address as at the statement date. Report unrecognised transactions within 13 months on 029 607 7290. Northbrook Building Society is authorised by the Prudential Regulation Authority."
+        },
+        {
+          "title": "Electricity Bill Apr to Jun 2024",
+          "content": "Brightwater Energy electricity statement for supply account 1005-7552-404, billing period 01/04/2024 to 30/06/2024, supply address 77 Tannery Yard, Glasgow, G7 8XY, United Kingdom. Meter serial L40569970, previous reading 52757 kWh, present reading 53724 kWh, consumption 967 kWh charged at 27.49p per kWh plus a daily standing charge of 45.07p over 91 days, giving GBP 306.84 before VAT at 5% and GBP 322.18 in total. Payments received by direct debit during the period: GBP 230.00. Balance carried forward GBP 92.18, to be collected on 14/07/2024 under mandate reference DD-2026-6788. Tariff Smart Tracker, estimated annual consumption 3868 kWh. Emergency and meter fault line 0161 026 9259. This statement is addressed to the named account holder at the supply address and is accepted by most institutions as evidence of residence at that address for the period it covers. Keep it with your household records."
+        },
+        {
+          "title": "2023 Self Assessment Tax Return Summary",
+          "content": "Summary of self assessment submission for the year ending 5 April 2023, unique taxpayer reference 7147 635 846. Employment income plus dividends from a personal company: turnover GBP 127,720.00, allowable expenses GBP 39,189.00, net profit GBP 88,531.00. Class 4 national insurance GBP 5,312.00. Personal allowance applied in full. Total income tax and national insurance liability for the year GBP 18,932.00, of which GBP 9,466.00 was paid on account in January 2023 and the balance falls due by 31 January 2024, with a further payment on account due the same date. Declared domicile and residence: United Kingdom throughout the year, with no overseas income or gains to report. Filed online via the self assessment portal on 9 December 2023. Agent reference AG-2025-6579. Retained as evidence of declared income for affordability and source of wealth assessment."
+        }
+      ]
+    },
+    {
+      "firstName": "Isabella",
+      "lastName": "Romano",
+      "email": "isabella.romano@example.com",
+      "description": "Italian architect in Oxford, married to a UK national; the couple are moving to a joint discretionary mandate and have a shared tenancy pending a purchase.",
+      "socialLinks": [
+        "https://www.linkedin.com/in/isabella-romano-arch"
+      ],
+      "documents": [
+        {
+          "title": "Assured Shorthold Tenancy Agreement",
+          "content": "Agreement made between the landlord, Oakridge Lettings Ltd, and the tenant named above, for the letting of Flat 4, 21 Ferndale Close, Oxford, OX9 7SY, United Kingdom, for a fixed term of 12 months commencing 1 April 2025. Monthly rent of GBP 2,475.00 payable in advance on the first day of each month by standing order to the landlord's designated client account. A deposit of GBP 2,858.00, equivalent to five weeks' rent, has been registered with the Tenancy Deposit Scheme, certificate reference DPS-2026-5542. The tenant is named as the sole occupier for the purposes of this agreement and confirms this address as their principal residence for the duration of the term. Break clause permits either party to terminate after month six with two months' written notice. Gas safety certificate, electrical installation condition report and energy performance certificate rating C have been provided prior to occupation. Pets are not permitted; the property is let unfurnished. Council tax and utilities are the tenant's responsibility."
+        },
+        {
+          "title": "Passport Bio-Data Summary (Italian)",
+          "content": "Certified copy of the data page of a Italian passport, passport number C96489128, issued by Questura di Firenze on 13/03/2020, valid until 13/03/2030. Holder ROMANO, ISABELLA, nationality Italian, date of birth 05/04/1967, place of birth Firenze, sex F. Biometric chip read successfully and matched to the printed data. Original inspected by the relationship manager during the onboarding meeting on 12 August 2020; the client's likeness confirmed against the photograph and the document confirmed as genuine using the firm's document verification tool, reference DV-2025-9076. The client's UK immigration status was verified separately through the Home Office share code service where applicable. This copy is retained under the firm's customer due diligence procedures and must be refreshed on renewal of the document or on a change of name. Any discrepancy between the passport name and the name on the account must be resolved before trading is enabled."
+        },
+        {
+          "title": "Advisory Engagement Letter",
+          "content": "This letter confirms the terms on which NevisWealth Asset Management will act on behalf of the client named above. Our remit covers discretionary management of the portfolio held in custody with our nominated depositary, quarterly performance reporting and an annual suitability review. Charges are calculated as a percentage of assets under management, billed quarterly in arrears and deducted directly from the account: 0.80% per annum on the first GBP 500,000.00, tapering to 0.50% thereafter, plus underlying fund costs disclosed separately in the cost and charges statement. A one-off setup charge of GBP 250.00 applies to new mandates. Either party may terminate this arrangement in writing with thirty days' notice, at which point any accrued but unbilled amount becomes payable immediately. The client confirms that the risk profile recorded in the investment policy statement remains accurate and will notify us of any change in circumstances. This engagement is governed by the firm's standard terms of business, a copy of which has been provided separately, and by the regulatory disclosures required under the firm's licence."
+        }
+      ]
+    },
+    {
+      "firstName": "Nathan",
+      "lastName": "Cole",
+      "email": "nathan.cole@example.com",
+      "description": "Professional footballer, 24, with a short career horizon. Long-term portfolio ring-fenced with restricted withdrawals; agent copied on annual reports.",
+      "socialLinks": [
+        "https://www.linkedin.com/in/nathan-cole-official"
+      ],
+      "documents": [
+        {
+          "title": "Investment Policy Statement",
+          "content": "Investment policy statement agreed between the client named above and NevisWealth Asset Management. Objective: growth ahead of inflation over a fifteen-year horizon. Time horizon 10 years. Risk profile balanced on the firm's seven-point scale, assessed by questionnaire on 13 September 2024 and confirmed in discussion; the client accepts a maximum peak-to-trough drawdown of around 30% in a stressed year. Strategic asset allocation 40% global equities, 50% investment grade and government bonds, 10% diversifiers including listed infrastructure and gold, with rebalancing bands of plus or minus 5 percentage points reviewed quarterly. Constraints: no direct exposure to tobacco or controversial weapons; liquidity requirement of GBP 30,000.00 available within five working days. Benchmark a composite of MSCI ACWI and the Bloomberg Global Aggregate in the same proportions, hedged to sterling. Reviewed annually or on a material change in circumstances."
+        },
+        {
+          "title": "Driving Licence Summary",
+          "content": "Certified copy of the front and back of a UK photocard driving licence, licence number COLE9902026NC9HH, issued by the DVLA and valid from 13/06/2020 to 13/06/2030. Holder Nathan Cole, date of birth 02/02/1996, address printed on the licence Flat 9, 40 Ropewalk, London, SW8 6HZ, United Kingdom, which matches the address held on the client record. Entitlement categories AM, A, B, B1, BE, f, k, l, n, p, q; no endorsements or penalty points recorded on the summary obtained from the DVLA view-your-licence service on 21 May 2022, check code shared by the client. Photograph compared with the client in person and confirmed as a true likeness. Security features checked: tactile surface, optically variable ink, changing colour hologram. Retained under the firm's customer due diligence procedures. The photocard expires ten years after issue and must be renewed with a current photograph; the client has been reminded of the renewal date."
+        },
+        {
+          "title": "Current Account Statement January 2024",
+          "content": "Statement of account for Ridgeway Bank plc current account ending 7676, sort code 20-33-14, for 01/01/2024 to 31/01/2024. Opening balance GBP 3,710.13. Credits: salary GBP 5,627.88 from KELVIN ENGINEERING PLC on 29/01/2024; faster payment GBP 227.00 received from GIFT MUM. Debits: mortgage payment GBP 1,529.00 to Halcyon Home Loans on 04/01/2024; direct debits GBP 195.46 to Cityline Mobile, Pennine Energy, Albion Gas & Electric; card payments GBP 810.42 across 16 transactions; cash withdrawals GBP 160.00. Closing balance GBP 6,643.13. Arranged overdraft GBP 1,900.00, not used. This statement was posted to the account holder at Flat 9, 40 Ropewalk, London, SW8 6HZ, United Kingdom, the correspondence address held for the account, and may be relied upon as evidence of that address as at the statement date. Report unrecognised transactions within 13 months on 01865 639 6760. Ridgeway Bank plc is authorised by the Prudential Regulation Authority."
+        }
+      ]
+    },
+    {
+      "firstName": "Wendy",
+      "lastName": "Chapman",
+      "email": "wendy.chapman@example.com",
+      "description": "Bookkeeper, cautious, holds premium bonds and cash ISAs. Investing in funds for the first time and wants to understand every charge before committing.",
+      "socialLinks": [],
+      "documents": [
+        {
+          "title": "Broadband and Landline Bill July 2024",
+          "content": "Fibrelink Broadband monthly bill for account 930230144, bill date 31/07/2024, covering services from 01/07/2024 to 31/07/2024 at the installation address 111 Ropewalk, Milton Keynes, MK5 5HY, United Kingdom. Full fibre broadband 300 Mb GBP 29.00, landline rental GBP 19.00, itemised calls GBP 1.46, total including VAT GBP 49.46. Paid in full by direct debit on 10/08/2024; no action is needed. Your minimum term ends on 13/10/2025, after which the price may change with 30 days' notice. Router serial H3387318552, static IP not enabled, average download speed measured at the router 834 Mb. This bill shows the address at which the service is installed and the account holder responsible for it. Faults can be reported around the clock on 01865 125 3025; compensation applies automatically for outages over two working days under the voluntary code."
+        },
+        {
+          "title": "Council Tax Bill 2025/26",
+          "content": "Kingsmere District Council Council Tax demand notice for 111 Ropewalk, Milton Keynes, MK5 5HY, United Kingdom, account CT-2024-7417, for the financial year 1 April 2025 to 31 March 2026. Valuation band E. Annual charge GBP 2,685.00, made up of the Kingsmere District element GBP 2,094.30, the police and crime commissioner precept GBP 295.35, the fire authority precept GBP 107.40 and the adult social care precept GBP 187.95. A 25% disregard applies as one occupant is a full-time student; evidence has been received. Payable in ten instalments of GBP 268.50 on the first of each month from April to January by direct debit. The liable person named above is registered at this property as their sole or main residence for the whole of the charging year. Appeals against banding go to the Valuation Office Agency; changes of circumstance must be reported within 21 days on 0117 650 9288 or through the council's online account, quoting your account number."
+        }
+      ]
+    },
+    {
+      "firstName": "Sebastian",
+      "lastName": "Ortega",
+      "email": "sebastian.ortega@example.com",
+      "description": "Chilean-Spanish airline pilot based at Gatwick whose rostering complicates tax residency; a statutory residence test log is kept with the tax adviser.",
+      "socialLinks": [
+        "https://www.linkedin.com/in/sebastian-ortega-pilot"
+      ],
+      "documents": [
+        {
+          "title": "Passport Bio-Data Summary (Spanish)",
+          "content": "Certified copy of the data page of a Spanish passport, passport number X60051592, issued by Dirección General de la Policía, Madrid on 07/10/2018, valid until 07/10/2028. Holder ORTEGA, SEBASTIAN, nationality Spanish, date of birth 14/06/1962, place of birth Santiago de Chile, sex M. Biometric chip read successfully and matched to the printed data. Original inspected by the relationship manager during the onboarding meeting on 9 December 2019; the client's likeness confirmed against the photograph and the document confirmed as genuine using the firm's document verification tool, reference DV-2025-9052. The client's UK immigration status was verified separately through the Home Office share code service where applicable. This copy is retained under the firm's customer due diligence procedures and must be refreshed on renewal of the document or on a change of name. Any discrepancy between the passport name and the name on the account must be resolved before trading is enabled."
+        },
+        {
+          "title": "Tax Calculation Summary 2024/25",
+          "content": "HMRC tax calculation (SA302 equivalent) for the tax year 6 April 2024 to 5 April 2025, unique taxpayer reference 3157118003, national insurance number redacted. Total income received GBP 160,660.00, comprising employment income GBP 112,462.00, dividends GBP 35,345.00 and bank interest GBP 12,853.00. Minus personal allowance GBP 0.00. Income tax charged after allowances and reliefs GBP 40,109.00, less tax deducted at source GBP 24,868.00, giving GBP 15,241.00 due by 31 January 2026. Gift aid payments of GBP 1,000.00 were made and have extended the basic rate band. Student loan repayments nil. This calculation is based on the Self Assessment return submitted on 13 June 2025 and may be amended within twelve months. Produced from the taxpayer's online account and provided to the adviser as evidence of income; lenders normally require the matching tax year overview alongside it."
+        },
+        {
+          "title": "Coastline Power Statement June 2025",
+          "content": "Dual fuel supply statement from Coastline Power for account 4184-1698-580 covering 01/04/2025 to 30/06/2025. Electricity 1225 kWh at 28.72p per kWh, standing charge 59.38p per day. Gas 1254 kWh, converted from 113.0 cubic metres at calorific value 39.4, at 6.64p per kWh, standing charge 28.73p per day. Total energy charges GBP 514.38 plus VAT GBP 25.72, total GBP 540.10. Your account was in credit by GBP 56.00 at the start of the period and payments of GBP 397.00 were received, leaving GBP 87.10 due, which will be collected on 21/07/2025 by direct debit. Registered supply address Flat 11, 86 Marlow Row, Brighton, BN16 6SZ, United Kingdom, MPAN 3662604944154, MPRN 7661554313. Smart meter readings were taken automatically on 30/06/2025; no estimated readings were used. Your current tariff ends on 30/03/2026; we will write to you with renewal options six weeks before then. To switch tariff, report a supply fault or query a meter reading call 0161 452 7322 or use the Coastline Power app."
+        }
+      ]
+    },
+    {
+      "firstName": "Eleanor",
+      "lastName": "Hughes",
+      "email": "eleanor.hughes@example.com",
+      "description": "Retired solicitor and executor of her late brother's estate. The inheritance is being placed in a bare trust for her nieces, which she will manage with the firm.",
+      "socialLinks": [
+        "https://www.linkedin.com/in/eleanor-hughes-ret"
+      ],
+      "documents": [
+        {
+          "title": "Estate Distribution Statement",
+          "content": "Final estate accounts and distribution statement prepared by Ashby Legal LLP as solicitors to the executors of the estate of the late Arthur Hughes, who died on 29 August 2023. Grant of probate issued 16 April 2025. Gross estate GBP 1,005,000.00, comprising the deceased's residence, cash at bank, National Savings and a portfolio of quoted shares. Less inheritance tax paid GBP 0.00, funeral, legal and valuation costs GBP 12,900.00 and settled liabilities. Net distributable estate GBP 992,100.00. Under the will dated 1 May 2018, Eleanor Hughes receives a 33% share of residue, GBP 330,700.00, paid to the beneficiary's nominated account on 8 December 2025, reference EST-2025-5134. Interim distributions already made are shown in the accounts. The beneficiary has signed a receipt and release. This statement is provided to the firm as documentary evidence of the origin of the funds now being invested. Any income arising during the administration period is reported on form R185."
+        },
+        {
+          "title": "Declaration of Trust Summary",
+          "content": "Summary of the declaration of trust establishing The Hughes Nieces Trust, executed 15 June 2024. Settlor Eleanor Hughes. Initial trust fund GBP 695,000.00 transferred from the settlor's account at Halcyon Bank plc on 28 June 2024. Trustees Eleanor Hughes and the settlor's brother. Beneficiaries the settlor's nieces in equal shares absolutely. The trust is an interest in possession trust with the settlor's spouse as life tenant. The trustees have delegated investment management to NevisWealth Asset Management under a separate agreement and have agreed an investment policy consistent with the beneficiaries' ages. The trust has been registered on the Trust Registration Service and the trustees have obtained a unique taxpayer reference. The settlor is excluded from benefit. This summary was prepared by the trustees' solicitors for the investment manager's records and is not the deed itself."
         }
       ]
     }
