@@ -1,6 +1,6 @@
 # Unified Search, System Design v2
 
-One Spring Boot service (Java 25) on one PostgreSQL 17 database with `pgvector`, `pg_trgm` and `citext`. Runs locally with `docker compose up`. Swagger UI is the only interactive surface. No broker, cache, ANN index or second service.
+One Spring Boot service (Java 25) on one PostgreSQL 17 database with `pgvector`, `pg_trgm` and `citext`. Runs locally with `docker compose up`. A React SPA serves as the primary UI; Swagger UI is available for API exploration. No broker, cache, ANN index or second service.
 
 - **Documents carry a type and a set of KYC purposes** from a closed taxonomy (§3), assigned at ingest by a deterministic classifier. This is the signal v1 lacked.
 - **Every query is parsed into a plan** before retrieval (§6.1). The plan names the mentioned client if any, the residual text, and the taxonomy labels the residual refers to.
@@ -30,12 +30,16 @@ Two eval defects hid the picture. A "top 3" assertion cannot pass for a query wi
 
 ```mermaid
 flowchart TB
-    UI["Swagger UI, curl"]
+    UI["React SPA"]
+    SWAGGER["Swagger UI, curl"]
+    ARF["ApiRewriteFilter: /api/* → /*"]
+
     subgraph App["Spring Boot app, one deployable"]
         subgraph Shared["shared"]
             F["ApiKeyFilter"]
             EMB["Embedder, MiniLM ONNX, in-process"]
             TAX["Taxonomy, loaded from taxonomy.yaml"]
+            WMC["WebMvcConfig: SPA fallback"]
         end
         subgraph Onboarding["onboarding, write side"]
             CC["ClientController"]
@@ -56,8 +60,12 @@ flowchart TB
     PG[("PostgreSQL 17, pgvector, pg_trgm, citext")]
     VX["Gemini API"]
 
-    UI -->|X-API-Key| F
+    UI -->|/api/*| ARF
+    ARF -->|X-API-Key| F
+    SWAGGER -->|X-API-Key| F
     F --> CC & DC & SC
+    F --o WMC
+    WMC -->|index.html| UI
     CC --> PG
     DC --> DS
     DS --> CLS --> TAX
@@ -96,8 +104,8 @@ com.example.searchapp
 └── shared/
     ├── embedding/         Embedder, one bean, warmed at startup
     ├── taxonomy/          Taxonomy, TaxonomyLoader (v2)
-    └── web/               ApiKeyFilter, RequestIdFilter, GlobalExceptionHandler, ProblemDetails,
-                           RequestValidationException, OpenApiConfiguration
+    └── web/               ApiKeyFilter, ApiRewriteFilter, RequestIdFilter, GlobalExceptionHandler,
+                           ProblemDetails, RequestValidationException, OpenApiConfiguration, WebMvcConfig
 ```
 
 There is no `ClientService`. Client creation is validate, insert, map the unique violation to `409`. `DocumentService` exists because document creation has logic (classify, chunk, embed outside the transaction, write atomically).
@@ -125,7 +133,7 @@ There is no `ClientService`. Client creation is validate, insert, map the unique
 | Summaries | `com.google.genai:google-genai`, API key | One env var for a reviewer. Vertex + ADC is the production shape | Spring AI |
 | API docs | springdoc, code-first | Cannot drift from the controllers | Design-first YAML |
 | Tests | JUnit 6, Testcontainers `pgvector/pgvector:pg17` | Real extensions | H2 |
-| UI | None, Swagger UI | Not asked for | React SPA |
+| UI | React SPA (Vite, React Router) | Served from the Spring Boot jar; calls API through `/api/*` prefix via `ApiRewriteFilter` | Swagger-only |
 
 ---
 
@@ -304,12 +312,15 @@ JSON is `snake_case`. Errors are RFC 9457 `application/problem+json`. IDs are UU
 |---|---|---|---|---|
 | `POST /clients` | onboarding | `201`, `Location`, `Client` | `400`, `401`, `409` | |
 | `GET /clients/{id}` | onboarding | `200` `Client` | `401`, `404` | |
+| `GET /clients/{id}/documents` | onboarding | `200` `Document[]` | `401`, `404` | Lists all documents for a client, newest first |
 | `POST /clients/{id}/documents` | onboarding | `201`, `Location`, `Document` | `400`, `401`, `404` | Optional `document_type`, `purposes` **(v2)**. Never calls a model |
 | `GET /clients/{id}/documents/{documentId}` | onboarding | `200` `Document` | `401`, `404` | Never triggers a summary |
 | `POST /clients/{id}/documents/{documentId}/summary` | onboarding | `202` `Document` | `401`, `404` | `none` or `failed` → `pending`. Already `pending` → `202` no-op. `ready` → `200` no-op |
 | `GET /search?q=&limit=&offset=` | search | `200` `SearchResult[]`, `X-Total-Count` | `400`, `401` | `[]` when nothing qualifies, never `404` |
 | `GET /health` | shared | `200` | | Unauthenticated |
 | `GET /v3/api-docs`, `/swagger-ui/**` | shared | `200` | | Unauthenticated |
+| `GET /` | shared | `200` `index.html` | | Serves the React SPA |
+| `GET /api/*` | shared | Rewritten to `/*` | | `ApiRewriteFilter` maps `/api/search` → `/search` etc. |
 
 A `404` covers both a missing id and a malformed UUID.
 
@@ -609,7 +620,9 @@ On request only. `POST …/summary` moves `none` or `failed` to `pending` and re
 
 ## 8. Security
 
-- `ApiKeyFilter` compares `X-API-Key` against `API_KEY` with `MessageDigest.isEqual`. Startup fails if the key is unset or under 32 characters. Allowlist `GET /health`, `/v3/api-docs/**`, `/swagger-ui/**`. Spring Security rejected as oversized for one static key.
+- `ApiKeyFilter` compares `X-API-Key` against `API_KEY` with `MessageDigest.isEqual`. Startup fails if the key is unset or under 32 characters. Allowlist `GET /health`, `/v3/api-docs/**`, `/swagger-ui/**`, `/`, `/index.html`, and all static asset extensions (`.js`, `.css`, `.png`, `.svg`, `.ico`, `.woff2`). Spring Security rejected as oversized for one static key.
+- `ApiRewriteFilter` rewrites `GET /api/search?q=…` to `GET /search?q=…` so the SPA calls a consistent `/api/*` prefix without the backend changing its endpoint paths.
+- The SPA stores the API key in `localStorage` after the user types it into the API Key modal. It is never hard-coded in the bundle or served from the server.
 - Every query parameter is bound, never interpolated, including `:residual`, `:types` and `:purposes`.
 - `social_links` restricted to `http(s)` at write time. User text is returned verbatim as JSON strings, escaping is the renderer's job.
 - Errors never carry stack traces, SQL or constraint names.
@@ -633,7 +646,9 @@ On request only. `POST …/summary` moves `none` or `failed` to `pending` and re
 
 ## 10. Deployment
 
-Local is the only built target. `docker compose up` starts `pgvector/pgvector:pg17` with a healthcheck and the app depending on it. Two-stage Dockerfile, JDK 25 build, `eclipse-temurin:25-jre` runtime, non-root, `-XX:MaxRAMPercentage=60`. The model is inside the jar.
+Local is the only built target. `docker compose up` starts `pgvector/pgvector:pg17` with a healthcheck and the app depending on it. Three-stage Dockerfile: a Node 22 Alpine stage builds the React SPA, a `gradle:9.7.1-jdk25` stage builds the jar, and `eclipse-temurin:25-jre` is the runtime. Non-root, `-XX:MaxRAMPercentage=60`. The model and the SPA are inside the jar.
+
+For local development without Docker, run `cd frontend && npm run build` first (or `./gradlew buildFrontend`), then `./gradlew bootRun`. During frontend development, `cd frontend && npm run dev` starts a Vite dev server on port 3000 that proxies `/api` to the backend on port 8080.
 
 | Env var | Default | Purpose |
 |---|---|---|
@@ -751,7 +766,7 @@ Ordered by expected value. None is in v2 scope.
 9. **Sentence-aware chunking.** Cut windows at sentence boundaries so the one sentence that answers a query is never split across chunks.
 10. **Summary as a chunk.** Embed a ready summary as `kind = 'summary'`. Purpose-oriented text embeds well, but it couples summaries to search, which v1 kept apart on purpose.
 11. **Click logging** on result position to find missing synonyms and mis-tagged documents from real usage.
-12. **Frontend debounce.** A request per keystroke would multiply the estimated 10 to 30 searches per second for 100 advisers.
+12. **Frontend debounce.** A request per keystroke would multiply the estimated 10 to 30 searches per second for 100 advisers. The current SPA debounces at 300 ms.
 
 Known limits carried forward. Short-name typos (§6.2), one- or two-character queries, English-only synonyms and stemming, a synonym that is also a client's name is resolved by the ambiguity rule and nothing smarter.
 
@@ -759,7 +774,9 @@ Known limits carried forward. Short-name typos (§6.2), one- or two-character qu
 
 ## 14. Implementation plan (delta from v1)
 
-Each step leaves a runnable system with a green build.
+Each step leaves a runnable system with a green build. Steps 1-7 are v2, step 8 is the frontend.
+
+
 
 1. **Taxonomy.** `taxonomy.yaml`, `Taxonomy`, `TaxonomyLoader`, validation tests.
 2. **Schema and classification.** `V2__taxonomy.sql`, `DocumentClassifier`, `label_text`, label chunk in `DocumentService`, `Reclassifier` at startup, `classification.json`, 100% on the seed corpus. Request fields `document_type` and `purposes`.
@@ -768,3 +785,4 @@ Each step leaves a runnable system with a green build.
 5. **Fusion and ordering.** `DocumentFusion` (RRF), `ResultOrdering` v2, hydration with best body chunk, response schema changes (`tier`, `signals`, `labels`, document type fields).
 6. **Eval v2.** `queries.json` with expectation shapes, the no-client-above-answers guard, recall@n and MRR, floor re-derivation. Every v1 failure in §0.1 must pass.
 7. **Docs.** README examples for identity, category and compound queries, the taxonomy file as the place to add a document type, and the reclassification behaviour.
+8. **Frontend (React SPA).** Vite + React Router SPA served from the Spring Boot jar. Three pages: search (`/`), client detail (`/clients/:id`), document detail (`/clients/:id/documents/:docId`). API calls through `/api/*` prefix. `ApiRewriteFilter` rewrites `/api/search` → `/search` etc. `WebMvcConfig` serves `index.html` for SPA routes. `ApiKeyFilter` allowlists static assets. `GET /clients/{id}/documents` added to list a client's documents.

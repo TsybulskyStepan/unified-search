@@ -1,9 +1,18 @@
+FROM node:22-alpine AS frontend-build
+
+WORKDIR /frontend
+COPY frontend/package.json frontend/package-lock.json* ./
+RUN npm ci
+COPY frontend/ .
+RUN npm run build
+
 FROM gradle:9.7.1-jdk25 AS build
 
 WORKDIR /workspace
 COPY gradle gradle
 COPY gradlew build.gradle settings.gradle ./
 RUN ./gradlew --no-daemon dependencies
+COPY --from=frontend-build /frontend/dist /workspace/src/main/resources/static
 COPY src src
 RUN ./gradlew --no-daemon bootJar
 

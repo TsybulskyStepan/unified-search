@@ -2,9 +2,11 @@ package com.example.searchapp.onboarding.controller;
 
 import com.example.searchapp.onboarding.dto.CreateDocumentRequest;
 import com.example.searchapp.onboarding.entity.Document;
+import com.example.searchapp.onboarding.repository.DocumentRepository;
 import com.example.searchapp.onboarding.service.DocumentService;
 import jakarta.validation.Valid;
 import java.net.URI;
+import java.util.List;
 import java.util.UUID;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -18,9 +20,16 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/clients/{id}/documents")
 public class DocumentController {
   private final DocumentService documents;
+  private final DocumentRepository documentRepository;
 
-  public DocumentController(DocumentService documents) {
+  public DocumentController(DocumentService documents, DocumentRepository documentRepository) {
     this.documents = documents;
+    this.documentRepository = documentRepository;
+  }
+
+  @GetMapping
+  List<Document> list(@PathVariable UUID id) {
+    return documentRepository.findByClientId(id);
   }
 
   @PostMapping

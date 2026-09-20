@@ -53,3 +53,28 @@ spotless {
         googleJavaFormat('1.36.1')
     }
 }
+
+/**
+ * Installs frontend dependencies (npm ci). Run separately or as part of buildFrontend.
+ */
+tasks.register('npmInstall', Exec) {
+    workingDir = file('frontend')
+    commandLine 'npm', 'ci'
+}
+
+/**
+ * Builds the React frontend via Vite. The output goes to {@code frontend/dist/}.
+ */
+tasks.register('buildFrontend', Exec) {
+    dependsOn('npmInstall')
+    workingDir = file('frontend')
+    commandLine 'npm', 'run', 'build'
+}
+
+// Copy frontend dist into the processed resources so the jar includes the SPA
+tasks.named('processResources') {
+    dependsOn('buildFrontend')
+    from('frontend/dist') {
+        into 'static'
+    }
+}

@@ -43,7 +43,16 @@ public class ApiKeyFilter extends OncePerRequestFilter {
         || path.equals("/swagger-ui.html")
         || path.startsWith("/swagger-ui/")
         || path.startsWith("/assets/")
-        || path.equals("/favicon.ico");
+        || path.equals("/favicon.ico")
+        || path.equals("/index.html")
+        || path.endsWith(".js")
+        || path.endsWith(".css")
+        || path.endsWith(".png")
+        || path.endsWith(".svg")
+        || path.endsWith(".ico")
+        || path.endsWith(".woff2")
+        || path.endsWith(".woff")
+        || path.endsWith(".ttf");
   }
 
   @Override

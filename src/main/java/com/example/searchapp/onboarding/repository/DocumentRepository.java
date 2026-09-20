@@ -98,6 +98,20 @@ public class DocumentRepository {
     return document;
   }
 
+  public List<Document> findByClientId(UUID clientId) {
+    return jdbc.sql(
+            """
+            SELECT %s
+            FROM document
+            WHERE client_id = :client_id
+            ORDER BY created_at DESC
+            """
+                .formatted(DOCUMENT_COLUMNS))
+        .param("client_id", clientId)
+        .query(DocumentRepository::map)
+        .list();
+  }
+
   public Optional<Document> findById(UUID clientId, UUID documentId) {
     return jdbc.sql(
             """
