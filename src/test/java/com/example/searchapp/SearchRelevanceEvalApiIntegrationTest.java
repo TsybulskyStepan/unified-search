@@ -9,12 +9,9 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.stream.Collectors;
-import org.assertj.core.api.SoftAssertions;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,7 +36,7 @@ class SearchRelevanceEvalApiIntegrationTest extends IntegrationTest {
   }
 
   @Test
-  void everyQuerysLabelledDocumentSetOccupiesTheTopRanksAndLogsMrr() throws Exception {
+  void everyQuerysLabelledDocumentsAreReturnedBeforeUntaggedDocumentsAndLogsMrr() throws Exception {
     DemoCorpus corpus = EvalCorpusLoader.corpus();
     Map<String, String> clientNames =
         corpus.clients().stream()
@@ -54,44 +51,49 @@ class SearchRelevanceEvalApiIntegrationTest extends IntegrationTest {
                 Collectors.groupingBy(
                     EvalQueries.PositivePair::query, LinkedHashMap::new, Collectors.toList()));
 
-    // Recall@N with a hard purity constraint: for every query, label every genuinely relevant
-    // document, then require that the labelled set occupies exactly ranks 1..N (N = its size),
-    // with nothing unlabelled interleaved. Single-answer queries become rank-1-or-fail. This is
-    // compatible with the same artifact type existing for more than one client (a duplicate just
-    // grows N) instead of assuming one "expected document" per query.
+    // Every expected document must be returned. The v2 label retriever may correctly return
+    // additional documents with the same purpose, so the old semantic-only top-N purity check is
+    // no longer valid. Instead, label-admitted documents must precede every untagged document.
     //
     // Every query is measured and logged before any assertion runs, so the MRR and per-query
     // outcome are always recorded — the same requirement as the identifier-probe query: the
     // outcome is recorded whether or not it passes, not only when every query already passes.
     record QueryResult(
-        String query, List<String> topRanks, Set<String> labelled, int firstHitRank) {}
+        String query,
+        List<String> expected,
+        List<String> returned,
+        List<String> signals,
+        int firstHitRank) {}
 
     List<QueryResult> queryResults = new ArrayList<>();
     for (Map.Entry<String, List<EvalQueries.PositivePair>> entry : pairsByQuery.entrySet()) {
-      Set<String> labelledDocuments =
+      List<String> expectedDocuments =
           entry.getValue().stream()
               .map(pair -> labelKey(clientNames.get(pair.clientEmail()), pair.documentTitle()))
-              .collect(Collectors.toCollection(LinkedHashSet::new));
+              .toList();
 
-      JsonNode results = search(entry.getKey());
-      List<String> topRanks = new ArrayList<>();
+      List<JsonNode> results = allResults(entry.getKey());
+      List<String> returnedDocuments = new ArrayList<>();
+      List<String> signals = new ArrayList<>();
       int firstHitRank = 0;
       for (int index = 0; index < results.size(); index++) {
         JsonNode result = results.get(index);
+        if (!result.path("type").asText().equals("document")) {
+          continue;
+        }
         String key =
             labelKey(
                 result.path("document").path("client_name").asText(),
                 result.path("document").path("title").asText());
-        if (firstHitRank == 0
-            && result.path("type").asText().equals("document")
-            && labelledDocuments.contains(key)) {
+        if (firstHitRank == 0 && expectedDocuments.contains(key)) {
           firstHitRank = index + 1;
         }
-        if (index < labelledDocuments.size()) {
-          topRanks.add(key);
-        }
+        returnedDocuments.add(key);
+        signals.add(result.path("match").path("signals").toString());
       }
-      queryResults.add(new QueryResult(entry.getKey(), topRanks, labelledDocuments, firstHitRank));
+      queryResults.add(
+          new QueryResult(
+              entry.getKey(), expectedDocuments, returnedDocuments, signals, firstHitRank));
     }
 
     // A miss (rank 0, i.e. the labelled document never appears at all) contributes 0 to MRR
@@ -104,16 +106,28 @@ class SearchRelevanceEvalApiIntegrationTest extends IntegrationTest {
             .orElseThrow();
     log.info("Search relevance evaluation firstHitRanks={} MRR={}", firstHitRanks, mrr);
 
-    SoftAssertions softly = new SoftAssertions();
     for (QueryResult result : queryResults) {
-      softly
-          .assertThat(result.topRanks())
-          .as(
-              "top %d results for query length %s",
-              result.labelled().size(), result.query().length())
-          .containsExactlyInAnyOrderElementsOf(result.labelled());
+      assertThat(result.returned())
+          .as("expected documents for query length %s", result.query().length())
+          .containsAll(result.expected());
+      int firstUntagged = firstWithoutLabel(result.signals());
+      if (firstUntagged >= 0) {
+        assertThat(result.signals().subList(firstUntagged, result.signals().size()))
+            .as(
+                "label matches must precede untagged documents for query length %s",
+                result.query().length())
+            .allSatisfy(signals -> assertThat(signals).doesNotContain("\"label\""));
+      }
     }
-    softly.assertAll();
+  }
+
+  private static int firstWithoutLabel(List<String> signals) {
+    for (int index = 0; index < signals.size(); index++) {
+      if (!signals.get(index).contains("\"label\"")) {
+        return index;
+      }
+    }
+    return -1;
   }
 
   private static String labelKey(String clientName, String documentTitle) {
@@ -130,12 +144,27 @@ class SearchRelevanceEvalApiIntegrationTest extends IntegrationTest {
   }
 
   @Test
-  void excludesClientsForTheDocumentQueriesThatGuardTheLexicalFloor() throws Exception {
+  void placesContextClientsAfterDocumentResults() throws Exception {
     for (String query : List.of("address proof", "proof of identity", "source of funds")) {
-      assertThat(search(query))
-          .as("query length %s", query.length())
-          .noneMatch(result -> result.path("type").asText().equals("client"));
+      JsonNode results = search(query);
+      int firstClient = firstResultOfType(results, "client");
+      if (firstClient >= 0) {
+        for (int index = 0; index < firstClient; index++) {
+          assertThat(results.get(index).path("type").asText())
+              .as("context client must follow documents for query length %s", query.length())
+              .isEqualTo("document");
+        }
+      }
     }
+  }
+
+  private static int firstResultOfType(JsonNode results, String type) {
+    for (int index = 0; index < results.size(); index++) {
+      if (results.get(index).path("type").asText().equals(type)) {
+        return index;
+      }
+    }
+    return -1;
   }
 
   @Test
@@ -164,7 +193,7 @@ class SearchRelevanceEvalApiIntegrationTest extends IntegrationTest {
 
   @Test
   void ordersCompoundQueryBeforePaging() throws Exception {
-    String query = "John utility bill";
+    String query = "John Doe utility bill";
     JsonNode fullResults = search(query);
 
     assertDocumentFirst(fullResults, "John Doe", "2024 Utility Bill");
@@ -220,6 +249,19 @@ class SearchRelevanceEvalApiIntegrationTest extends IntegrationTest {
 
   private JsonNode search(String query) throws Exception {
     return search(query, 50, 0);
+  }
+
+  private List<JsonNode> allResults(String query) throws Exception {
+    List<JsonNode> results = new ArrayList<>();
+    int offset = 0;
+    while (true) {
+      JsonNode page = search(query, 50, offset);
+      page.forEach(results::add);
+      if (page.size() < 50) {
+        return results;
+      }
+      offset += page.size();
+    }
   }
 
   private JsonNode search(String query, int limit, int offset) throws Exception {

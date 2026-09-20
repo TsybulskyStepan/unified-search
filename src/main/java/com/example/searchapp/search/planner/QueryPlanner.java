@@ -62,8 +62,13 @@ public class QueryPlanner {
   }
 
   public QueryPlan plan(NormalizedQuery query, List<MentionCandidate> candidates) {
-    ClientMention mention = mention(query, candidates);
-    int consumedTokens = mention == null ? 0 : candidates.getFirst().matchedThroughPosition();
+    MentionCandidate mentionCandidate = mentionCandidate(query, candidates);
+    ClientMention mention =
+        mentionCandidate == null
+            ? null
+            : new ClientMention(
+                mentionCandidate.clientId(), mentionCandidate.field(), mentionCandidate.score());
+    int consumedTokens = mentionCandidate == null ? 0 : mentionCandidate.matchedThroughPosition();
     List<String> residualTokens =
         query.tokens().subList(consumedTokens, query.tokens().size()).stream()
             .map(NormalizedToken::text)
@@ -72,17 +77,24 @@ public class QueryPlanner {
     return new QueryPlan(query.text(), mention, residual, intents(residualTokens));
   }
 
-  private ClientMention mention(NormalizedQuery query, List<MentionCandidate> candidates) {
-    if (candidates.size() != 1) {
+  private MentionCandidate mentionCandidate(
+      NormalizedQuery query, List<MentionCandidate> candidates) {
+    int longestMatch =
+        candidates.stream().mapToInt(MentionCandidate::matchedThroughPosition).max().orElse(0);
+    List<MentionCandidate> longestCandidates =
+        candidates.stream()
+            .filter(candidate -> candidate.matchedThroughPosition() == longestMatch)
+            .toList();
+    if (longestCandidates.size() != 1) {
       return null;
     }
-    MentionCandidate candidate = candidates.getFirst();
+    MentionCandidate candidate = longestCandidates.getFirst();
     if (candidate.matchedThroughPosition() == 1
         && singleTokenSynonyms.contains(canonical(query.tokens().getFirst().text()))
         && !query.tokens().getFirst().possessive()) {
       return null;
     }
-    return new ClientMention(candidate.clientId(), candidate.field(), candidate.score());
+    return candidate;
   }
 
   private Set<String> intents(List<String> tokens) {

@@ -10,4 +10,7 @@ public record SearchDocument(
     String title,
     String summary,
     String summaryStatus,
+    String documentType,
+    java.util.List<String> purposes,
+    String classificationSource,
     Instant createdAt) {}

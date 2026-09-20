@@ -23,21 +23,21 @@ public class ClientSearchRepository {
   public List<ClientMatch> findMatches(String query) {
     return jdbc.sql(
             """
-            SELECT c.id, best.field, best.score
+            SELECT c.id, best.field, best.tier, best.score
             FROM client c
             CROSS JOIN LATERAL (
-                SELECT field, score
+                SELECT field, tier, score
                 FROM (VALUES
-                    ('name',         word_similarity(:query, c.first_name || ' ' || c.last_name)),
-                    ('email',        word_similarity(:query, c.email::text)),
-                    ('description',  word_similarity(:query, coalesce(c.description, ''))),
-                    ('social_links', word_similarity(:query, array_to_string(c.social_links, ' ')))
-                ) AS fields(field, score)
-                ORDER BY score DESC
+                    ('name',         'identity', word_similarity(:query, c.first_name || ' ' || c.last_name)),
+                    ('email',        'identity', word_similarity(:query, c.email::text)),
+                    ('social_links', 'identity', word_similarity(:query, array_to_string(c.social_links, ' '))),
+                    ('description',  'context',  word_similarity(:query, coalesce(c.description, '')))
+                ) AS fields(field, tier, score)
+                WHERE score >= :lexicalFloor
+                ORDER BY (tier = 'identity') DESC, score DESC
                 LIMIT 1
             ) best
-            WHERE best.score >= :lexicalFloor
-            ORDER BY best.score DESC, c.last_name, c.id
+            ORDER BY (best.tier = 'identity') DESC, best.score DESC, c.last_name, c.id
             LIMIT 200
             """)
         .param("query", query)
@@ -123,6 +123,7 @@ public class ClientSearchRepository {
     return new ClientMatch(
         resultSet.getObject("id", UUID.class),
         resultSet.getString("field"),
+        resultSet.getString("tier"),
         resultSet.getDouble("score"));
   }
 

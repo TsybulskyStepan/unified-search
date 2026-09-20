@@ -396,7 +396,7 @@ No model call, no network. Creation latency is embedding plus one transaction.
 ### 5.3 Chunker and label chunk
 
 - Whitespace tokens with code-point offsets. Window 50 words, stride 40. A document of ≤ 50 words is one chunk.
-- The bundled tokenizer truncates silently at **126 word pieces**, measured with the model's own tokenizer, not the 256 usually quoted. Dense KYC text reaches ~2 word pieces per word, so 50 words plus title stays under the ceiling (measured maximum 112 on the corpus). The bound is asserted in a test, not assumed.
+- The bundled tokenizer truncates silently past **126 word pieces**, measured with the model's own tokenizer, not the 256 usually quoted. Dense KYC text reaches ~2 word pieces per word, so 50 words plus title does not exceed the ceiling. The bound is asserted in a test, not assumed.
 - **Label chunk (v2).** One extra vector per document that says what the document is, in the same space as the query. It gives the semantic signal a clean target for paraphrases the synonym list does not cover ("where did the money come from") and is immune to the chunk-dilution failure in §0.1. It never serves as a passage (§6.6).
 
 ---
@@ -425,7 +425,7 @@ If any retriever fails the request returns `500`. Partial results would make doc
 and `intents`. The client retriever reads the whole query; every document retriever reads the
 residual.
 
-- **Mention.** Tokens are compared in order against every client's `first_name || ' ' || last_name` and `email` with `word_similarity ≥ 0.69` (just under the measured `Hendersen → Henderson` 0.70). Only the leading contiguous run of matching tokens counts, so in `john utility bill` matching stops at `utility` and a later `bill` can never become a client named Bill. Tokens under three characters are skipped. Exactly one client → `mention`. Two or more → ambiguous, `mention = null`, and the client retriever still surfaces them.
+- **Mention.** Tokens are compared in order against every client's `first_name || ' ' || last_name` and `email` with `word_similarity ≥ 0.69` (just under the measured `Hendersen → Henderson` 0.70). Only the leading contiguous run of matching tokens counts, so in `john utility bill` matching stops at `utility` and a later `bill` can never become a client named Bill. Tokens under three characters are skipped. The client whose leading run is longest is the `mention`, provided it is unique: `john doe utility bill` names John Doe (two tokens) over John Smith (one). Two or more clients tied on the longest run → ambiguous, `mention = null`, and the client retriever still surfaces them (`john` alone ties every John).
 - **Ambiguity rule.** A single-token mention whose token is also a taxonomy synonym (`bill`, `statement`, `trust`) counts as a mention only if the token was possessive (`bill's`) or a second token also matched the same client (`bill carter`). Otherwise the token is treated as category text.
 - **Residual.** The tokens after the mention. Empty for an identity query (`john`, `neviswealth`, `hendersen`).
 - **Intents.** Longest-match, non-overlapping phrase search of the residual against all type and purpose synonyms. `completion statement` matches the type, not `statement`. Result is a set of type ids and purpose ids, possibly empty.
@@ -461,7 +461,7 @@ LIMIT 200;
 
 ### 6.3 Document retrievers **(v2)**
 
-All three take `plan.residual`. When the residual is empty none of them runs and the result holds clients only.
+All three take `plan.residual`. When the residual is empty, or non-empty but reduces to an empty tsquery (stop words only, `the and`), none of them runs and the result holds clients only. An embedding of stop words would admit documents on noise, so the check is made once, before the fan-out, rather than per retriever.
 
 **Label.** Admits every document whose stored labels match a query intent. Wording-independent, which is what fixes `proof of address`.
 
@@ -483,7 +483,7 @@ ORDER BY score DESC, d.id
 LIMIT 200;
 ```
 
-Skipped when the residual reduces to an empty tsquery (stop words only). `websearch_to_tsquery` ANDs terms, which keeps precision. Recall comes from the other two signals.
+`websearch_to_tsquery` ANDs terms, which keeps precision. Recall comes from the other two signals.
 
 **Semantic.** Best chunk per document over label and body chunks, above the floor.
 
@@ -503,7 +503,7 @@ LIMIT 200;
 
 - Exact scan, no index. ~10⁴ documents × ~4 chunks is ~4×10⁴ distance computations.
 - `embedding_model` is bound from the live `Embedder`. A model change without re-index matches nothing, loudly.
-- `semanticFloor` is a **recall gate**, currently 0.17, re-derived by the eval as the midpoint between the lowest positive and highest negative cosine (§11.3). With label and lexical admission it is no longer the only thing standing between a relevant document and the result list, which is the point.
+- `semanticFloor` is a **recall gate**, currently 0.266, re-derived by the eval over both label and body chunks as the midpoint between the lowest positive and highest negative cosine (§11.3). With label and lexical admission it is no longer the only thing standing between a relevant document and the result list, which is the point.
 - Future path when the scan exceeds budget, HNSW plus a top-K rewrite.
 
 ### 6.4 Fusion **(v2)**
@@ -550,7 +550,7 @@ order(plan, I, X, D) =
         : D[client == m] ++ [m] ++ D[client != m] ++ (I \ {m}) ++ X      where m = plan.mention
 ```
 
-Properties. Total and deterministic, so pagination is a slice. No score is compared across types. A mention has no filtering authority, it only reorders documents that qualified through §6.3. Two or more mentions (`John Doe` twice in the corpus) means `plan.mention == null`, Shape A applies and both clients sit in `I`.
+Properties. Total and deterministic, so pagination is a slice. No score is compared across types. A mention has no filtering authority, it only reorders documents that qualified through §6.3. Two or more clients tied on the longest matched run (`John Doe` twice in the corpus) means `plan.mention == null`, Shape A applies and both clients sit in `I`.
 
 **Worked examples on the seed corpus**
 

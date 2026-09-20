@@ -36,7 +36,6 @@ class SearchDocumentApiIntegrationTest extends IntegrationTest {
     var response = get(port, "/search?q=address%20proof", TEST_API_KEY);
 
     assertThat(response.statusCode()).isEqualTo(200);
-    assertThat(response.headers().firstValue("X-Total-Count")).contains("1");
     assertThat(response.body())
         .contains("\"type\":\"document\"")
         .contains("\"title\":\"2024 Utility Bill\"")
@@ -44,6 +43,53 @@ class SearchDocumentApiIntegrationTest extends IntegrationTest {
         .contains("\"passage\":\"account holder's name and confirms occupancy")
         .doesNotContain("\"type\":\"client\"")
         .doesNotContain("\"content\"");
+  }
+
+  @Test
+  void admitsAPurposeTaggedDocumentWhoseTextDoesNotUseTheQueryWords() throws Exception {
+    String clientId = createClient("Opaque", "Record", "opaque.record@example.com");
+    createDocument(
+        clientId,
+        "Monthly supplier record",
+        "Reference 92381. The account is settled and the enclosed figures are final.",
+        "utility_bill");
+
+    var response = get(port, "/search?q=proof%20of%20address", TEST_API_KEY);
+
+    assertThat(response.statusCode()).isEqualTo(200);
+    assertThat(response.body())
+        .contains("\"title\":\"Monthly supplier record\"")
+        .contains("\"signals\":[\"label\"")
+        .contains("\"labels\":[\"purpose:proof_of_address\"");
+  }
+
+  @Test
+  void admitsStemmedLexicalMatchesInTitleLabelsAndContent() throws Exception {
+    String clientId = createClient("Lexical", "Signals", "lexical.signals@example.com");
+    createDocument(clientId, "Verification archive", "Opaque reference 102.");
+    createDocument(clientId, "Supplier archive", "Opaque reference 103.", "utility_bill");
+    createDocument(clientId, "Supplier archive", "The declaration is recorded here.");
+
+    assertThat(get(port, "/search?q=verifications", TEST_API_KEY).body())
+        .contains("\"title\":\"Verification archive\"")
+        .contains("\"lexical\"");
+    assertThat(get(port, "/search?q=addresses", TEST_API_KEY).body())
+        .contains("\"title\":\"Supplier archive\"")
+        .contains("\"lexical\"");
+    assertThat(get(port, "/search?q=declarations", TEST_API_KEY).body())
+        .contains("The declaration is recorded here")
+        .contains("\"lexical\"");
+  }
+
+  @Test
+  void skipsDocumentRetrievalWhenTheResidualContainsOnlyStopWords() throws Exception {
+    String clientId = createClient("Stop", "Words", "stop.words@example.com");
+    createDocument(clientId, "Supplier archive", "The declaration is recorded here.");
+
+    var response = get(port, "/search?q=the%20and", TEST_API_KEY);
+
+    assertThat(response.statusCode()).isEqualTo(200);
+    assertThat(response.body()).doesNotContain("\"type\":\"document\"");
   }
 
   private String createClient(String firstName, String lastName, String email) throws Exception {
@@ -59,6 +105,13 @@ class SearchDocumentApiIntegrationTest extends IntegrationTest {
   }
 
   private void createDocument(String clientId, String title, String content) throws Exception {
+    createDocument(clientId, title, content, null);
+  }
+
+  private void createDocument(String clientId, String title, String content, String documentType)
+      throws Exception {
+    String documentTypeField =
+        documentType == null ? "" : ",\"document_type\":\"" + documentType + "\"";
     var response =
         HTTP.send(
             HttpRequest.newBuilder(
@@ -69,6 +122,7 @@ class SearchDocumentApiIntegrationTest extends IntegrationTest {
                 .POST(
                     HttpRequest.BodyPublishers.ofString(
                         "{\"title\":%s,\"content\":%s}"
+                            .replace("}", documentTypeField + "}")
                             .formatted(jsonString(title), jsonString(content))))
                 .build(),
             HttpResponse.BodyHandlers.ofString());

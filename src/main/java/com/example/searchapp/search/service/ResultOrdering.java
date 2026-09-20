@@ -28,13 +28,21 @@ final class ResultOrdering {
         clients.stream()
             .filter(client -> client.clientId().equals(mention.clientId()))
             .findFirst()
-            .orElse(new ClientMatch(mention.clientId(), mention.field(), mention.score()));
+            .orElse(
+                new ClientMatch(mention.clientId(), mention.field(), "identity", mention.score()));
     ordered.add(new ClientCandidate(mentionedClient));
     documents.stream()
         .filter(document -> !document.clientId().equals(mention.clientId()))
         .forEach(document -> ordered.add(new DocumentCandidate(document)));
     clients.stream()
-        .filter(client -> !client.clientId().equals(mention.clientId()))
+        .filter(
+            client ->
+                !client.clientId().equals(mention.clientId()) && client.tier().equals("identity"))
+        .forEach(client -> ordered.add(new ClientCandidate(client)));
+    clients.stream()
+        .filter(
+            client ->
+                !client.clientId().equals(mention.clientId()) && client.tier().equals("context"))
         .forEach(client -> ordered.add(new ClientCandidate(client)));
     return ordered;
   }
@@ -42,8 +50,13 @@ final class ResultOrdering {
   private static List<Candidate> defaultOrder(
       List<ClientMatch> clients, List<DocumentMatch> documents) {
     List<Candidate> ordered = new ArrayList<>(clients.size() + documents.size());
-    clients.forEach(client -> ordered.add(new ClientCandidate(client)));
+    clients.stream()
+        .filter(client -> client.tier().equals("identity"))
+        .forEach(client -> ordered.add(new ClientCandidate(client)));
     documents.forEach(document -> ordered.add(new DocumentCandidate(document)));
+    clients.stream()
+        .filter(client -> client.tier().equals("context"))
+        .forEach(client -> ordered.add(new ClientCandidate(client)));
     return ordered;
   }
 

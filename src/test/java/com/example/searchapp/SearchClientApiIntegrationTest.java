@@ -25,6 +25,7 @@ class SearchClientApiIntegrationTest extends IntegrationTest {
     assertThat(response.body())
         .contains("\"type\":\"client\"")
         .contains("\"field\":\"email\"")
+        .contains("\"tier\":\"identity\"")
         .contains("\"email\":\"john.doe@neviswealth.com\"");
   }
 
@@ -42,6 +43,7 @@ class SearchClientApiIntegrationTest extends IntegrationTest {
     assertThat(response.headers().firstValue("X-Total-Count")).contains("1");
     assertThat(response.body())
         .contains("\"field\":\"social_links\"")
+        .contains("\"tier\":\"identity\"")
         .contains("\"email\":\"jane@example.com\"");
   }
 

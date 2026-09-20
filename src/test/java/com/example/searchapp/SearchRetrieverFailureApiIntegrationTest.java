@@ -2,8 +2,8 @@ package com.example.searchapp;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.example.searchapp.search.repository.DocumentMatch;
 import com.example.searchapp.search.repository.DocumentSearchRepository;
+import com.example.searchapp.search.repository.RankedDocumentMatch;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.TestConfiguration;
@@ -33,7 +33,13 @@ class SearchRetrieverFailureApiIntegrationTest extends IntegrationTest {
     DocumentSearchRepository failingSemanticRetriever() {
       return new DocumentSearchRepository(null, 0.0) {
         @Override
-        public List<DocumentMatch> findMatches(float[] queryVector, String embeddingModel) {
+        public boolean hasSearchableTerms(String residual) {
+          return true;
+        }
+
+        @Override
+        public List<RankedDocumentMatch> findSemanticMatches(
+            float[] queryVector, String embeddingModel) {
           throw new IllegalStateException("semantic unavailable");
         }
       };
