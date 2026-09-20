@@ -1,0 +1,65 @@
+### Search — every query shape, against the seeded demo corpus.
+# 50 clients, 126 documents. Every response carries X-Total-Count.
+
+@baseUrl = http://localhost:8080
+@apiKey = dev-only-insecure-key-do-not-use-in-production-env
+
+### Identity: an email fragment. Client first, match.tier = identity.
+GET {{baseUrl}}/search?q=NevisWealth&limit=5
+X-API-Key: {{apiKey}}
+
+### Identity: a first name shared by two clients. Both are returned.
+GET {{baseUrl}}/search?q=John&limit=5
+X-API-Key: {{apiKey}}
+
+### Category: a KYC purpose. Documents only, zero clients.
+GET {{baseUrl}}/search?q=tax%20residency&limit=10
+X-API-Key: {{apiKey}}
+
+### Category: wording the documents never use.
+# The completion statements are tagged source_of_funds, so they lead.
+GET {{baseUrl}}/search?q=source%20of%20funds&limit=10
+X-API-Key: {{apiKey}}
+
+### Category where a client legitimately also matches, but must not outrank.
+# Grace Kim's description says "advisory arrangements", which scores 0.64.
+# The engagement letters come first; she appears below them on the context tier.
+GET {{baseUrl}}/search?q=advisory%20fees&limit=15
+X-API-Key: {{apiKey}}
+
+### Compound: a client plus a category.
+# The client is the qualifier and the document is the target, so John Doe's
+# utility bill leads, then his other matching documents, then John himself,
+# then other clients' bills.
+GET {{baseUrl}}/search?q=John%20Doe%20utility%20bill&limit=10
+X-API-Key: {{apiKey}}
+
+### Compound with a possessive. Bill Carter's statement first, then Bill.
+# "Bill" is also a synonym for utility_bill; the possessive resolves the ambiguity.
+GET {{baseUrl}}/search?q=Bill's%20statement&limit=10
+X-API-Key: {{apiKey}}
+
+### The same token without the possessive is read as a category.
+# Expect the client Bill Carter first on an identity hit, then the bills.
+GET {{baseUrl}}/search?q=bill&limit=10
+X-API-Key: {{apiKey}}
+
+### A misspelled name still scopes a compound query.
+GET {{baseUrl}}/search?q=Hendersen%20council%20tax&limit=10
+X-API-Key: {{apiKey}}
+
+### Out of domain. Expect 200 with an empty array, not the least-bad match.
+GET {{baseUrl}}/search?q=best%20pizza%20recipes%20in%20Naples
+X-API-Key: {{apiKey}}
+
+### Paging. The order is total, so a page is a slice; ids never repeat.
+GET {{baseUrl}}/search?q=proof%20of%20address&limit=5&offset=0
+X-API-Key: {{apiKey}}
+
+###
+GET {{baseUrl}}/search?q=proof%20of%20address&limit=5&offset=5
+X-API-Key: {{apiKey}}
+
+### Deep page, well past the end. Expect 200, an empty array, and a non-zero X-Total-Count.
+GET {{baseUrl}}/search?q=proof%20of%20address&limit=5&offset=500
+X-API-Key: {{apiKey}}
