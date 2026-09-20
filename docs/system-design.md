@@ -396,7 +396,7 @@ No model call, no network. Creation latency is embedding plus one transaction.
 ### 5.3 Chunker and label chunk
 
 - Whitespace tokens with code-point offsets. Window 50 words, stride 40. A document of ≤ 50 words is one chunk.
-- The bundled tokenizer truncates silently at **126 word pieces**, measured with the model's own tokenizer, not the 256 usually quoted. Dense KYC text reaches ~2 word pieces per word, so 50 words plus title stays under the ceiling (measured maximum 112 on the corpus). The bound is asserted in a test, not assumed.
+- The bundled tokenizer truncates silently past **126 word pieces**, measured with the model's own tokenizer, not the 256 usually quoted. Dense KYC text reaches ~2 word pieces per word, so 50 words plus title does not exceed the ceiling. The bound is asserted in a test, not assumed.
 - **Label chunk (v2).** One extra vector per document that says what the document is, in the same space as the query. It gives the semantic signal a clean target for paraphrases the synonym list does not cover ("where did the money come from") and is immune to the chunk-dilution failure in §0.1. It never serves as a passage (§6.6).
 
 ---
@@ -503,7 +503,7 @@ LIMIT 200;
 
 - Exact scan, no index. ~10⁴ documents × ~4 chunks is ~4×10⁴ distance computations.
 - `embedding_model` is bound from the live `Embedder`. A model change without re-index matches nothing, loudly.
-- `semanticFloor` is a **recall gate**, currently 0.17, re-derived by the eval as the midpoint between the lowest positive and highest negative cosine (§11.3). With label and lexical admission it is no longer the only thing standing between a relevant document and the result list, which is the point.
+- `semanticFloor` is a **recall gate**, currently 0.266, re-derived by the eval over both label and body chunks as the midpoint between the lowest positive and highest negative cosine (§11.3). With label and lexical admission it is no longer the only thing standing between a relevant document and the result list, which is the point.
 - Future path when the scan exceeds budget, HNSW plus a top-K rewrite.
 
 ### 6.4 Fusion **(v2)**

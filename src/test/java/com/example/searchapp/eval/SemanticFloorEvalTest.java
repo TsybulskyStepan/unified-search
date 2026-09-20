@@ -5,8 +5,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.example.searchapp.onboarding.seed.DemoCorpus;
 import com.example.searchapp.onboarding.service.Chunk;
 import com.example.searchapp.onboarding.service.Chunker;
+import com.example.searchapp.onboarding.service.Classification;
+import com.example.searchapp.onboarding.service.DocumentClassifier;
 import com.example.searchapp.shared.embedding.Cosine;
 import com.example.searchapp.shared.embedding.Embedder;
+import com.example.searchapp.shared.taxonomy.Taxonomy;
+import com.example.searchapp.shared.taxonomy.TaxonomyLoader;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -18,10 +22,11 @@ import org.junit.jupiter.api.Test;
  *
  * <p>For every positive pair, scores the query against its own expected document's best chunk. For
  * every negative query, scores it against the best (highest-scoring, i.e. worst-case) chunk across
- * the *entire* corpus. The semantic floor recorded in {@code application.yaml} is the midpoint
- * between the lowest positive score and the highest negative score; this test fails the build if
- * that gap ever closes, per the ticket's own gate: "if positives and negatives do not separate,
- * stop and change the model before continuing."
+ * the *entire* corpus. Both body and label chunks are included because both can admit a document
+ * through semantic retrieval. The semantic floor recorded in {@code application.yaml} is the
+ * midpoint between the lowest positive score and the highest negative score; this test fails the
+ * build if that gap ever closes, per the ticket's own gate: "if positives and negatives do not
+ * separate, stop and change the model before continuing."
  *
  * <p>This uses raw similarity scores computed in Java, not the search endpoint (that version,
  * exercising the real floors end to end, is ticket 08).
@@ -88,6 +93,8 @@ class SemanticFloorEvalTest {
   }
 
   private static List<EmbeddedDocument> embedCorpus(DemoCorpus corpus) {
+    Taxonomy taxonomy = TaxonomyLoader.load(TaxonomyLoader.TAXONOMY_RESOURCE);
+    DocumentClassifier classifier = new DocumentClassifier(taxonomy);
     List<EmbeddedDocument> documents = new ArrayList<>();
     for (DemoCorpus.DemoClient client : corpus.clients()) {
       for (DemoCorpus.DemoDocument document : client.documents()) {
@@ -96,6 +103,11 @@ class SemanticFloorEvalTest {
             chunks.stream()
                 .map(chunk -> Chunker.embeddingInput(document.title(), document.content(), chunk))
                 .toList();
+        Classification classification =
+            classifier.classify(document.title(), document.content(), null, List.of());
+        embeddingInputs = new ArrayList<>(embeddingInputs);
+        embeddingInputs.add(
+            Chunker.labelEmbeddingInput(document.title(), classification.labelText()));
         List<float[]> vectors = embedder.embedAll(embeddingInputs);
         documents.add(new EmbeddedDocument(client.email(), document.title(), vectors));
       }

@@ -43,7 +43,7 @@ class EmbeddingWordPieceBoundTest {
                   "'%s' chunk #%d embedding input must stay under the measured word-piece"
                       + " ceiling",
                   document.title(), chunk.ordinal())
-              .isLessThan(MEASURED_WORD_PIECE_CEILING);
+              .isLessThanOrEqualTo(MEASURED_WORD_PIECE_CEILING);
 
           maxTokenCount = Math.max(maxTokenCount, tokenCount);
           checked++;

@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.example.searchapp.SearchApplication;
+import com.example.searchapp.eval.EvalCorpusLoader;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -60,7 +61,7 @@ class DemoSeederIntegrationTest {
   @Test
   void seedsTheCorpusOnAnEmptyDatabaseAndSearchFindsIt() throws Exception {
     try (ConfigurableApplicationContext context = boot(true, true)) {
-      assertThat(countClients()).isEqualTo(8);
+      assertThat(countClients()).isEqualTo(EvalCorpusLoader.corpus().clients().size());
 
       int port = Integer.parseInt(context.getEnvironment().getProperty("local.server.port"));
       HttpResponse<String> response = searchViaHttp(port, "NevisWealth");

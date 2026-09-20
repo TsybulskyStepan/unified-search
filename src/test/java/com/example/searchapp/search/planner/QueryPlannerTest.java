@@ -128,6 +128,15 @@ class QueryPlannerTest {
             "john mary",
             Set.of()),
         row(
+            "longer leading identity beats a partial match",
+            "John Doe utility bill",
+            List.of(
+                new MentionCandidate(JOHN, "name", 1.0, 2),
+                new MentionCandidate(MARY, "name", 1.0, 1)),
+            JOHN,
+            "utility bill",
+            Set.of("utility_bill")),
+        row(
             "unmatched text still searches",
             "meeting notes",
             List.of(),
