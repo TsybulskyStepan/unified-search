@@ -89,7 +89,7 @@ com.example.searchapp
 │   ├── dto/               CreateClientRequest, CreateDocumentRequest
 │   ├── entity/            Client, Document
 │   ├── repository/        ClientRepository, DocumentRepository
-│   ├── service/           DocumentService, Chunker, Chunk, EmbeddedChunk,
+│   ├── service/           DocumentService, DocumentChunkSet, Chunker, Chunk, EmbeddedChunk,
 │   │                      DocumentClassifier, Reclassifier (v2),
 │   │                      SummaryWorker, Summarizer, GeminiSummarizer
 │   ├── exception/         OnboardingExceptionHandler, *NotFoundException, DuplicateClientEmailException
@@ -401,7 +401,7 @@ Validate → `INSERT … RETURNING *` → map `client_email_uk` violation to `40
 1. Validate, check the client exists (`404`).
 2. `classification = DocumentClassifier.classify(title, content, requested)`.
 3. `chunks = Chunker.split(content)`.
-4. Embed outside any transaction. Body chunk input is `title + "\n\n" + chunk text`. Label chunk input is `title + "\n" + label_text` (title alone for `unknown`).
+4. Embed outside any transaction. Body chunk input is `title + "\n\n" + chunk text`. Label chunk input is `title + "\n" + label_text` (title alone for `unknown`). The label and every body chunk are embedded in one batch by a single module, `DocumentChunkSet`, so no caller lays out the batch itself; `Reclassifier` uses it to re-embed just a label.
 5. One transaction. Insert the document row with type, purposes, source, version and `label_text`, then the label chunk (`kind = 'label'`, `ordinal = 0`, offsets 0 and 0), then the body chunks (`kind = 'body'`, `ordinal` 1..n).
 6. `201` with `Location`.
 

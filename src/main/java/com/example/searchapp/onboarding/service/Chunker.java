@@ -56,7 +56,7 @@ public final class Chunker {
    * title alone when {@code labelText} is empty ({@code unknown} documents, §3.3) — there is no
    * label to append, and no reason to embed a trailing blank line.
    */
-  public static String labelEmbeddingInput(String title, String labelText) {
+  static String labelEmbeddingInput(String title, String labelText) {
     return labelText.isEmpty() ? title : title + "\n" + labelText;
   }
 

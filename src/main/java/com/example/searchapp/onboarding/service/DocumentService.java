@@ -9,8 +9,6 @@ import com.example.searchapp.onboarding.repository.DocumentRepository;
 import com.example.searchapp.shared.embedding.Embedder;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
@@ -60,36 +58,16 @@ public class DocumentService {
             request.title(), request.content(), request.documentType(), request.purposes());
     classificationOutcomes.record(classification);
 
-    List<Chunk> chunks = Chunker.split(request.content());
-    // Content is non-blank (@NotBlank), so the chunker always yields at least one chunk (§3.2).
-    // A document that exists but cannot be found is the worst outcome in this system, and it is
-    // silent — this turns a broken assumption into a loud failure instead.
-    if (chunks.isEmpty()) {
-      throw new IllegalStateException("Chunker produced no chunks for non-blank content");
-    }
-
-    // One embedAll call covers the label input and every body chunk input (§5.2 step 4): index 0
-    // is the label chunk, the rest line up with `chunks`.
-    List<String> embeddingInputs = new ArrayList<>(chunks.size() + 1);
-    embeddingInputs.add(Chunker.labelEmbeddingInput(request.title(), classification.labelText()));
-    for (Chunk chunk : chunks) {
-      embeddingInputs.add(Chunker.embeddingInput(request.title(), request.content(), chunk));
-    }
-
     long embeddingStartNanos = System.nanoTime();
     long embeddingNanos;
-    List<float[]> embeddings;
+    DocumentChunkSet chunkSet;
     try {
-      embeddings = embedder.embedAll(embeddingInputs);
+      chunkSet =
+          DocumentChunkSet.embed(
+              embedder, request.title(), request.content(), classification.labelText());
     } finally {
       embeddingNanos = System.nanoTime() - embeddingStartNanos;
       embeddingTimer.record(embeddingNanos, TimeUnit.NANOSECONDS);
-    }
-
-    float[] labelEmbedding = embeddings.get(0);
-    List<EmbeddedChunk> embeddedChunks = new ArrayList<>(chunks.size());
-    for (int i = 0; i < chunks.size(); i++) {
-      embeddedChunks.add(new EmbeddedChunk(chunks.get(i), embeddings.get(i + 1)));
     }
 
     Document document =
@@ -98,8 +76,8 @@ public class DocumentService {
             request.title(),
             request.content(),
             classification,
-            labelEmbedding,
-            embeddedChunks,
+            chunkSet.labelEmbedding(),
+            chunkSet.bodyChunks(),
             embedder.modelId());
     log.info(
         "Document indexed document_id={} document_type={} classification_source={}"
@@ -107,7 +85,7 @@ public class DocumentService {
         document.id(),
         document.documentType(),
         document.classificationSource(),
-        chunks.size(),
+        chunkSet.bodyChunks().size(),
         TimeUnit.NANOSECONDS.toMillis(embeddingNanos));
     return document;
   }

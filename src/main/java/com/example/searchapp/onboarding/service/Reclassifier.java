@@ -89,7 +89,7 @@ public class Reclassifier implements ApplicationRunner {
             : classifier.classify(row.title(), row.content(), null, List.of());
     classificationOutcomes.record(classification);
     float[] labelEmbedding =
-        embedder.embed(Chunker.labelEmbeddingInput(row.title(), classification.labelText()));
+        DocumentChunkSet.embedLabel(embedder, row.title(), classification.labelText());
     return new ReclassifiedRow(row.id(), classification, labelEmbedding);
   }
 }

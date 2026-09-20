@@ -4,9 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;
 
 import com.example.searchapp.onboarding.seed.DemoCorpus;
-import com.example.searchapp.onboarding.service.Chunk;
-import com.example.searchapp.onboarding.service.Chunker;
 import com.example.searchapp.onboarding.service.Classification;
+import com.example.searchapp.onboarding.service.DocumentChunkSet;
 import com.example.searchapp.onboarding.service.DocumentClassifier;
 import com.example.searchapp.shared.embedding.Cosine;
 import com.example.searchapp.shared.embedding.Embedder;
@@ -131,17 +130,14 @@ class SemanticFloorEvalTest {
     List<EmbeddedDocument> documents = new ArrayList<>();
     for (DemoCorpus.DemoClient client : corpus.clients()) {
       for (DemoCorpus.DemoDocument document : client.documents()) {
-        List<Chunk> chunks = Chunker.split(document.content());
-        List<String> embeddingInputs =
-            chunks.stream()
-                .map(chunk -> Chunker.embeddingInput(document.title(), document.content(), chunk))
-                .toList();
         Classification classification =
             classifier.classify(document.title(), document.content(), null, List.of());
-        embeddingInputs = new ArrayList<>(embeddingInputs);
-        embeddingInputs.add(
-            Chunker.labelEmbeddingInput(document.title(), classification.labelText()));
-        List<float[]> vectors = embedder.embedAll(embeddingInputs);
+        DocumentChunkSet chunkSet =
+            DocumentChunkSet.embed(
+                embedder, document.title(), document.content(), classification.labelText());
+        List<float[]> vectors = new ArrayList<>();
+        chunkSet.bodyChunks().forEach(chunk -> vectors.add(chunk.embedding()));
+        vectors.add(chunkSet.labelEmbedding());
         documents.add(new EmbeddedDocument(client.email(), document.title(), vectors));
       }
     }
