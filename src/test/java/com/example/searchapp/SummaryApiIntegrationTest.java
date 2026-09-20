@@ -124,6 +124,10 @@ class SummaryApiIntegrationTest extends IntegrationTest {
       assertThat(response.get().statusCode()).isEqualTo(202);
       assertThat(response.get().body()).contains("\"summary_status\":\"pending\"");
     }
+    // Both HTTP responses returning 202 only proves the DB row flipped to pending; the winner's
+    // async nudge can still be short of actually calling the (paused) summarizer at this point, so
+    // this needs the same poll every sibling test in this file uses, not an immediate assertion.
+    awaitCallCount(1);
     assertThat(summarizer.callCount()).isEqualTo(1);
 
     summarizer.release();
