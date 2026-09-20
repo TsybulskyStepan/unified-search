@@ -1,0 +1,38 @@
+### Quickstart — the two cases the assignment brief names.
+# Run `docker compose up -d` first and wait for /health to report UP.
+
+@baseUrl = http://localhost:8080
+@apiKey = dev-only-insecure-key-do-not-use-in-production-env
+
+### Health — no API key required. Expect 200 {"status":"UP"}.
+GET {{baseUrl}}/health
+
+### Case 1: a company name in an email address finds the client.
+# "NevisWealth" matches john.doe@neviswealth.com through pg_trgm word_similarity,
+# which splits the address into john / doe / neviswealth / com. Expect John Doe
+# first, with match.field = email and match.tier = identity.
+GET {{baseUrl}}/search?q=NevisWealth&limit=5
+X-API-Key: {{apiKey}}
+
+### Case 2: a KYC category finds documents that never use the word.
+# "address proof" returns utility bills, council tax bills, bank statements and
+# tenancy agreements. Each result reports which signals admitted it:
+#   label    — the document is tagged proof_of_address
+#   lexical  — the words matched a tsvector
+#   semantic — the embedding matched, no shared words needed
+GET {{baseUrl}}/search?q=address%20proof&limit=10
+X-API-Key: {{apiKey}}
+
+### The same question in the wording the brief uses. Same answers.
+GET {{baseUrl}}/search?q=proof%20of%20address&limit=10
+X-API-Key: {{apiKey}}
+
+### "utility bill" as a category. Zero clients, despite a client named Bill Carter.
+GET {{baseUrl}}/search?q=utility%20bill&limit=10
+X-API-Key: {{apiKey}}
+
+### Interactive API docs, served without a key.
+GET {{baseUrl}}/swagger-ui.html
+
+### The generated OpenAPI document.
+GET {{baseUrl}}/v3/api-docs

@@ -1,0 +1,63 @@
+### Summaries — the optional extra from the brief.
+#
+# Summarizing costs money and takes seconds, so it never runs on the write path
+# and never on a GET. It is requested explicitly, runs in the background, and
+# search results are identical in every summary state, including failure.
+#
+# With no GEMINI_API_KEY set — the default — a requested summary fails
+# permanently within one nudge. That is the intended demo: the state machine is
+# visible end to end without credentials. Set GEMINI_API_KEY in .env and restart
+# to see the same path reach "ready".
+
+@baseUrl = http://localhost:8080
+@apiKey = dev-only-insecure-key-do-not-use-in-production-env
+
+### A client and a document to summarize.
+# @name createClient
+POST {{baseUrl}}/clients
+X-API-Key: {{apiKey}}
+Content-Type: application/json
+
+{
+  "first_name": "Rosalind",
+  "last_name": "Franklin",
+  "email": "rosalind.franklin@example.com"
+}
+
+### The id of the client created above.
+@clientId = {{createClient.response.body.$.id}}
+
+### Expect 201 with summary_status "none".
+# @name createDocument
+POST {{baseUrl}}/clients/{{clientId}}/documents
+X-API-Key: {{apiKey}}
+Content-Type: application/json
+
+{
+  "title": "Advisory Engagement Letter",
+  "content": "This letter sets out the terms on which Nevis Wealth Management provides discretionary investment services. The annual management charge is 0.75% of assets under management, billed quarterly in arrears and calculated on the average daily valuation. Custody and transaction costs are additional and shown separately in the cost and charges statement. A one-off setup charge of GBP 250 applies to new mandates. Either party may terminate this arrangement in writing with thirty days' notice, at which point any accrued but unbilled amount becomes payable immediately."
+}
+
+### The id of the document created above.
+@documentId = {{createDocument.response.body.$.id}}
+
+### Request the summary. Expect 202 Accepted and summary_status "pending".
+POST {{baseUrl}}/clients/{{clientId}}/documents/{{documentId}}/summary
+X-API-Key: {{apiKey}}
+
+### Poll the document. Without a key configured this reaches "failed" in a second or two.
+# With GEMINI_API_KEY set, expect "ready" and a populated summary field.
+GET {{baseUrl}}/clients/{{clientId}}/documents/{{documentId}}
+X-API-Key: {{apiKey}}
+
+### Requesting again after a terminal state retries. Expect 202 and "pending" again.
+POST {{baseUrl}}/clients/{{clientId}}/documents/{{documentId}}/summary
+X-API-Key: {{apiKey}}
+
+### Search is unaffected by the summary state: the document is still found.
+GET {{baseUrl}}/search?q=advisory%20fees&limit=20
+X-API-Key: {{apiKey}}
+
+### Summary outcomes are counted by terminal status.
+GET {{baseUrl}}/metrics/summary.outcome
+X-API-Key: {{apiKey}}

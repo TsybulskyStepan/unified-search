@@ -1,0 +1,71 @@
+### Documents — create, classify, fetch, and find immediately.
+
+@baseUrl = http://localhost:8080
+@apiKey = dev-only-insecure-key-do-not-use-in-production-env
+
+### A client to own the documents. Expect 201.
+# @name createClient
+POST {{baseUrl}}/clients
+X-API-Key: {{apiKey}}
+Content-Type: application/json
+
+{
+  "first_name": "Marie",
+  "last_name": "Curie",
+  "email": "marie.curie@example.com"
+}
+
+### The id of the client created above.
+@clientId = {{createClient.response.body.$.id}}
+
+### Create a document. Expect 201 with a Location header.
+# Only title and content are required. The response adds what the classifier
+# decided: document_type, purposes, and classification_source = "rule".
+# The row and all of its chunk embeddings commit in one transaction, so the
+# document is searchable the moment this returns 201.
+# @name createDocument
+POST {{baseUrl}}/clients/{{clientId}}/documents
+X-API-Key: {{apiKey}}
+Content-Type: application/json
+
+{
+  "title": "2025 Utility Bill",
+  "content": "Northwind Energy statement for account 55512, billing period 01/01/2025 to 31/03/2025. Electricity usage 980 kWh, standing charge 54.10p per day, total including VAT GBP 212.44. Registered supply address: 4 Bridge Lane, Bristol, BS1 4TT, United Kingdom. Smart meter readings are taken automatically. Retain this statement; it is issued in the account holder's name and confirms occupancy at the registered address."
+}
+
+### The id of the document created above.
+@documentId = {{createDocument.response.body.$.id}}
+
+### Fetch it back. Expect 200, including the full content.
+GET {{baseUrl}}/clients/{{clientId}}/documents/{{documentId}}
+X-API-Key: {{apiKey}}
+
+### Searchable on 201: the bill just created answers "proof of address".
+# It is one of many, so look for the Bristol address in the returned passages.
+GET {{baseUrl}}/search?q=proof%20of%20address&limit=50
+X-API-Key: {{apiKey}}
+
+### Classification is by title and content patterns, not the title alone.
+# No pattern matches here, so expect document_type "unknown", empty purposes,
+# and classification_source "unknown". The document is still searchable.
+POST {{baseUrl}}/clients/{{clientId}}/documents
+X-API-Key: {{apiKey}}
+Content-Type: application/json
+
+{
+  "title": "Meeting Notes",
+  "content": "Discussed the client's plans for the next quarter over coffee. No documents were exchanged and no instructions were given."
+}
+
+### The caller can override the classifier. Expect classification_source "request".
+# purposes may be given too, but only alongside an explicit document_type.
+POST {{baseUrl}}/clients/{{clientId}}/documents
+X-API-Key: {{apiKey}}
+Content-Type: application/json
+
+{
+  "title": "Scanned Paperwork",
+  "content": "Illegible scan; the adviser confirmed by phone that this is a current account statement.",
+  "document_type": "bank_statement",
+  "purposes": ["proof_of_address"]
+}
