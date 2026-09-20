@@ -31,7 +31,7 @@ Each one is enforced by a test once its code exists. Adding code that could brea
 
 - **Module boundary.** `onboarding` and `search` never import each other; both may use `shared`. They share two contracts, not one: the database schema, and the vector space — which is why `Embedder` lives in `shared`. Enforced by package structure only, not by a test (system-design §1.3); the ArchUnit test that once checked this was removed in `61c4854`.
 - **Searchable on `201`.** A document row and all its chunk embeddings commit in one transaction (§5.2).
-- **No PII in logs.** Never log query text, names, emails, titles or content. Log IDs, lengths, counts and timings (§9).
+- **No PII in logs.** Never log query text, names, emails, titles or content. Log IDs, lengths, counts and timings (§9). Applies to the running service. The relevance eval (§11.3) may log its own fixture queries, which are synthetic, so its report is readable.
 - **SQL is bound, never concatenated.** `JdbcClient` with parameters; no JPA (§1.4).
 - **One embedding model.** `Embedder` is the only class that imports LangChain4j (§1.4). Every chunk records the model that produced it and search filters on it, so a model change can never silently mix vector spaces.
 - **Migrations are additive** (expand/contract), Flyway only (§11.5).
