@@ -336,7 +336,7 @@ Local is the only built target. `docker compose up` starts `pgvector/pgvector:pg
 
 ### Relevance evaluation set
 
-`src/test/resources/eval/` holds the corpus (also the seed: 50 clients, 126 documents), the expected type per document, and the queries. Each query declares one expectation.
+`src/test/resources/eval/` holds the expected type per document and the queries. The corpus they run against is the seed corpus, `src/main/resources/seed/corpus.json`: 50 clients and 126 documents. Each query declares one expectation.
 
 | Shape | Assertion |
 |---|---|
