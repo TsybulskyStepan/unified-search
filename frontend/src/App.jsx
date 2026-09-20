@@ -1,17 +1,48 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Outlet, Link, useNavigate } from 'react-router-dom';
+import { search } from './api/client';
 import ApiKeyModal from './components/ApiKeyModal';
 import { useApiKey } from './hooks/useApiKey';
 
 export default function App() {
   const { apiKey, setApiKey } = useApiKey();
   const navigate = useNavigate();
+  const [query, setQuery] = useState('');
+  const [suggestions, setSuggestions] = useState([]);
+  const [previewOpen, setPreviewOpen] = useState(false);
+
+  useEffect(() => {
+    if (!query.trim()) {
+      setSuggestions([]);
+      return undefined;
+    }
+
+    let current = true;
+    const timeout = setTimeout(async () => {
+      try {
+        const { results } = await search(query, { limit: 5 });
+        if (current) {
+          setSuggestions(results.slice(0, 5));
+        }
+      } catch {
+        if (current) {
+          setSuggestions([]);
+        }
+      }
+    }, 250);
+
+    return () => {
+      current = false;
+      clearTimeout(timeout);
+    };
+  }, [apiKey, query]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
     const form = e.target;
     const query = form.elements.q.value.trim();
     if (query) {
+      setPreviewOpen(false);
       navigate(`/?q=${encodeURIComponent(query)}`);
     }
   };
@@ -43,10 +74,42 @@ export default function App() {
               type="search"
               placeholder="Search clients and documents…"
               className="search-input header-search-input"
-              defaultValue={
-                new URLSearchParams(window.location.search).get('q') || ''
-              }
+              value={query}
+              onChange={(event) => {
+                setQuery(event.target.value);
+                setPreviewOpen(true);
+              }}
+              onFocus={() => setPreviewOpen(true)}
+              onBlur={() => setTimeout(() => setPreviewOpen(false), 150)}
             />
+            {previewOpen && query.trim() && (
+              <ul className="search-preview" aria-label="Search suggestions">
+                {suggestions.map((result, index) => (
+                  <li key={`${result.type}-${result.client?.id || result.document?.id}-${index}`}>
+                    <Link
+                      to={result.type === 'client'
+                        ? `/clients/${result.client.id}`
+                        : `/clients/${result.document.client_id}/documents/${result.document.id}`}
+                      onClick={() => setPreviewOpen(false)}
+                    >
+                      <span className="search-preview-title">
+                        {result.type === 'client'
+                          ? `${result.client.first_name} ${result.client.last_name}`
+                          : result.document.title}
+                      </span>
+                      <span className="search-preview-subtitle">
+                        {result.type === 'client'
+                          ? result.client.email
+                          : result.document.client_name}
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+                {suggestions.length === 0 && (
+                  <li className="search-preview-empty">No matches</li>
+                )}
+              </ul>
+            )}
           </form>
 
           <button

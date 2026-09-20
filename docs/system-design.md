@@ -323,7 +323,7 @@ JSON is `snake_case`. Errors are RFC 9457 `application/problem+json`. IDs are UU
 | `GET /` | shared | `200` `index.html` | | Serves the React SPA |
 | `GET /api/*` | shared | Rewritten to `/*` | | `ApiRewriteFilter` maps `/api/search` → `/search` etc. |
 
-The SPA home route lists all clients as responsive tiles (with a create-client tile first) until a query is supplied through the persistent header search field. A query calls `GET /api/search`; a client tile opens its detail route. The create-client route writes the client, then each optional title/content document entry through the existing onboarding endpoints. It intentionally does not upload files: the API accepts document content as text (§4.2).
+The SPA home route lists all clients as responsive tiles (with a create-client tile first) until a query is supplied through the persistent header search field. Typing debounces a `GET /api/search?limit=5` preview dropdown; submitting runs the full search page. A client tile opens its detail route. The create-client route writes the client, then each optional title/content document entry through the existing onboarding endpoints. It intentionally does not upload files: the API accepts document content as text (§4.2).
 
 A missing id is `404`. A malformed UUID in a path is `400`, a bad request rather than a missing record. An unknown route is `404` with the same generic body as any other.
 

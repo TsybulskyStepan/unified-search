@@ -8,7 +8,7 @@ globalThis.localStorage = {
   removeItem: (key) => storage.delete(key),
 };
 
-const { createClient, createDocument, getClients } = await import('../src/api/client.js');
+const { createClient, createDocument, getClients, search } = await import('../src/api/client.js');
 
 function jsonResponse(body, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -29,6 +29,18 @@ test('loads the client tiles with the stored API key', async () => {
 
   assert.equal(received.url, '/api/clients');
   assert.equal(received.options.headers['X-API-Key'], 'test-key');
+});
+
+test('limits a search preview to five results', async () => {
+  let received;
+  globalThis.fetch = async (url, options) => {
+    received = { url, options };
+    return jsonResponse([]);
+  };
+
+  await search('address proof', { limit: 5 });
+
+  assert.equal(received.url, '/api/search?q=address+proof&limit=5');
 });
 
 test('creates a client, then attaches a text document to it', async () => {
