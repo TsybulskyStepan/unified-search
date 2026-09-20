@@ -504,6 +504,18 @@
     {
       "query": "recommend a good sci-fi movie",
       "shape": "none"
+    },
+    {
+      "query": "sdfewferdvrevrennfg",
+      "shape": "gibberish"
+    },
+    {
+      "query": "qwpzxk lmnvbt hgfdsaq",
+      "shape": "gibberish"
+    },
+    {
+      "query": "asdfghjkl",
+      "shape": "gibberish"
     }
   ]
 }

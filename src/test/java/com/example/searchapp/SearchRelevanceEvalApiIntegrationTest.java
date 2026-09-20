@@ -79,14 +79,19 @@ class SearchRelevanceEvalApiIntegrationTest extends IntegrationTest {
           switch (query.shape()) {
             case FIRST -> 1;
             case ALL_WITHIN, COMPOUND -> expectedKeys.size();
-            case NONE -> 0;
+            case NONE, GIBBERISH -> 0;
           };
       outcomes.add(new Outcome(query, results, items, expectedKeys, ranks, n));
     }
 
     // A total miss has reciprocal rank 0, so it lowers MRR instead of dividing by zero.
     List<Outcome> ranked =
-        outcomes.stream().filter(o -> o.query().shape() != EvalQueries.Shape.NONE).toList();
+        outcomes.stream()
+            .filter(
+                o ->
+                    o.query().shape() != EvalQueries.Shape.NONE
+                        && o.query().shape() != EvalQueries.Shape.GIBBERISH)
+            .toList();
     for (Outcome outcome : outcomes) {
       log.info(
           "eval query='{}' shape={} n={} recall@n={}/{} rr={} results={}",
@@ -161,7 +166,7 @@ class SearchRelevanceEvalApiIntegrationTest extends IntegrationTest {
             .as("%s: none of the client's own documents follow the client", name)
             .noneMatch(result -> result.key().startsWith(ownDocuments));
       }
-      case NONE -> softly.assertThat(results).as("%s: empty result", name).isEmpty();
+      case NONE, GIBBERISH -> softly.assertThat(results).as("%s: empty result", name).isEmpty();
     }
   }
 

@@ -17,6 +17,7 @@ import com.example.searchapp.search.repository.HydratedDocument;
 import com.example.searchapp.search.repository.LabelDocumentMatch;
 import com.example.searchapp.search.repository.RankedDocumentMatch;
 import com.example.searchapp.shared.embedding.Embedder;
+import com.example.searchapp.shared.embedding.QueryEmbedding;
 import com.example.searchapp.shared.taxonomy.Taxonomy;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
@@ -132,26 +133,30 @@ public class SearchService {
                         timings::setLexicalNanos,
                         () -> documents.findLexicalMatches(plan.residual())),
                 searchExecutor);
-        CompletableFuture<float[]> embeddedQuery =
+        CompletableFuture<QueryEmbedding> embeddedQuery =
             CompletableFuture.supplyAsync(
                 () ->
                     time(
                         queryEmbeddingTimer,
                         timings::setQueryEmbeddingNanos,
-                        () -> embedder.embed(plan.residual())),
+                        () -> embedder.embedQuery(plan.residual())),
                 searchExecutor);
         CompletableFuture<List<RankedDocumentMatch>> semanticMatches =
             embeddedQuery.thenApplyAsync(
-                vector ->
+                embedding ->
                     time(
                         semanticTimer,
                         timings::setSemanticNanos,
-                        () -> documents.findSemanticMatches(vector, embedder.modelId())),
+                        () ->
+                            embedding.readable()
+                                ? documents.findSemanticMatches(
+                                    embedding.vector(), embedder.modelId())
+                                : List.of()),
                 searchExecutor);
 
         CompletableFuture.allOf(clientMatches, labelMatches, lexicalMatches, semanticMatches)
             .join();
-        queryVector = embeddedQuery.join();
+        queryVector = embeddedQuery.join().vector();
         List<LabelDocumentMatch> labels = labelMatches.join();
         List<RankedDocumentMatch> lexical = lexicalMatches.join();
         List<RankedDocumentMatch> semantic = semanticMatches.join();

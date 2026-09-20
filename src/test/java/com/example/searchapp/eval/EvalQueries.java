@@ -19,7 +19,13 @@ public record EvalQueries(Map<String, List<Expected>> sets, List<EvalQuery> quer
     @JsonProperty("compound")
     COMPOUND,
     @JsonProperty("none")
-    NONE
+    NONE,
+    /**
+     * Text that is not language (§6.3): no results, but unlike {@link #NONE} it is not a negative
+     * for the semantic floor, because a readability gate rejects it rather than the floor.
+     */
+    @JsonProperty("gibberish")
+    GIBBERISH
   }
 
   /**
