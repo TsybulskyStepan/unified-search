@@ -9,23 +9,25 @@ import com.example.searchapp.onboarding.repository.DocumentRepository;
 import com.example.searchapp.shared.embedding.Embedder;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-import java.util.stream.IntStream;
+import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 /**
- * Chunks and embeds outside the transaction, then writes the document row and its chunks atomically
- * (§5.2). Unlike client creation, this has real orchestration logic — that's why a service exists
- * here and not for clients (§1.2).
+ * Chunks, classifies and embeds outside the transaction, then writes the document row, its label
+ * chunk and its body chunks atomically (§5.2). Unlike client creation, this has real orchestration
+ * logic — that's why a service exists here and not for clients (§1.2).
  */
 @Service
 public class DocumentService {
   private static final Logger log = LoggerFactory.getLogger(DocumentService.class);
   private final ClientRepository clients;
   private final DocumentRepository documents;
+  private final DocumentClassifier classifier;
   private final Embedder embedder;
   private final SummaryWorker summaryWorker;
   private final Timer embeddingTimer;
@@ -33,11 +35,13 @@ public class DocumentService {
   public DocumentService(
       ClientRepository clients,
       DocumentRepository documents,
+      DocumentClassifier classifier,
       Embedder embedder,
       SummaryWorker summaryWorker,
       MeterRegistry meterRegistry) {
     this.clients = clients;
     this.documents = documents;
+    this.classifier = classifier;
     this.embedder = embedder;
     this.summaryWorker = summaryWorker;
     embeddingTimer = meterRegistry.timer("document.embed");
@@ -48,6 +52,10 @@ public class DocumentService {
       throw new ClientNotFoundException();
     }
 
+    Classification classification =
+        classifier.classify(
+            request.title(), request.content(), request.documentType(), request.purposes());
+
     List<Chunk> chunks = Chunker.split(request.content());
     // Content is non-blank (@NotBlank), so the chunker always yields at least one chunk (§3.2).
     // A document that exists but cannot be found is the worst outcome in this system, and it is
@@ -56,10 +64,14 @@ public class DocumentService {
       throw new IllegalStateException("Chunker produced no chunks for non-blank content");
     }
 
-    List<String> embeddingInputs =
-        chunks.stream()
-            .map(chunk -> Chunker.embeddingInput(request.title(), request.content(), chunk))
-            .toList();
+    // One embedAll call covers the label input and every body chunk input (§5.2 step 4): index 0
+    // is the label chunk, the rest line up with `chunks`.
+    List<String> embeddingInputs = new ArrayList<>(chunks.size() + 1);
+    embeddingInputs.add(Chunker.labelEmbeddingInput(request.title(), classification.labelText()));
+    for (Chunk chunk : chunks) {
+      embeddingInputs.add(Chunker.embeddingInput(request.title(), request.content(), chunk));
+    }
+
     long embeddingStartNanos = System.nanoTime();
     long embeddingNanos;
     List<float[]> embeddings;
@@ -67,22 +79,32 @@ public class DocumentService {
       embeddings = embedder.embedAll(embeddingInputs);
     } finally {
       embeddingNanos = System.nanoTime() - embeddingStartNanos;
-      embeddingTimer.record(embeddingNanos, java.util.concurrent.TimeUnit.NANOSECONDS);
+      embeddingTimer.record(embeddingNanos, TimeUnit.NANOSECONDS);
     }
 
-    List<EmbeddedChunk> embeddedChunks =
-        IntStream.range(0, chunks.size())
-            .mapToObj(i -> new EmbeddedChunk(chunks.get(i), embeddings.get(i)))
-            .toList();
+    float[] labelEmbedding = embeddings.get(0);
+    List<EmbeddedChunk> embeddedChunks = new ArrayList<>(chunks.size());
+    for (int i = 0; i < chunks.size(); i++) {
+      embeddedChunks.add(new EmbeddedChunk(chunks.get(i), embeddings.get(i + 1)));
+    }
 
     Document document =
         documents.insert(
-            clientId, request.title(), request.content(), embeddedChunks, embedder.modelId());
+            clientId,
+            request.title(),
+            request.content(),
+            classification,
+            labelEmbedding,
+            embeddedChunks,
+            embedder.modelId());
     log.info(
-        "Document indexed document_id={} chunk_count={} embed_ms={}",
+        "Document indexed document_id={} document_type={} classification_source={}"
+            + " chunk_count={} embed_ms={}",
         document.id(),
+        document.documentType(),
+        document.classificationSource(),
         chunks.size(),
-        java.util.concurrent.TimeUnit.NANOSECONDS.toMillis(embeddingNanos));
+        TimeUnit.NANOSECONDS.toMillis(embeddingNanos));
     return document;
   }
 

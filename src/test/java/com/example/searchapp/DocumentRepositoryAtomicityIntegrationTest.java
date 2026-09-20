@@ -7,6 +7,7 @@ import com.example.searchapp.onboarding.dto.CreateClientRequest;
 import com.example.searchapp.onboarding.repository.ClientRepository;
 import com.example.searchapp.onboarding.repository.DocumentRepository;
 import com.example.searchapp.onboarding.service.Chunk;
+import com.example.searchapp.onboarding.service.Classification;
 import com.example.searchapp.onboarding.service.EmbeddedChunk;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -36,8 +37,18 @@ class DocumentRepositoryAtomicityIntegrationTest extends IntegrationTest {
             new EmbeddedChunk(new Chunk(0, 0, 5), new float[384]),
             new EmbeddedChunk(new Chunk(1, 6, 11), new float[10]));
 
+    Classification classification =
+        new Classification("unknown", List.of(), Classification.SOURCE_UNKNOWN, 0, "");
     assertThatThrownBy(
-            () -> documents.insert(client.id(), "Title", "one two", chunks, "test-model"))
+            () ->
+                documents.insert(
+                    client.id(),
+                    "Title",
+                    "one two",
+                    classification,
+                    new float[384],
+                    chunks,
+                    "test-model"))
         .isInstanceOf(DataAccessException.class);
 
     Integer documentCount =

@@ -19,18 +19,18 @@ labels and query intents speaking the same language, and `taxonomy_version` on t
 
 **Blocked by:** 14 — The taxonomy.
 
-**Status:** ready-for-agent
+**Status:** complete
 
-- [ ] A created document is stored with its type, purposes, classification source and taxonomy version
-- [ ] Classification is deterministic: identical title and content always yield identical labels
-- [ ] A request may name the type, and optionally its purposes, and the stored source records that it did
-- [ ] An unrecognised document is stored as `unknown` with no purposes and is still searchable
-- [ ] A tie between two candidate types yields `unknown` rather than an arbitrary winner
-- [ ] Every document in the seed corpus classifies to its expected type, from a checked-in expectations file
-- [ ] The document row, its label chunk and its body chunks still commit in one transaction
-- [ ] A returned passage is always body text and never label text
-- [ ] Rows below the current taxonomy version are brought up to date at startup, in batches, safe to interrupt
-- [ ] Readiness does not wait for reclassification, and a stale row stays searchable under its old labels meanwhile
-- [ ] Reclassification keeps a request-supplied type while refreshing that row's labels and version
-- [ ] Reclassification runs before the seeder, so a freshly seeded document is never immediately stale
-- [ ] `POST` still makes no network call and still needs no credential
+- [x] A created document is stored with its type, purposes, classification source and taxonomy version
+- [x] Classification is deterministic: identical title and content always yield identical labels
+- [x] A request may name the type, and optionally its purposes, and the stored source records that it did
+- [x] An unrecognised document is stored as `unknown` with no purposes and is still searchable
+- [x] A tie between two candidate types yields `unknown` rather than an arbitrary winner
+- [x] Every document in the seed corpus classifies to its expected type, from a checked-in expectations file
+- [x] The document row, its label chunk and its body chunks still commit in one transaction
+- [x] A returned passage is always body text and never label text
+- [x] Rows below the current taxonomy version are brought up to date at startup, in batches, safe to interrupt
+- [x] Readiness does not wait for reclassification, and a stale row stays searchable under its old labels meanwhile
+- [x] Reclassification keeps a request-supplied type while refreshing that row's labels and version
+- [x] Reclassification runs before the seeder, so a freshly seeded document is never immediately stale
+- [x] `POST` still makes no network call and still needs no credential

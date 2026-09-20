@@ -35,20 +35,33 @@ class DocumentApiIntegrationTest extends IntegrationTest {
         .contains("\"content\":\"Account 123, due 15 June.\"")
         .contains("\"summary_status\":\"none\"")
         .contains("\"summary\":null")
-        .contains("\"client_id\":\"" + clientId + "\"");
+        .contains("\"client_id\":\"" + clientId + "\"")
+        .contains("\"document_type\":\"utility_bill\"")
+        .contains("\"purposes\":[\"proof_of_address\"]")
+        .contains("\"classification_source\":\"rule\"");
 
     String documentId = extractId(create.body());
     var fetched = get(port, URI.create(location).getPath(), TEST_API_KEY);
     assertThat(fetched.statusCode()).isEqualTo(200);
     assertThat(fetched.body()).isEqualTo(create.body());
 
+    // One label chunk plus one body chunk (§5.2): every document carries a label chunk regardless
+    // of how short its content is.
     Integer chunkCount =
         jdbcClient
             .sql("SELECT count(*) FROM document_chunk WHERE document_id = :id")
             .param("id", UUID.fromString(documentId))
             .query(Integer.class)
             .single();
-    assertThat(chunkCount).isEqualTo(1);
+    assertThat(chunkCount).isEqualTo(2);
+
+    Integer labelChunkCount =
+        jdbcClient
+            .sql("SELECT count(*) FROM document_chunk WHERE document_id = :id AND kind = 'label'")
+            .param("id", UUID.fromString(documentId))
+            .query(Integer.class)
+            .single();
+    assertThat(labelChunkCount).isEqualTo(1);
 
     String embeddingModel =
         jdbcClient

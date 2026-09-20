@@ -35,8 +35,8 @@ class SearchSemanticsApiIntegrationTest extends IntegrationTest {
     jdbc.sql(
             """
             INSERT INTO document_chunk
-                (document_id, embedding_model, ordinal, start_offset, end_offset, embedding)
-            VALUES (:document_id, :embedding_model, 1, :start_offset, :end_offset, :embedding)
+                (document_id, embedding_model, kind, ordinal, start_offset, end_offset, embedding)
+            VALUES (:document_id, :embedding_model, 'body', 2, :start_offset, :end_offset, :embedding)
             """)
         .param("document_id", UUID.fromString(documentId))
         .param("embedding_model", embedder.modelId())
@@ -50,6 +50,31 @@ class SearchSemanticsApiIntegrationTest extends IntegrationTest {
     assertThat(results).hasSize(1);
     assertThat(results.get(0).path("type").asText()).isEqualTo("document");
     assertThat(results.get(0).path("match").path("passage").asText()).isEqualTo(bestPassage);
+  }
+
+  @Test
+  void neverReturnsTheLabelChunkAsTheDocumentPassage() throws Exception {
+    // The label chunk (ticket 15, §5.3) is made the closest possible match to the query, and the
+    // body chunk the furthest: if the semantic retriever ever let a label chunk win best-passage
+    // selection, this document would either be missing (label chunk excluded, body chunk alone is
+    // below the floor) or would surface an empty passage (a label chunk's offsets are always 0, 0).
+    // Either way, "the passage is the label chunk" can never be what the assertion below sees.
+    String query = "label chunk isolation regression";
+    String content = "unrelated body content";
+    String documentId =
+        createDocument(createClient("label-isolation-owner@example.com"), "Evidence", content);
+
+    setOnlyChunkEmbedding(documentId, inverse(embedder.embed(query)));
+    jdbc.sql(
+            "UPDATE document_chunk SET embedding = :embedding"
+                + " WHERE document_id = :document_id AND kind = 'label'")
+        .param("embedding", new PGvector(embedder.embed(query)))
+        .param("document_id", UUID.fromString(documentId))
+        .update();
+
+    JsonNode results = search(query);
+
+    assertThat(results.toString()).doesNotContain(documentId);
   }
 
   @Test
@@ -158,10 +183,19 @@ class SearchSemanticsApiIntegrationTest extends IntegrationTest {
     return extractId(response.body());
   }
 
+  /**
+   * Sets the sole <em>body</em> chunk's embedding (every test document here has exactly one).
+   * Scoped to {@code kind = 'body'} so it never touches the document's label chunk (ticket 15,
+   * §5.3), which every created document also carries and which must never influence best-passage
+   * selection.
+   */
   private void setOnlyChunkEmbedding(String documentId, float[] embedding) {
     int updated =
         jdbc.sql(
-                "UPDATE document_chunk SET embedding = :embedding WHERE document_id = :document_id")
+                """
+                UPDATE document_chunk SET embedding = :embedding
+                WHERE document_id = :document_id AND kind = 'body'
+                """)
             .param("embedding", new PGvector(embedding))
             .param("document_id", UUID.fromString(documentId))
             .update();

@@ -25,16 +25,19 @@ import org.yaml.snakeyaml.error.YAMLException;
  * months apart instead.
  */
 @Configuration
-class TaxonomyLoader {
-  static final String TAXONOMY_RESOURCE = "/taxonomy/taxonomy.yaml";
+public class TaxonomyLoader {
+  public static final String TAXONOMY_RESOURCE = "/taxonomy/taxonomy.yaml";
 
   @Bean
   Taxonomy taxonomy() {
     return load(TAXONOMY_RESOURCE);
   }
 
-  /** Package-visible for direct testing, without a Spring context. */
-  static Taxonomy load(String resource) {
+  /**
+   * Public so a unit test outside this package (e.g. {@code DocumentClassifierTest}, §11.1) can
+   * load the real bundled taxonomy without a Spring context.
+   */
+  public static Taxonomy load(String resource) {
     try (InputStream in = TaxonomyLoader.class.getResourceAsStream(resource)) {
       if (in == null) {
         throw new IllegalStateException("Missing taxonomy file on classpath: " + resource);

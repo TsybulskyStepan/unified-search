@@ -51,6 +51,15 @@ public final class Chunker {
     return title + "\n\n" + text(content, chunk);
   }
 
+  /**
+   * The text to embed for a document's label chunk (§5.3): {@code title + "\n" + labelText}, or the
+   * title alone when {@code labelText} is empty ({@code unknown} documents, §3.3) — there is no
+   * label to append, and no reason to embed a trailing blank line.
+   */
+  public static String labelEmbeddingInput(String title, String labelText) {
+    return labelText.isEmpty() ? title : title + "\n" + labelText;
+  }
+
   /** Extracts the text a chunk covers, by code-point offset into {@code content}. */
   public static String text(String content, Chunk chunk) {
     int startIndex = content.offsetByCodePoints(0, chunk.startOffset());
