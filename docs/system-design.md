@@ -51,10 +51,10 @@ flowchart TB
         end
         subgraph Search["search, read side"]
             SC["SearchController"]
-            SS["SearchService, plan, retrieve, fuse, order, page, hydrate"]
+            SS["SearchService, plan, order, page"]
             QP["QueryPlanner"]
-            CR["ClientRetriever"]
-            DR["DocumentRetriever, label, lexical, semantic"]
+            CR["ClientSearchRepository, identity and context tiers"]
+            DR["DocumentRetriever, label, lexical, semantic, fuse, hydrate"]
         end
     end
     PG[("PostgreSQL 17, pgvector, pg_trgm, citext")]
@@ -74,8 +74,8 @@ flowchart TB
     SC --> SS
     SS --> QP --> TAX
     SS --> CR --> PG
-    SS --> EMB
     SS --> DR --> PG
+    DR --> EMB
     SW --> PG
     SW --> SUM --> VX
 ```
@@ -98,9 +98,8 @@ com.example.searchapp
 │   ├── controller/        SearchController
 │   ├── dto/               SearchRequest, SearchResult, match types
 │   ├── planner/           QueryPlanner, QueryPlan, ClientMention (v2)
-│   ├── repository/        ClientRetriever, LabelDocumentRetriever, LexicalDocumentRetriever,
-│   │                      SemanticDocumentRetriever (v2 split)
-│   └── service/           SearchService, DocumentFusion, ResultOrdering (pure functions)
+│   ├── repository/        ClientSearchRepository, DocumentSearchRepository (SQL only)
+│   └── service/           SearchService, DocumentRetriever, DocumentFusion, ResultOrdering
 └── shared/
     ├── embedding/         Embedder, one bean, warmed at startup
     ├── taxonomy/          Taxonomy, TaxonomyLoader (v2)
@@ -423,11 +422,14 @@ No model call, no network. Creation latency is embedding plus one transaction.
 flowchart LR
     Q["q, limit, offset"] --> V["validate, normalise"] --> P["QueryPlanner"]
     P --> PAR{{"parallel on virtual threads"}}
-    PAR --> CR["ClientRetriever, identity and context tiers"]
-    PAR --> LB["LabelDocumentRetriever, type or purpose in intents"]
-    PAR --> LX["LexicalDocumentRetriever, tsvector"]
-    PAR --> EQ["Embedder.embed residual"] --> SM["SemanticDocumentRetriever, best chunk, cosine >= floor"]
-    LB & LX & SM --> FU["DocumentFusion, RRF"]
+    PAR --> CR["client search, identity and context tiers"]
+    PAR --> DR
+    subgraph DR["DocumentRetriever"]
+        LB["label, type or purpose in intents"]
+        LX["lexical, tsvector"]
+        EQ["Embedder.embed residual"] --> SM["semantic, best chunk, cosine >= floor"]
+        LB & LX & SM --> FU["DocumentFusion, RRF"]
+    end
     CR & FU --> ORD["ResultOrdering"] --> SL["slice"] --> HY["hydrate page"] --> R["200, X-Total-Count"]
 ```
 
@@ -475,7 +477,9 @@ LIMIT 200;
 
 ### 6.3 Document retrievers **(v2)**
 
-All three take `plan.residual`. When the residual is empty, or non-empty but reduces to an empty tsquery (stop words only, `the and`), none of them runs and the result holds clients only. An embedding of stop words would admit documents on noise, so the check is made once, before the fan-out, rather than per retriever.
+One `DocumentRetriever` runs all three signals concurrently and returns the fused list, so the search service sees a single retrieval rather than three. It was first planned as three modules, but each is one query and no caller wants them separately. It also keeps the query vector: hydrating a page picks each document's best passage against it, and only the retriever needs to know that vector exists.
+
+All three take `plan.residual`. When the residual is empty, or non-empty but reduces to an empty tsquery (stop words only, `the and`), none of them runs and the result holds clients only. An embedding of stop words would admit documents on noise, so the check is made once, before the fan-out, rather than per signal.
 
 **Label.** Admits every document whose stored labels match a query intent. Wording-independent, which is what fixes `proof of address`.
 
@@ -797,7 +801,7 @@ Each step leaves a runnable system with a green build. Steps 1-7 are v2, step 8 
 1. **Taxonomy.** `taxonomy.yaml`, `Taxonomy`, `TaxonomyLoader`, validation tests.
 2. **Schema and classification.** `V2__taxonomy.sql`, `DocumentClassifier`, `label_text`, label chunk in `DocumentService`, `Reclassifier` at startup, `classification.json`, 100% on the seed corpus. Request fields `document_type` and `purposes`.
 3. **Planner.** Normalisation, mention detection with the ambiguity rule, intents. Table-driven unit tests from §6.5.
-4. **Retrievers.** `ClientRetriever` tiers, `LabelDocumentRetriever`, `LexicalDocumentRetriever`, `SemanticDocumentRetriever` over both chunk kinds.
+4. **Retrieval.** Client tiers, and `DocumentRetriever` over the label, lexical and semantic signals across both chunk kinds.
 5. **Fusion and ordering.** `DocumentFusion` (RRF), `ResultOrdering` v2, hydration with best body chunk, response schema changes (`tier`, `signals`, `labels`, document type fields).
 6. **Eval v2.** `queries.json` with expectation shapes, the no-client-above-answers guard, recall@n and MRR, floor re-derivation. Every v1 failure in §0.1 must pass.
 7. **Docs.** README examples for identity, category and compound queries, the taxonomy file as the place to add a document type, and the reclassification behaviour.

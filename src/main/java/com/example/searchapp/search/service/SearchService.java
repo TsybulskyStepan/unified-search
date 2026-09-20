@@ -12,12 +12,7 @@ import com.example.searchapp.search.planner.QueryPlanner;
 import com.example.searchapp.search.repository.ClientMatch;
 import com.example.searchapp.search.repository.ClientSearchRepository;
 import com.example.searchapp.search.repository.DocumentMatch;
-import com.example.searchapp.search.repository.DocumentSearchRepository;
 import com.example.searchapp.search.repository.HydratedDocument;
-import com.example.searchapp.search.repository.LabelDocumentMatch;
-import com.example.searchapp.search.repository.RankedDocumentMatch;
-import com.example.searchapp.shared.embedding.Embedder;
-import com.example.searchapp.shared.embedding.QueryEmbedding;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import jakarta.annotation.PreDestroy;
@@ -29,6 +24,7 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.function.LongConsumer;
 import java.util.function.Supplier;
@@ -42,8 +38,7 @@ import org.springframework.stereotype.Service;
 public class SearchService {
   private static final Logger log = LoggerFactory.getLogger(SearchService.class);
   private final ClientSearchRepository clients;
-  private final DocumentSearchRepository documents;
-  private final Embedder embedder;
+  private final DocumentRetriever retriever;
   private final QueryPlanner queryPlanner;
   private final Timer planTimer;
   private final Timer clientTimer;
@@ -56,13 +51,11 @@ public class SearchService {
 
   public SearchService(
       ClientSearchRepository clients,
-      DocumentSearchRepository documents,
-      Embedder embedder,
+      DocumentRetriever retriever,
       QueryPlanner queryPlanner,
       MeterRegistry meterRegistry) {
     this.clients = clients;
-    this.documents = documents;
-    this.embedder = embedder;
+    this.retriever = retriever;
     this.queryPlanner = queryPlanner;
     planTimer = meterRegistry.timer("search.plan");
     clientTimer = meterRegistry.timer("search.clients");
@@ -105,63 +98,17 @@ public class SearchService {
                       timings::setClientNanos,
                       () -> clients.findMatches(plan.query())),
               searchExecutor);
-      List<DocumentMatch> documentResults;
-      float[] queryVector = null;
-      if (!plan.hasResidual() || !documents.hasSearchableTerms(plan.residual())) {
-        clientMatches.join();
-        documentResults = List.of();
-      } else {
-        CompletableFuture<List<LabelDocumentMatch>> labelMatches =
-            CompletableFuture.supplyAsync(
-                () ->
-                    time(
-                        labelTimer,
-                        timings::setLabelNanos,
-                        () -> documents.findLabelMatches(plan.types(), plan.purposes())),
-                searchExecutor);
-        CompletableFuture<List<RankedDocumentMatch>> lexicalMatches =
-            CompletableFuture.supplyAsync(
-                () ->
-                    time(
-                        lexicalTimer,
-                        timings::setLexicalNanos,
-                        () -> documents.findLexicalMatches(plan.residual())),
-                searchExecutor);
-        CompletableFuture<QueryEmbedding> embeddedQuery =
-            CompletableFuture.supplyAsync(
-                () ->
-                    time(
-                        queryEmbeddingTimer,
-                        timings::setQueryEmbeddingNanos,
-                        () -> embedder.embedQuery(plan.residual())),
-                searchExecutor);
-        CompletableFuture<List<RankedDocumentMatch>> semanticMatches =
-            embeddedQuery.thenApplyAsync(
-                embedding ->
-                    time(
-                        semanticTimer,
-                        timings::setSemanticNanos,
-                        () ->
-                            embedding.readable()
-                                ? documents.findSemanticMatches(
-                                    embedding.vector(), embedder.modelId())
-                                : List.of()),
-                searchExecutor);
-
-        CompletableFuture.allOf(clientMatches, labelMatches, lexicalMatches, semanticMatches)
-            .join();
-        queryVector = embeddedQuery.join().vector();
-        List<LabelDocumentMatch> labels = labelMatches.join();
-        List<RankedDocumentMatch> lexical = lexicalMatches.join();
-        List<RankedDocumentMatch> semantic = semanticMatches.join();
-        hits = new SearchHits(0, labels.size(), lexical.size(), semantic.size());
-        documentResults = DocumentFusion.fuse(labels, lexical, semantic);
+      // The client query must already be running when retrieve() blocks, so the two overlap and
+      // latency stays the slower of them rather than their sum.
+      DocumentRetriever.Result retrieval = retriever.retrieve(plan);
+      if (retrieval.ran()) {
+        hits = recordRetrieval(retrieval.measurements(), timings);
       }
 
       List<ClientMatch> clientResults = clientMatches.join();
       hits = hits.withClients(clientResults.size());
       List<ResultOrdering.Candidate> candidates =
-          ResultOrdering.order(clientResults, documentResults, plan);
+          ResultOrdering.order(clientResults, retrieval.matches(), plan);
       if (request.offset() >= candidates.size()) {
         return new SearchPage(List.of(), candidates.size());
       }
@@ -173,10 +120,7 @@ public class SearchService {
           clients.findByIds(matches.clientIds()).stream()
               .collect(Collectors.toMap(SearchClient::id, Function.identity()));
       Map<UUID, HydratedDocument> documentsById =
-          documents
-              .findByMatches(matches.documentMatches(), queryVector, embedder.modelId())
-              .stream()
-              .collect(Collectors.toMap(result -> result.document().id(), Function.identity()));
+          retriever.hydrate(matches.documentMatches(), retrieval);
       List<SearchResult> page =
           pageCandidates.stream()
               .map(candidate -> toResult(candidate, clientsById, documentsById))
@@ -185,7 +129,7 @@ public class SearchService {
       return new SearchPage(page, candidates.size());
     } finally {
       long totalNanos = System.nanoTime() - totalStartNanos;
-      totalTimer.record(totalNanos, java.util.concurrent.TimeUnit.NANOSECONDS);
+      totalTimer.record(totalNanos, TimeUnit.NANOSECONDS);
       log.info(
           "Search audit request_id={} query_length={} plan_shape={} intent_count={}"
               + " mention_present={} client_hits={} label_hits={} lexical_hits={} semantic_hits={}"
@@ -210,19 +154,32 @@ public class SearchService {
     }
   }
 
+  private SearchHits recordRetrieval(
+      DocumentRetriever.Measurements measured, SearchTimings timings) {
+    labelTimer.record(measured.labelNanos(), TimeUnit.NANOSECONDS);
+    lexicalTimer.record(measured.lexicalNanos(), TimeUnit.NANOSECONDS);
+    queryEmbeddingTimer.record(measured.queryEmbeddingNanos(), TimeUnit.NANOSECONDS);
+    semanticTimer.record(measured.semanticNanos(), TimeUnit.NANOSECONDS);
+    timings.setLabelNanos(measured.labelNanos());
+    timings.setLexicalNanos(measured.lexicalNanos());
+    timings.setQueryEmbeddingNanos(measured.queryEmbeddingNanos());
+    timings.setSemanticNanos(measured.semanticNanos());
+    return new SearchHits(0, measured.labelHits(), measured.lexicalHits(), measured.semanticHits());
+  }
+
   private static <T> T time(Timer timer, LongConsumer recordNanos, Supplier<T> operation) {
     long startNanos = System.nanoTime();
     try {
       return operation.get();
     } finally {
       long elapsedNanos = System.nanoTime() - startNanos;
-      timer.record(elapsedNanos, java.util.concurrent.TimeUnit.NANOSECONDS);
+      timer.record(elapsedNanos, TimeUnit.NANOSECONDS);
       recordNanos.accept(elapsedNanos);
     }
   }
 
   private static long millis(long durationNanos) {
-    return java.util.concurrent.TimeUnit.NANOSECONDS.toMillis(durationNanos);
+    return TimeUnit.NANOSECONDS.toMillis(durationNanos);
   }
 
   private static PageMatches partition(List<ResultOrdering.Candidate> candidates) {
