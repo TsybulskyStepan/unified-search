@@ -59,7 +59,7 @@ spotless {
  */
 tasks.register('npmInstall', Exec) {
     workingDir = file('frontend')
-    commandLine 'npm', 'ci'
+    commandLine 'sh', '-c', 'npm ci'
 }
 
 /**
@@ -68,7 +68,7 @@ tasks.register('npmInstall', Exec) {
 tasks.register('buildFrontend', Exec) {
     dependsOn('npmInstall')
     workingDir = file('frontend')
-    commandLine 'npm', 'run', 'build'
+    commandLine 'sh', '-c', 'npm run build'
 }
 
 // Copy frontend dist into the processed resources so the jar includes the SPA
