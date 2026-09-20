@@ -211,6 +211,23 @@ class SearchRelevanceEvalApiIntegrationTest extends IntegrationTest {
     }
   }
 
+  @Test
+  void pagesACategoryQueryAsSlicesOfOneStableOrdering() throws Exception {
+    String query = "proof of address";
+    JsonNode fullResults = search(query);
+
+    assertThat(fullResults.size()).isGreaterThan(2);
+    for (int offset = 0; offset < fullResults.size(); offset++) {
+      assertThat(search(query, 1, offset)).containsExactly(fullResults.get(offset));
+    }
+    for (int offset = 0; offset < fullResults.size(); offset += 2) {
+      int end = Math.min(offset + 2, fullResults.size());
+      List<JsonNode> expected = new ArrayList<>();
+      fullResults.forEach(expected::add);
+      assertThat(search(query, 2, offset)).containsExactlyElementsOf(expected.subList(offset, end));
+    }
+  }
+
   private static void assertDocumentFirst(JsonNode results, String clientName, String title) {
     JsonNode first = results.get(0);
     assertThat(first.path("type").asText()).isEqualTo("document");

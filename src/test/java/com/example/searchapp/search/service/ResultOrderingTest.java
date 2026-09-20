@@ -89,4 +89,36 @@ class ResultOrderingTest {
         residual,
         java.util.Set.of());
   }
+
+  @Test
+  void keepsContextClientsBelowEveryDocumentAndIdentityClientForANamedClientQuery() {
+    UUID grace = UUID.fromString("00000000-0000-0000-0000-000000000003");
+    UUID sam = UUID.fromString("00000000-0000-0000-0000-000000000004");
+
+    var candidates =
+        ResultOrdering.order(
+            List.of(client(grace, "context"), client(sam, "identity"), client(JOHN, "identity")),
+            List.of(document(MARYS_BILL, MARY), document(JOHNS_BILL, JOHN)),
+            plan(JOHN, "utility bill"));
+
+    assertThat(candidates)
+        .extracting(ResultOrdering.Candidate::id)
+        .containsExactly(JOHNS_BILL, JOHN, MARYS_BILL, sam, grace);
+  }
+
+  @Test
+  void movesResultsWithoutDroppingOrDuplicatingAnyOfThemInEitherShape() {
+    var clients = List.of(client(MARY, "context"), client(JOHN, "identity"));
+    var documents = List.of(document(MARYS_BILL, MARY), document(JOHNS_BILL, JOHN));
+    var noMention = new QueryPlan("bill", null, "bill", java.util.Set.of());
+
+    for (QueryPlan plan : List.of(noMention, plan(JOHN, "bill"))) {
+      var candidates = ResultOrdering.order(clients, documents, plan);
+
+      assertThat(candidates)
+          .extracting(ResultOrdering.Candidate::id)
+          .containsExactlyInAnyOrder(MARY, JOHN, MARYS_BILL, JOHNS_BILL);
+      assertThat(ResultOrdering.order(clients, documents, plan)).isEqualTo(candidates);
+    }
+  }
 }
