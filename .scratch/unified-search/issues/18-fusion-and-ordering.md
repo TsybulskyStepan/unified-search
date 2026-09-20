@@ -21,16 +21,16 @@ nobody can debug from a bug report.
 
 **Blocked by:** 17 — Three document signals.
 
-**Status:** ready-for-agent
+**Status:** complete
 
-- [ ] A document admitted by more than one signal outranks one admitted by a single signal, all else equal
-- [ ] A document admitted by label alone still precedes every untagged document
-- [ ] Ordering is a pure function of the plan and the two client tiers, testable from plain lists
-- [ ] A category query returns identity clients, then documents, then context clients
-- [ ] A query naming a client returns that client's matching documents, then the client, then other clients' matching documents
-- [ ] A context-tier client never appears above a document that answers the query
-- [ ] The order is total, so a page is a slice and deep pages stay stable
-- [ ] Each result reports which signals admitted it and which labels matched
-- [ ] A passage still comes from a body chunk, never the label chunk
-- [ ] Ordering never removes a document, only moves it
-- [ ] Both shapes are decided once per query, so paging cannot change the shape mid-result
+- [x] A document admitted by more than one signal outranks one admitted by a single signal, all else equal
+- [x] A document admitted by label alone still precedes every untagged document
+- [x] Ordering is a pure function of the plan and the two client tiers, testable from plain lists
+- [x] A category query returns identity clients, then documents, then context clients
+- [x] A query naming a client returns that client's matching documents, then the client, then other clients' matching documents
+- [x] A context-tier client never appears above a document that answers the query
+- [x] The order is total, so a page is a slice and deep pages stay stable
+- [x] Each result reports which signals admitted it and which labels matched
+- [x] A passage still comes from a body chunk, never the label chunk
+- [x] Ordering never removes a document, only moves it
+- [x] Both shapes are decided once per query, so paging cannot change the shape mid-result
