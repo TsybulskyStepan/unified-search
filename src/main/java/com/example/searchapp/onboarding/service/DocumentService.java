@@ -7,9 +7,13 @@ import com.example.searchapp.onboarding.exception.DocumentNotFoundException;
 import com.example.searchapp.onboarding.repository.ClientRepository;
 import com.example.searchapp.onboarding.repository.DocumentRepository;
 import com.example.searchapp.shared.embedding.Embedder;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.IntStream;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 /**
@@ -19,20 +23,24 @@ import org.springframework.stereotype.Service;
  */
 @Service
 public class DocumentService {
+  private static final Logger log = LoggerFactory.getLogger(DocumentService.class);
   private final ClientRepository clients;
   private final DocumentRepository documents;
   private final Embedder embedder;
   private final SummaryWorker summaryWorker;
+  private final Timer embeddingTimer;
 
   public DocumentService(
       ClientRepository clients,
       DocumentRepository documents,
       Embedder embedder,
-      SummaryWorker summaryWorker) {
+      SummaryWorker summaryWorker,
+      MeterRegistry meterRegistry) {
     this.clients = clients;
     this.documents = documents;
     this.embedder = embedder;
     this.summaryWorker = summaryWorker;
+    embeddingTimer = meterRegistry.timer("document.embed");
   }
 
   public Document create(UUID clientId, CreateDocumentRequest request) {
@@ -52,15 +60,30 @@ public class DocumentService {
         chunks.stream()
             .map(chunk -> Chunker.embeddingInput(request.title(), request.content(), chunk))
             .toList();
-    List<float[]> embeddings = embedder.embedAll(embeddingInputs);
+    long embeddingStartNanos = System.nanoTime();
+    long embeddingNanos;
+    List<float[]> embeddings;
+    try {
+      embeddings = embedder.embedAll(embeddingInputs);
+    } finally {
+      embeddingNanos = System.nanoTime() - embeddingStartNanos;
+      embeddingTimer.record(embeddingNanos, java.util.concurrent.TimeUnit.NANOSECONDS);
+    }
 
     List<EmbeddedChunk> embeddedChunks =
         IntStream.range(0, chunks.size())
             .mapToObj(i -> new EmbeddedChunk(chunks.get(i), embeddings.get(i)))
             .toList();
 
-    return documents.insert(
-        clientId, request.title(), request.content(), embeddedChunks, embedder.modelId());
+    Document document =
+        documents.insert(
+            clientId, request.title(), request.content(), embeddedChunks, embedder.modelId());
+    log.info(
+        "Document indexed document_id={} chunk_count={} embed_ms={}",
+        document.id(),
+        chunks.size(),
+        java.util.concurrent.TimeUnit.NANOSECONDS.toMillis(embeddingNanos));
+    return document;
   }
 
   public Document find(UUID clientId, UUID documentId) {

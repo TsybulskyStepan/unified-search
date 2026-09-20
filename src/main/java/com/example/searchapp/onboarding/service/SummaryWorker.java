@@ -3,6 +3,9 @@ package com.example.searchapp.onboarding.service;
 import com.example.searchapp.onboarding.exception.PermanentSummarizationException;
 import com.example.searchapp.onboarding.repository.ClaimedSummaryJob;
 import com.example.searchapp.onboarding.repository.DocumentRepository;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import jakarta.annotation.PreDestroy;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -23,11 +26,18 @@ public class SummaryWorker {
 
   private final DocumentRepository documents;
   private final Summarizer summarizer;
+  private final Timer summaryTimer;
+  private final Counter readyOutcomes;
+  private final Counter failedOutcomes;
   private final ExecutorService nudgeExecutor = Executors.newVirtualThreadPerTaskExecutor();
 
-  public SummaryWorker(DocumentRepository documents, Summarizer summarizer) {
+  public SummaryWorker(
+      DocumentRepository documents, Summarizer summarizer, MeterRegistry meterRegistry) {
     this.documents = documents;
     this.summarizer = summarizer;
+    summaryTimer = meterRegistry.timer("summary.call");
+    readyOutcomes = meterRegistry.counter("summary.outcome", "status", "ready");
+    failedOutcomes = meterRegistry.counter("summary.outcome", "status", "failed");
   }
 
   /** Fire-and-forget: returns immediately, the claim-and-process cycle runs on its own thread. */
@@ -43,6 +53,7 @@ public class SummaryWorker {
   public void runOnce() {
     int exhausted = documents.markExhaustedAsFailed();
     if (exhausted > 0) {
+      failedOutcomes.increment(exhausted);
       log.info("Summary sweep outcome=failed count={}", exhausted);
     }
     List<ClaimedSummaryJob> claimed = documents.claimPending(CLAIM_BATCH);
@@ -54,8 +65,9 @@ public class SummaryWorker {
   private void process(ClaimedSummaryJob job) {
     long startNanos = System.nanoTime();
     try {
-      String summary = summarizer.summarize(job.title(), job.content());
+      String summary = timeSummaryCall(job);
       documents.completeSummarySuccess(job.id(), summary);
+      readyOutcomes.increment();
       log.info(
           "Summary outcome document_id={} attempt={} outcome=ready latency_ms={}",
           job.id(),
@@ -63,6 +75,7 @@ public class SummaryWorker {
           latencyMillis(startNanos));
     } catch (PermanentSummarizationException exception) {
       documents.completeSummaryFailed(job.id());
+      failedOutcomes.increment();
       log.warn(
           "Summary outcome document_id={} attempt={} outcome=failed error={} latency_ms={}",
           job.id(),
@@ -83,6 +96,16 @@ public class SummaryWorker {
 
   private static long latencyMillis(long startNanos) {
     return (System.nanoTime() - startNanos) / 1_000_000;
+  }
+
+  private String timeSummaryCall(ClaimedSummaryJob job) {
+    long startNanos = System.nanoTime();
+    try {
+      return summarizer.summarize(job.title(), job.content());
+    } finally {
+      summaryTimer.record(
+          System.nanoTime() - startNanos, java.util.concurrent.TimeUnit.NANOSECONDS);
+    }
   }
 
   @PreDestroy
