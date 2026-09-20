@@ -12,16 +12,16 @@ import java.io.UncheckedIOException;
  * com.example.searchapp.onboarding.seed.DemoSeeder} loads in production (§11.3), on the test
  * classpath because it ships in {@code src/main/resources}.
  */
-final class EvalCorpusLoader {
+public final class EvalCorpusLoader {
   private static final ObjectMapper MAPPER = new ObjectMapper();
 
   private EvalCorpusLoader() {}
 
-  static DemoCorpus corpus() {
+  public static DemoCorpus corpus() {
     return read("/seed/corpus.json", DemoCorpus.class);
   }
 
-  static EvalQueries queries() {
+  public static EvalQueries queries() {
     return read("/eval/queries.json", EvalQueries.class);
   }
 

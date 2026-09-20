@@ -17,6 +17,78 @@ repositories {
     mavenCentral()
 }
 
+def e5BaseV2Revision = 'f52bf8ec8c7124536f0efb74aca902b2995e5bcd'
+def e5BaseV2Resources = layout.buildDirectory.dir('generated-resources/e5-base-v2')
+
+def sha256 = { File file ->
+    java.security.MessageDigest digest = java.security.MessageDigest.getInstance('SHA-256')
+    file.withInputStream { input ->
+        byte[] buffer = new byte[8192]
+        for (int read; (read = input.read(buffer)) != -1;) {
+            digest.update(buffer, 0, read)
+        }
+    }
+    digest.digest().collect { String.format('%02x', it) }.join()
+}
+
+def downloadAndVerify = { String url, File destination, String expectedSha256 ->
+    if (destination.exists() && sha256(destination) == expectedSha256) {
+        return
+    }
+    destination.parentFile.mkdirs()
+    File temporary = new File(destination.parentFile, destination.name + '.part')
+    if (temporary.exists() && sha256(temporary) == expectedSha256) {
+        java.nio.file.Files.move(
+            temporary.toPath(),
+            destination.toPath(),
+            java.nio.file.StandardCopyOption.REPLACE_EXISTING
+        )
+        return
+    }
+    long existingBytes = temporary.exists() ? temporary.length() : 0
+    URLConnection connection = new URL(url).openConnection()
+    if (existingBytes > 0) {
+        connection.setRequestProperty('Range', "bytes=${existingBytes}-")
+    }
+    connection.inputStream.withCloseable { input ->
+        new FileOutputStream(temporary, existingBytes > 0).withCloseable { output -> output << input }
+    }
+    if (sha256(temporary) != expectedSha256) {
+        throw new GradleException("SHA-256 verification failed for ${destination.name}")
+    }
+    java.nio.file.Files.move(
+        temporary.toPath(),
+        destination.toPath(),
+        java.nio.file.StandardCopyOption.REPLACE_EXISTING
+    )
+}
+
+tasks.register('downloadE5BaseV2') {
+    def outputDirectory = e5BaseV2Resources.get().asFile
+    inputs.property('revision', e5BaseV2Revision)
+    outputs.files(
+        new File(outputDirectory, 'e5-base-v2.onnx'),
+        new File(outputDirectory, 'e5-base-v2-tokenizer.json')
+    )
+    doLast {
+        downloadAndVerify(
+            "https://huggingface.co/intfloat/e5-base-v2/resolve/${e5BaseV2Revision}/onnx/model.onnx",
+            new File(outputDirectory, 'e5-base-v2.onnx'),
+            '157f97ef1957d34f52efa26f8031371bf9043acc45460cec7ebe94631ac0e96b'
+        )
+        downloadAndVerify(
+            "https://huggingface.co/intfloat/e5-base-v2/resolve/${e5BaseV2Revision}/onnx/tokenizer.json",
+            new File(outputDirectory, 'e5-base-v2-tokenizer.json'),
+            'd241a60d5e8f04cc1b2b3e9ef7a4921b27bf526d9f6050ab90f9267a1f9e5c66'
+        )
+    }
+}
+
+sourceSets.main.resources.srcDir(e5BaseV2Resources)
+tasks.named('processResources') {
+    dependsOn(tasks.named('downloadE5BaseV2'))
+}
+
 dependencies {
     implementation platform('org.springframework.boot:spring-boot-dependencies:4.1.0')
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
@@ -27,9 +99,9 @@ dependencies {
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.0'
     implementation 'org.flywaydb:flyway-core'
     implementation 'org.flywaydb:flyway-database-postgresql'
-    // In-process MiniLM embedding model (§1.4): the model and tokenizer ship inside this jar,
-    // so nothing downloads at first use. Still versioned -beta (latest: 1.20.0-beta30).
-    implementation 'dev.langchain4j:langchain4j-embeddings-all-minilm-l6-v2:1.20.0-beta30'
+    // ONNX Runtime and the in-process model primitives (§1.4). The pinned E5-base-v2 model and
+    // tokenizer are downloaded, checksum-verified, and packaged by processResources.
+    implementation 'dev.langchain4j:langchain4j-embeddings:1.20.0-beta30'
     // Binds float[] to the pgvector `vector` column type (§1.4).
     implementation 'com.pgvector:pgvector:0.1.6'
     // Official Google Gen AI SDK, Gemini API mode with a plain API key (§1.4). GeminiSummarizer
@@ -46,6 +118,8 @@ dependencies {
 
 test {
     useJUnitPlatform()
+    // E5-base-v2's 416 MB ONNX graph needs more than Gradle's default 512 MB test heap to load.
+    maxHeapSize = '2g'
 }
 
 spotless {

@@ -8,19 +8,14 @@ import java.util.List;
  * code-point offsets into the caller's content, never a copy of the text, matching what {@code
  * document_chunk} stores (§3.1) and what the hydration query extracts by (§6.6).
  *
- * <p><strong>Geometry: 50-word windows on a 40-word stride</strong> (10-word / 20% overlap). This
- * is smaller than the 150/120 originally sized against a documented 256 word-piece limit. That
- * limit does not hold for the model actually shipped in {@code
- * langchain4j-embeddings-all-minilm-l6-v2}: its bundled tokenizer truncates silently around 126
- * word pieces, verified directly against the model's own tokenizer (see {@code
- * EmbeddingWordPieceBoundTest}), not the 256 figure generally quoted for all-MiniLM-L6-v2. Dense
- * KYC prose (account numbers, currency, dates) measured at up to ~2 word pieces per word, so 50
- * words plus a title comfortably stays under that measured ceiling for real corpus content, where
- * 150 words routinely would not.
+ * <p><strong>Geometry: 60-word windows on a 48-word stride</strong> (12-word / 20% overlap). This
+ * remains within E5-base-v2's 512 word-piece input ceiling even for dense KYC prose (account
+ * numbers, currency, dates). {@code EmbeddingWordPieceBoundTest} measures the real tokenizer over
+ * the seed/eval corpus, including the title and E5's required passage prefix.
  */
 public final class Chunker {
-  static final int WINDOW_WORDS = 50;
-  static final int STRIDE_WORDS = 40;
+  static final int WINDOW_WORDS = 60;
+  static final int STRIDE_WORDS = 48;
 
   private Chunker() {}
 

@@ -45,9 +45,22 @@ class HealthAndSchemaIntegrationTest extends IntegrationTest {
                 """)
             .query(String.class)
             .list();
+    List<String> embeddingColumns =
+        jdbcClient
+            .sql(
+                """
+                SELECT column_name
+                FROM information_schema.columns
+                WHERE table_name = 'document_chunk'
+                  AND column_name IN ('embedding', 'embedding_768')
+                ORDER BY ordinal_position
+                """)
+            .query(String.class)
+            .list();
 
     assertThat(extensions).containsExactlyInAnyOrder("vector", "pg_trgm", "citext");
     assertThat(tables).contains("client", "document", "document_chunk");
     assertThat(primaryKeyColumns).containsExactly("document_id", "embedding_model", "ordinal");
+    assertThat(embeddingColumns).containsExactly("embedding", "embedding_768");
   }
 }

@@ -7,7 +7,7 @@
 A single Spring Boot service on Java 25, backed by one PostgreSQL 17 database with `pgvector`, `pg_trgm` and `citext`. It exposes the three brief endpoints plus three more, and runs locally with `docker compose up`. The interactive surface is Swagger UI; there is no frontend (§10). **Local is the only target that is built**; §11.5 records the GCP shape without deploying it (PRD §7).
 
 - **Clients** are matched lexically with `pg_trgm` `word_similarity` over name, email, description and social links. Trigram extraction splits on non-alphanumerics, which satisfies J1 (`"NevisWealth"` → `john.doe@neviswealth.com`) without a custom tokenizer. Verified: score `1.0` (§6.2).
-- **Documents** are split into overlapping word windows, embedded in-process with all-MiniLM-L6-v2 (ONNX), and ranked by exact cosine scan in `pgvector`. A document's score is its best chunk's score, and that chunk is returned as the match passage.
+- **Documents** are split into overlapping word windows, embedded in-process with E5-base-v2 (ONNX), and ranked by exact cosine scan in `pgvector`. A document's score is its best chunk's score, and that chunk is returned as the match passage.
 - **Ordering** is deterministic and by provenance: each retriever applies its own floor, then clients rank above documents (PRD §5.4). No fusion — the corpora are disjoint, so there is no evidence to fuse.
 - **Writes** are searchable on `201`: the document row and all chunk embeddings commit in one transaction.
 - **Summaries** are generated **on explicit request** (`POST …/summary`) by a DB-backed worker, using Gemini through a plain API key. Failure never touches search.
@@ -30,7 +30,7 @@ flowchart TB
     subgraph App["Spring Boot app — one deployable"]
         subgraph Shared["shared"]
             F[ApiKeyFilter]
-            EMB[Embedder<br/>MiniLM ONNX, in-process]
+            EMB[Embedder<br/>E5-base-v2 ONNX, in-process]
             DOCS[springdoc<br/>OpenAPI + Swagger UI]
         end
         subgraph Onboarding["onboarding — write side"]
@@ -149,15 +149,15 @@ The by-id `GET`s belong to `onboarding`. They read back what `onboarding` just w
 | Framework | Spring Boot 4.1.x | PRD vocabulary (Flyway, Swagger UI, AppCDS) assumes it; virtual threads, ProblemDetail, Actuator built in | Quarkus/Micronaut: no requirement they serve better |
 | Data access | Spring `JdbcClient` + `com.pgvector:pgvector` type | Every interesting query is native SQL (trigram, vector, `DISTINCT ON`); JPA would be bypassed for all of them | JPA/Hibernate: adds mapping config for no query we'd use it for |
 | Migrations | Flyway | PRD §7 | `ddl-auto` (PRD forbids) |
-| Embeddings | `dev.langchain4j:langchain4j-embeddings-all-minilm-l6-v2` (MiniLM + ONNX Runtime, model inside the jar) | The model ships in the artifact, so nothing downloads at first request (PRD §7). Only this module is used, not the LangChain4j framework | DJL + HF tokenizer: more glue code for the same model. Spring AI Transformers: downloads the model at runtime by default. The `-q` (quantized) variant of this same artifact was also considered; the non-quantized one was kept for accuracy, since latency was not the bottleneck (§13.2) |
+| Embeddings | `intfloat/e5-base-v2`, revision `f52bf8ec8c7124536f0efb74aca902b2995e5bcd` (ONNX Runtime via `dev.langchain4j:langchain4j-embeddings`) | E5's `query:`/`passage:` training prefixes improve asymmetric retrieval. Gradle downloads the pinned ONNX model and tokenizer, verifies SHA-256, then packages both into the application jar; there is no runtime or first-request download. `Embedder` remains the only LangChain4j importer | DJL + HF tokenizer: more glue code for the same ONNX model. Spring AI Transformers: downloads the model at runtime by default. MiniLM and BGE-small did not meet the live eval top-three gate (§12.3) |
 | Summaries | `com.google.genai:google-genai` (Gemini API mode, API key) | Official Google Gen AI SDK. A single `GEMINI_API_KEY` is something a reviewer can supply in seconds; Vertex + ADC would need a GCP project and service account, which — with no deployment (PRD §7) — would leave the feature unreachable for everyone who runs this | Vertex mode + ADC: right for Cloud Run, pure friction locally. Spring AI: extra abstraction for one call |
 | API docs | springdoc-openapi 3.x (code-first) | `/v3/api-docs` + Swagger UI generated from the controllers that actually serve traffic; no drift | Design-first `api.yaml` + generator: two sources of truth, generator friction with snake_case and records |
 | UI | None. Swagger UI is the interactive surface | The brief asks for API documentation, not a frontend (§10) | React SPA: the largest unrequested item in the build (PRD §8.3) |
 | Tests | JUnit 6, Testcontainers (`pgvector/pgvector:pg17`) | Real Postgres extensions; trigram/vector behaviour can't be mocked meaningfully | H2: has none of the three extensions |
 
-**Library risk:** the LangChain4j embeddings module is still versioned `-beta` (latest: `1.20.0-beta30`). It is pinned, and `Embedder` is the only class that imports it. Swapping to DJL touches one file.
+**Library risk:** the LangChain4j embeddings module is still versioned `-beta` (latest: `1.20.0-beta30`). It is pinned, and `Embedder` is the only class that imports it. The E5 model files are independently pinned and SHA-256 checked at build time, so a changed Hugging Face tag cannot silently change the vector space. Swapping to DJL touches one file.
 
-*Verification note:* an earlier draft of this line cited `1.0.0-beta5` as the latest release, sourced from `search.maven.org`'s Solr search API. That index is stale for this artifact by roughly 80 releases — the authoritative source is the repository's own `maven-metadata.xml` (`repo1.maven.org/maven2/.../maven-metadata.xml`), which lists `1.20.0-beta30` as `<release>`/`<latest>`. Re-pinned to the real latest version and re-ran the full suite against it: `all-minilm-l6-v2-tokenizer.json` is byte-identical to the `1.0.0-beta5` jar's copy, and every measured number in this document (the 126 word-piece ceiling, the 0.17 semantic floor) reproduced exactly, so the model itself is unchanged between these releases — only the dependency coordinate was wrong.
+*Verification note:* an earlier draft cited `1.0.0-beta5` as the latest LangChain4j release, sourced from `search.maven.org`'s stale Solr index. The authoritative `maven-metadata.xml` at `repo1.maven.org` lists `1.20.0-beta30` as `<release>`/`<latest>`. The library is pinned to that release; the E5 artifacts are separately pinned to a source revision and SHA-256 checked.
 
 ---
 
@@ -170,7 +170,7 @@ flowchart LR
     end
 
     subgraph GCP["GCP — documented, NOT built"]
-        CR[Cloud Run service<br/>2 vCPU · 2 GiB<br/>min 1 · max 2<br/>CPU always allocated]
+        CR[Cloud Run service<br/>2 vCPU · 4 GiB<br/>min 1 · max 2<br/>CPU always allocated]
         CS[(Cloud SQL Postgres 17<br/>1 dedicated vCPU)]
         SM[Secret Manager<br/>API_KEY · DB password]
         VA[Vertex AI Gemini Flash]
@@ -221,7 +221,7 @@ CREATE INDEX document_pending_idx ON document (created_at) WHERE summary_status 
 
 CREATE TABLE document_chunk (
     document_id     uuid NOT NULL REFERENCES document (id) ON DELETE CASCADE,
-    embedding_model text NOT NULL,   -- which model produced `embedding`
+    embedding_model text NOT NULL,   -- which model produced the populated vector column
     ordinal         int  NOT NULL,
     start_offset    int  NOT NULL,   -- code-point offsets into document.content
     end_offset      int  NOT NULL,
@@ -231,6 +231,8 @@ CREATE TABLE document_chunk (
 ```
 
 **`embedding_model` is in the primary key on purpose.** It lets a re-index write new-model chunks *alongside* the old ones and cut over by changing which model the query filters on — which is what makes PRD §5.6's "briefly stale, never absent" true rather than aspirational.
+
+`V2__add_e5_base_embeddings.sql` expands this historical schema with nullable `embedding_768 vector(768)`, makes the old 384-dimension `embedding` nullable, and adds a check that exactly one vector column is populated. New E5-base-v2 chunks use `embedding_768`; existing MiniLM chunks remain queryable by the old release until the offline re-index has written their E5 counterparts. The eventual contract step drops `embedding` only after every active deployment queries E5.
 
 Seed clients and documents are **not** SQL (§11.3), because their embeddings have to come from the same model and code path as live writes.
 
@@ -247,10 +249,10 @@ Seed clients and documents are **not** SQL (§11.3), because their embeddings ha
 ### 3.3 Refinements to PRD §5.1
 
 - **Chunks store offsets, not text.** PRD §5.1 models a chunk as carrying its own `text`. Storing `start_offset`/`end_offset` into `document.content` instead avoids duplicating the entire corpus, and the passage is extracted in SQL at hydration time (§6.6). Behaviour is identical; the PRD's requirement is that a passage exists, not that it is stored twice. Offsets are code points on both sides, so Java and Postgres agree on non-BMP text.
-- **Chunk geometry is fixed here, not in the PRD.** 50-word windows on a 40-word stride, title prefixed to each — sized against the *measured* word-piece ceiling of the model actually shipped, not the 256 figure generally quoted for all-MiniLM-L6-v2 (§5.3). This resolves PRD OQ 3.
+- **Chunk geometry is fixed here, not in the PRD.** 60-word windows on a 48-word stride, title prefixed to each — selected by the live E5 evaluation and checked with its real tokenizer against the 512 word-piece ceiling (§5.3). This resolves PRD OQ 3.
 - **`social_links` is `NOT NULL DEFAULT '{}'`** rather than nullable. The API returns `[]` instead of `null`, which leaves one representation of "none".
 - **`summary_status` is `text` + `CHECK`** rather than a Postgres enum, which avoids JDBC casts. Same closed set, now four values with `none` as the default (PRD §5.7).
-- **`embedding_model` on every chunk.** Not in the PRD, which treats "one model per corpus" as a rule to follow (PRD §8.1). Rules followed by hand fail silently here: `pgvector` cannot tell two 384-dimension vector spaces apart, and a plausible fallback model (`bge-small-en-v1.5`) is also 384-dimensional, so swapping it without re-indexing would leave every search quietly wrong. Recording the model turns an invisible corruption into an empty result set, and makes a staged re-index possible.
+- **`embedding_model` on every chunk.** Not in the PRD, which treats "one model per corpus" as a rule to follow (PRD §8.1). Rules followed by hand fail silently here: `pgvector` cannot tell two same-dimension vector spaces apart, so swapping models without re-indexing would leave every search quietly wrong. Recording the model turns an invisible corruption into an empty result set, and makes a staged re-index possible.
 - **Two worker columns, `summary_attempts` and `summary_lease_until`**, see §7.
 - **`document_pending_idx` stays a partial index on `summary_status = 'pending'`.** With request-triggered summaries, `pending` rows are exactly the work queue and are normally few — which makes the partial index smaller and more useful than it was when every new document entered the queue.
 
@@ -377,17 +379,17 @@ sequenceDiagram
     DC-->>C: 201 + Location
 ```
 
-- **Embedding happens before `BEGIN`.** Model inference (~5–15 ms per chunk on CPU) does not hold a connection or transaction open. The transaction covers only the two inserts, which is what "row and embedding in one transaction" requires.
+- **Embedding happens before `BEGIN`.** Model inference is CPU work and does not hold a connection or transaction open. The transaction covers only the two inserts, which is what "row and embedding in one transaction" requires.
 - **The client existence check is not repeated inside the transaction.** If the client disappeared between the check and the insert, the FK fails and the request gets `404`. There is no client delete path today, so this is defensive only.
 - **No summary work happens here.** The document is created `none`; the model is untouched until someone asks (§7). Creation latency is therefore embedding plus two inserts, with no LLM call anywhere in the budget.
 
 ### 5.3 Chunker
 
 - Tokenise content on whitespace, preserving code-point offsets.
-- Window of **50 words**, stride **40** (10-word overlap).
-- **The commonly quoted 256 word-piece limit for all-MiniLM-L6-v2 does not hold for the model this project actually ships.** The bundled tokenizer inside `langchain4j-embeddings-all-minilm-l6-v2` truncates silently — no exception — at **126 word pieces**, measured directly with `Embedder`'s own token-count method (ticket 03's `EmbeddingWordPieceBoundTest`), not assumed from the model card. Dense KYC prose (account numbers, currency, dates, reference codes) measured at up to **~2 word pieces per word**, well above the ~1.3 quoted for general English, and it is exactly this kind of text that fills these documents. 150-word windows would silently truncate on realistic content; 50 words, title included, measured at up to 112 of the 126-piece ceiling across the seed/eval corpus (§12.3) — comfortable margin against both plain narrative and dense figures.
+- Window of **60 words**, stride **48** (12-word overlap).
+- **E5-base-v2 accepts at most 512 word pieces.** The 60-word window and title stay below that bound even for dense KYC prose. `EmbeddingWordPieceBoundTest` measures every real seed/eval input using E5's own tokenizer, including the required `passage:` prefix, so a geometry change cannot reintroduce silent truncation.
 - Each chunk's embedding input is `title + "\n\n" + chunk text`. The title is repeated so every chunk carries it (PRD §5.3 "embedding input is title + content").
-- A document of ≤ 50 words is one chunk.
+- A document of ≤ 60 words is one chunk.
 - `Chunker` is a pure function with unit tests: boundary offsets, overlap, single-word content, Unicode (surrogate pairs), and the word-piece bound checked with the model's own tokenizer, not an estimate, in a test.
 
 ---
@@ -469,7 +471,7 @@ LIMIT 200;
 
 ### 6.3 Client mention detection
 
-Compound search answers a different question from lexical retrieval: whether a client name appears *inside* a longer query. The query is split on whitespace; tokens shorter than three characters are discarded and the remaining tokens are compared against each client's full name and email with `word_similarity`. At most two above-0.7 client mentions are returned, so one is actionable and two mean ambiguous.
+Compound search answers a different question from lexical retrieval: whether a client name begins a longer query. The query is split on whitespace; tokens shorter than three characters are discarded and the remaining tokens are compared against each client's full name and email with `word_similarity`. Only the initial contiguous identity phrase is eligible: in `"John Doe utility bill"`, `John Doe` may name a client, but matching stops at `utility`. This prevents a category word such as `bill` from later being mistaken for a client named Bill. At most two above-0.69 client mentions are returned, so one is actionable and two mean ambiguous. The value is just below the measured `Hendersen` → `Henderson` score, keeping the typo case in scope without admitting unrelated category terms.
 
 The mention records which tokens matched. The compound branch applies only when exactly one client is mentioned, at least one query token did not match that client (the residual guard), and at least one already-qualified semantic document belongs to that client. The residual guard prevents a name-only query from promoting the client's documents above the client; the qualified-document guard means a false positive changes nothing. A mention has no filtering authority: it only reorders document matches that already cleared `semanticFloor`.
 
@@ -480,21 +482,22 @@ SELECT document_id, start_offset, end_offset, similarity
 FROM (
     SELECT DISTINCT ON (document_id)
            document_id, start_offset, end_offset,
-           1 - (embedding <=> :qvec) AS similarity
+           1 - (embedding_768 <=> :qvec) AS similarity
     FROM document_chunk
     WHERE embedding_model = :embeddingModel
-    ORDER BY document_id, embedding <=> :qvec
+      AND embedding_768 IS NOT NULL
+    ORDER BY document_id, embedding_768 <=> :qvec
 ) best_chunk
 WHERE similarity >= :semanticFloor
 ORDER BY similarity DESC, document_id
 LIMIT 200;
 ```
 
-- **Exact scan** (no index): with ~10⁴ documents averaging a few chunks, that is ~3×10⁴ 384-dimension distance computations.
+- **Exact scan** (no index): with ~10⁴ documents averaging a few chunks, that is ~3×10⁴ 768-dimension distance computations.
 - **Document score is its best chunk's score** (max-pooling), and that chunk's offsets become `match.passage`. Averaging across chunks would penalise long documents that contain one highly relevant section.
-- **Query embedding** uses the same `Embedder` as writes, on raw `q` with no title prefix. Vectors are L2-normalised, so cosine distance `<=>` is correct.
+- **Query embedding** uses the same `Embedder` as writes, with E5's required `query:` prefix; write inputs use its `passage:` prefix. Vectors are L2-normalised, so cosine distance `<=>` is correct.
 - **`embedding_model` is bound from the live `Embedder`, not from configuration**. The query therefore compares only against vectors produced by the model that is actually running. If the model changes without a re-index, the predicate matches nothing and documents disappear from results — loudly wrong, and caught by the J2 test, instead of silently wrong (§3.3).
-- **Relevance floor.** `semanticFloor` is a property, currently **0.17**. It is set by running the eval set (§12.3) in both directions: every expected pair must clear it, and the unrelated-query set must not. Ticket 03 measured this from raw cosine scores over the seed/eval corpus (`SemanticFloorEvalTest`): lowest positive-pair score 0.2163, highest negative-query score 0.1308, midpoint 0.17. Ticket 08 re-derives it against the live `/search` endpoint instead of raw scores, which is the number that should be trusted once it exists.
+- **Relevance floor.** The E5-base-v2 trial configures candidate `semanticFloor` **0.753**, the rounded-up midpoint of its raw-score gap: lowest positive **0.7680**, highest negative **0.7371**, gap **0.0309**. It must not merge as a model change: its live `/search` evaluation fails the required per-positive-pair top-three gate (§12.3). A passing model is selected only from live endpoint evidence, not raw scores alone.
 
 **Future path (not built):** when the exact scan measurably exceeds budget, add `HNSW (embedding vector_cosine_ops)`. The `DISTINCT ON` plus threshold shape then needs rewriting as an ordered top-K over chunks with pgvector's iterative index scan, followed by grouping in the application. Named here so the rewrite is expected work rather than a surprise.
 
@@ -680,8 +683,8 @@ A frontend is planned as a separate piece of work once this is complete, against
 
 Two-stage `Dockerfile`:
 
-1. `gradle` stage (JDK 25): `./gradlew bootJar`. The MiniLM model is inside the dependency jar, so nothing downloads at first request (PRD §7).
-2. Runtime: `eclipse-temurin:25-jre`, non-root user, `-XX:MaxRAMPercentage=60`. Expected size ~400–500 MB, dominated by the ONNX Runtime native libraries and the model itself — which is the image cost PRD §7 refers to.
+1. `gradle` stage (JDK 25): `./gradlew bootJar`. `processResources` downloads E5-base-v2 and its tokenizer at the pinned revision, verifies SHA-256, and includes them in the jar, so nothing downloads at startup or first request (PRD §8.1).
+2. Runtime: `eclipse-temurin:25-jre`, non-root user, `-XX:MaxRAMPercentage=60`. Expected size ~750 MB, dominated by E5's 416 MB ONNX graph and ONNX Runtime native libraries. The model also requires a 2 GiB-plus JVM heap to load; the documented Cloud Run shape is therefore 4 GiB — which is the image and memory cost PRD §7 refers to.
 
 There is no `node` stage and no static assets, since there is no frontend (§10).
 
@@ -713,7 +716,7 @@ Deploying is a "plus" in the brief, not a requirement, and the hours go to the g
 
 | Resource | Setting | Reason |
 |---|---|---|
-| Cloud Run | 2 vCPU, 2 GiB, concurrency 40 | JVM heap + ONNX native memory + inference CPU |
+| Cloud Run | 2 vCPU, 4 GiB, concurrency 40 | JVM heap + ONNX native memory + inference CPU |
 | | `min-instances=1` | JVM + model load is seconds; the reviewer tries once (PRD §7) |
 | | **CPU always allocated** (`--no-cpu-throttling`) | With request-based CPU, CPU is throttled between requests. Summary nudges and sweeps would stall |
 | | `max-instances=2` | Headroom for ~100 advisers at the §13.4 estimate; raise on measurement. The lease in §7.2 makes >1 instance correct, not merely likely-fine |
@@ -746,7 +749,7 @@ Flyway runs on startup in roles that include `onboarding`. With more than one in
 | **J2** | `GET /search?q=address proof` → the utility-bill document is in the results, above the floor, with a passage — **and zero client results**, since any client would outrank it (§6.5) |
 | J3 | `Hendersen` → Henderson client first |
 | Type ordering | A query matching both a client and a document returns the client first even when the document's cosine exceeds the client's `word_similarity` |
-| Compound query | `GET /search?q=John utility bill` → John's qualified utility bill is first, John is second, and other qualified bills remain in the list |
+| Compound query | `GET /search?q=John utility bill` → John's qualified documents lead, then John, and other qualified documents remain in the list |
 | Best chunk | A document with two controlled chunk scores returns the passage from its highest-scoring chunk |
 | Semantic floor | A document whose best chunk is below `semanticFloor` is absent from the response |
 | Social links | `neviswealth` also matches through a LinkedIn company URL |
@@ -800,20 +803,20 @@ PRD §6 states the latency figures as design targets and says plainly that they 
 | Stage | Estimate | Note |
 |---|---|---|
 | Auth, validation | < 1 ms | |
-| Query embedding | 5–15 ms | Parallel with lexical |
+| Query embedding | 15–45 ms | E5-base-v2 ONNX; parallel with lexical |
 | Lexical SQL (10³ clients × 4 trigram comparisons) | 5–15 ms | Sequential scan |
 | Semantic SQL (~3×10⁴ chunks exact) | 20–60 ms | Dominant term; CPU on the database |
 | Ordering + slice | < 1 ms | Concatenation, not fusion (§6.5) |
 | Hydration (2 queries) | 2–5 ms | |
-| **Total** | **~40–100 ms** | Budget p99 < 300 ms |
+| **Total** | **~50–130 ms** | Budget p99 < 300 ms |
 
 ### 13.2 Document creation
 
 A typical KYC text document (≤ 300 words, 1–3 chunks) costs 10–45 ms to embed plus ~5 ms of transaction.
 
-**Cost is linear in document length**, which is why PRD §6 sets the creation target at **1 s** rather than the search-sized budget. The §4.2 cap of 64 000 characters is roughly 10 600 words, or about **265 chunks at the 40-word stride actually used** (§5.3) — revised up from an earlier estimate of ~88 chunks at a since-corrected 120-word stride. The 5–15 ms per chunk quoted above is the *single-call* figure; `DocumentService` calls `embedAll`, and batched ONNX inference amortises per-call overhead substantially, which is what the 1 s target relies on. That reliance is an assumption, not a measurement (§12.4) — the largest document is the case most likely to miss, and it is now a ~3× larger chunk count than originally assumed, so it is the figure most worth measuring first once `DocumentService` exists (ticket 05).
+**Cost is linear in document length**, which is why PRD §6 sets the creation target at **1 s** rather than the search-sized budget. The §4.2 cap of 64 000 characters is roughly 10 600 words, or about **220 chunks at the 48-word stride actually used** (§5.3). The single-call inference estimate is 15–45 ms; `DocumentService` calls `embedAll`, and batched ONNX inference amortises per-call overhead substantially, which is what the 1 s target relies on. That reliance is an assumption, not a measurement (§12.4), so the largest document is the figure most worth measuring first once `DocumentService` exists (ticket 05).
 
-The cap and the target are two expressions of one constraint: 64 000 characters ↔ ~265 chunks ↔ ~1 s. Raising the cap means raising the target, or changing the consistency contract. Moving large-document embedding off the request path would break "searchable on `201`", which is why the escape hatch is a *different ingestion mode* rather than a tweak (§13.3).
+The cap and the target are two expressions of one constraint: 64 000 characters ↔ ~220 chunks ↔ ~1 s. Raising the cap means raising the target, or changing the consistency contract. Moving large-document embedding off the request path would break "searchable on `201`", which is why the escape hatch is a *different ingestion mode* rather than a tweak (§13.3).
 
 ### 13.3 What changes at larger scale
 
@@ -833,7 +836,7 @@ Triggers are stated as what to watch for once the system runs under real traffic
 
 Going from 10 to 100 advisers working in parallel, or to higher production RPS, is a sizing question, not a design question. Taking 100 advisers issuing a search every few seconds during active work gives an order-of-magnitude peak of **10–30 searches per second**. That is an assumed request rate, not a measured one, and a client that issues a request per keystroke rather than per query would multiply it — which is a reason any future frontend should debounce (§10).
 
-- **App tier: stateless.** Query embedding is ~5–15 ms of CPU per search, so one 2-vCPU instance covers the estimate. More load means more instances. In a split deployment, only `search` instances (§1.3).
+- **App tier: stateless.** Query embedding is estimated at ~15–45 ms of CPU per search, so one 2-vCPU, 4 GiB instance covers the estimate. More load means more instances. In a split deployment, only `search` instances (§1.3).
 - **Writes share app CPU with reads while both modules run in one process.** Document embedding takes 10–45 ms for a typical document and up to ~1 s for the largest (§13.2). If that measurably slows search, splitting the deployment is the first response.
 - **Database: the first shared limit.** The exact semantic scan costs 20–60 ms of CPU per search, so one vCPU saturates at roughly 15–50 searches per second, and the top of the estimate reaches it. The response is a larger instance or the HNSW trigger in §13.3. Neither changes the architecture.
 - **Not a response: read replicas.** Replication is asynchronous, so searching a replica would break "searchable on `201`" (PRD §5.6).

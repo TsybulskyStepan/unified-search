@@ -13,13 +13,12 @@ import org.junit.jupiter.api.Test;
  * Guards the chunk geometry in {@link Chunker} against the model's real input limit, measured
  * directly through {@link Embedder#tokenCount} — the model's own tokenizer, not an estimate.
  *
- * <p>The bundled all-MiniLM-L6-v2 tokenizer truncates silently past 126 word pieces (see {@code
- * Chunker}'s class javadoc); this test proves every chunk actually produced from the eval/seed
- * corpus, title included, stays under that ceiling with margin, on dense KYC prose as well as plain
- * narrative.
+ * <p>E5-base-v2 accepts at most 512 word pieces. This test proves every chunk actually produced
+ * from the eval/seed corpus, title and E5's required passage prefix included, stays under that
+ * ceiling with margin, on dense KYC prose as well as plain narrative.
  */
 class EmbeddingWordPieceBoundTest {
-  private static final int MEASURED_WORD_PIECE_CEILING = 126;
+  private static final int WORD_PIECE_CEILING = 512;
   private static final Embedder embedder = new Embedder();
 
   @Test
@@ -40,10 +39,9 @@ class EmbeddingWordPieceBoundTest {
 
           assertThat(tokenCount)
               .as(
-                  "'%s' chunk #%d embedding input must stay under the measured word-piece"
-                      + " ceiling",
+                  "'%s' chunk #%d embedding input must stay under E5's word-piece ceiling",
                   document.title(), chunk.ordinal())
-              .isLessThan(MEASURED_WORD_PIECE_CEILING);
+              .isLessThan(WORD_PIECE_CEILING);
 
           maxTokenCount = Math.max(maxTokenCount, tokenCount);
           checked++;
@@ -54,6 +52,6 @@ class EmbeddingWordPieceBoundTest {
     assertThat(checked).isPositive();
     System.out.printf(
         "checked %d chunks; max word-piece count observed: %d (ceiling %d)%n",
-        checked, maxTokenCount, MEASURED_WORD_PIECE_CEILING);
+        checked, maxTokenCount, WORD_PIECE_CEILING);
   }
 }

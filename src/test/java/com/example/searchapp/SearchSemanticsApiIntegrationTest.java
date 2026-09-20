@@ -35,7 +35,7 @@ class SearchSemanticsApiIntegrationTest extends IntegrationTest {
     jdbc.sql(
             """
             INSERT INTO document_chunk
-                (document_id, embedding_model, ordinal, start_offset, end_offset, embedding)
+                (document_id, embedding_model, ordinal, start_offset, end_offset, embedding_768)
             VALUES (:document_id, :embedding_model, 1, :start_offset, :end_offset, :embedding)
             """)
         .param("document_id", UUID.fromString(documentId))
@@ -161,7 +161,7 @@ class SearchSemanticsApiIntegrationTest extends IntegrationTest {
   private void setOnlyChunkEmbedding(String documentId, float[] embedding) {
     int updated =
         jdbc.sql(
-                "UPDATE document_chunk SET embedding = :embedding WHERE document_id = :document_id")
+                "UPDATE document_chunk SET embedding_768 = :embedding WHERE document_id = :document_id")
             .param("embedding", new PGvector(embedding))
             .param("document_id", UUID.fromString(documentId))
             .update();

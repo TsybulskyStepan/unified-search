@@ -31,11 +31,12 @@ public class DocumentSearchRepository {
                     client_id,
                     start_offset,
                     end_offset,
-                    1 - (embedding <=> :query_vector) AS similarity
+                    1 - (embedding_768 <=> :query_vector) AS similarity
                 FROM document_chunk chunk
                 JOIN document ON document.id = chunk.document_id
                 WHERE embedding_model = :embedding_model
-                ORDER BY document_id, embedding <=> :query_vector
+                  AND embedding_768 IS NOT NULL
+                ORDER BY document_id, embedding_768 <=> :query_vector
             ) AS best_chunk
             WHERE similarity >= :semantic_floor
             ORDER BY similarity DESC, document_id

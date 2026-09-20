@@ -12,7 +12,7 @@ class EmbedderTest {
 
   @Test
   void exposesTheModelIdentifier() {
-    assertThat(embedder.modelId()).isEqualTo("all-MiniLM-L6-v2");
+    assertThat(embedder.modelId()).isEqualTo("e5-base-v2");
   }
 
   @Test
@@ -21,10 +21,10 @@ class EmbedderTest {
   }
 
   @Test
-  void embedsASingleTextTo384Dimensions() {
+  void embedsASingleTextTo768Dimensions() {
     float[] vector = embedder.embed("proof of address");
 
-    assertThat(vector).hasSize(384);
+    assertThat(vector).hasSize(768);
   }
 
   @Test
@@ -32,18 +32,18 @@ class EmbedderTest {
     var vectors = embedder.embedAll(java.util.List.of("first chunk", "second chunk"));
 
     assertThat(vectors).hasSize(2);
-    assertThat(vectors.get(0)).hasSize(384);
-    assertThat(vectors.get(1)).hasSize(384);
+    assertThat(vectors.get(0)).hasSize(768);
+    assertThat(vectors.get(1)).hasSize(768);
   }
 
   @Test
   void tokenCountIsExactNotEstimated() {
-    // ten distinct, common plain-English words tokenise one-for-one on this model
+    // ten distinct, common plain-English words plus E5's passage prefix and two special tokens
     int count =
         embedder.tokenCount(
             "account statement balance payment address utility gas water meter reading");
 
-    assertThat(count).isEqualTo(10);
+    assertThat(count).isEqualTo(12);
   }
 
   @Test

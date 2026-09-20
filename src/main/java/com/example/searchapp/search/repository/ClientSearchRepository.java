@@ -11,6 +11,7 @@ import org.springframework.stereotype.Repository;
 @Repository
 public class ClientSearchRepository {
   private static final double LEXICAL_FLOOR = 0.6;
+  private static final double MENTION_FLOOR = 0.69;
 
   private final JdbcClient jdbc;
 
@@ -63,35 +64,49 @@ public class ClientSearchRepository {
     if (tokens.isEmpty()) {
       return List.of();
     }
-    String[] distinctTokens = tokens.stream().distinct().toArray(String[]::new);
+    String[] queryTokens = tokens.toArray(String[]::new);
     return jdbc.sql(
             """
-            WITH token_scores AS (
-                SELECT c.id, token, field, word_similarity(token, value) AS score
+            WITH query_tokens AS (
+                SELECT token, position
+                FROM unnest(CAST(:tokens AS text[])) WITH ORDINALITY AS query_tokens(token, position)
+            ), token_scores AS (
+                SELECT c.id, query_tokens.position, field,
+                       word_similarity(query_tokens.token, value) AS score
                 FROM client c
-                CROSS JOIN unnest(CAST(:tokens AS text[])) AS query_tokens(token)
+                CROSS JOIN query_tokens
                 CROSS JOIN LATERAL (VALUES
                     ('name', c.first_name || ' ' || c.last_name),
                     ('email', c.email::text)
                 ) AS fields(field, value)
             ), token_matches AS (
-                SELECT DISTINCT ON (id, token) id, token, field, score
+                SELECT DISTINCT ON (id, position) id, position, field, score
                 FROM token_scores
                 WHERE score >= :mention_floor
-                ORDER BY id, token, score DESC, field
+                ORDER BY id, position, score DESC, field
+            ), first_non_identity_token AS (
+                SELECT coalesce(min(query_tokens.position), :token_count + 1) AS position
+                FROM query_tokens
+                WHERE NOT EXISTS (
+                    SELECT 1
+                    FROM token_matches
+                    WHERE token_matches.position = query_tokens.position
+                )
             )
             SELECT id,
                    (array_agg(field ORDER BY score DESC, field))[1] AS field,
                    max(score) AS score,
                    count(*) AS matched_token_count
             FROM token_matches
+            WHERE position < (SELECT position FROM first_non_identity_token)
             GROUP BY id
             ORDER BY max(score) DESC, id
             LIMIT 2
             """)
-        .param("tokens", distinctTokens)
-        .param("mention_floor", 0.7)
-        .query((resultSet, rowNumber) -> mapMention(resultSet, distinctTokens.length))
+        .param("tokens", queryTokens)
+        .param("mention_floor", MENTION_FLOOR)
+        .param("token_count", queryTokens.length)
+        .query((resultSet, rowNumber) -> mapMention(resultSet, queryTokens.length))
         .list();
   }
 
