@@ -285,6 +285,24 @@
       ]
     },
     {
+      "query": "Grace Kim",
+      "shape": "first",
+      "expected": [
+        {
+          "client": "grace.kim@example.com"
+        }
+      ]
+    },
+    {
+      "query": "Grace Ki",
+      "shape": "first",
+      "expected": [
+        {
+          "client": "grace.kim@example.com"
+        }
+      ]
+    },
+    {
       "query": "bill",
       "shape": "first",
       "expected": [

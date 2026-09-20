@@ -78,7 +78,8 @@ class SearchSemanticsApiIntegrationTest extends IntegrationTest {
   @Test
   void keepsClientBeforeADocumentWithAHigherScore() throws Exception {
     String query = "lexicalordersignal";
-    createClient("advisor@lexicalordersignalx.example");
+    createClientWithSocialLink(
+        "advisor@example.com", "https://www.linkedin.com/company/lexicalordersignalx");
     String documentId =
         createDocument(createClient("document-owner@example.com"), "Evidence", "ranked passage");
     setOnlyChunkEmbedding(documentId, embedder.embed(query));
@@ -171,6 +172,17 @@ class SearchSemanticsApiIntegrationTest extends IntegrationTest {
 
   private String createClient(String email) throws Exception {
     return createClient("Search", "Owner", email);
+  }
+
+  private void createClientWithSocialLink(String email, String socialLink) throws Exception {
+    var response =
+        post(
+            port,
+            "/clients",
+            TEST_API_KEY,
+            "{\"first_name\":\"Search\",\"last_name\":\"Advisor\",\"email\":\"%s\",\"social_links\":[\"%s\"]}"
+                .formatted(email, socialLink));
+    assertThat(response.statusCode()).isEqualTo(201);
   }
 
   private String createClient(String firstName, String lastName, String email) throws Exception {
