@@ -18,15 +18,15 @@ nothing.
 
 **Blocked by:** nothing.
 
-**Status:** ready-for-agent
+**Status:** complete
 
-- [ ] The taxonomy loads once at startup from one file and is reachable from both modules through `shared`
-- [ ] Startup fails loudly on a duplicate type or purpose id
-- [ ] Startup fails on a type naming a purpose that does not exist
-- [ ] Startup fails on a synonym that collides with a type or purpose id
-- [ ] Every type in §3.1 is present with its label, default purposes, title patterns, content patterns and synonyms
-- [ ] Every purpose in §3.1 is present with its label and query synonyms
-- [ ] The file carries a version, and that version is readable by the code that will stamp documents
-- [ ] `unknown` is a legal type carrying no purposes
-- [ ] Adding a type is a change to the file alone, with no code change required
-- [ ] Nothing reads the taxonomy yet: search and ingest behave exactly as before
+- [x] The taxonomy loads once at startup from one file and is reachable from both modules through `shared`
+- [x] Startup fails loudly on a duplicate type or purpose id
+- [x] Startup fails on a type naming a purpose that does not exist
+- [x] Startup fails on a synonym that collides with a type or purpose id
+- [x] Every type in §3.1 is present with its label, default purposes, title patterns, content patterns and synonyms
+- [x] Every purpose in §3.1 is present with its label and query synonyms
+- [x] The file carries a version, and that version is readable by the code that will stamp documents
+- [x] `unknown` is a legal type carrying no purposes
+- [x] Adding a type is a change to the file alone, with no code change required
+- [x] Nothing reads the taxonomy yet: search and ingest behave exactly as before
