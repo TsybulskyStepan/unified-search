@@ -86,12 +86,12 @@ class SearchSemanticsApiIntegrationTest extends IntegrationTest {
     setOnlyChunkEmbedding(documentId, embedder.embed(query));
 
     JsonNode results = search(query);
+    JsonNode matchedDocument = resultForDocument(results, documentId);
 
-    assertThat(results).hasSize(2);
     assertThat(results.get(0).path("type").asText()).isEqualTo("client");
-    assertThat(results.get(1).path("type").asText()).isEqualTo("document");
+    assertThat(matchedDocument.path("type").asText()).isEqualTo("document");
     assertThat(results.get(0).path("score").decimalValue())
-        .isLessThan(results.get(1).path("score").decimalValue());
+        .isLessThan(matchedDocument.path("score").decimalValue());
   }
 
   @Test
@@ -101,7 +101,7 @@ class SearchSemanticsApiIntegrationTest extends IntegrationTest {
     String maryId = createClient("Mary", "Henderson", "mary.henderson@example.com");
     String johnDocumentId = createDocument(johnId, "Utility Bill", "John's utility bill");
     String maryDocumentId = createDocument(maryId, "Utility Bill", "Mary's utility bill");
-    float[] queryEmbedding = embedder.embed(query);
+    float[] queryEmbedding = embedder.embed("utility bill");
     setOnlyChunkEmbedding(johnDocumentId, queryEmbedding);
     setOnlyChunkEmbedding(maryDocumentId, queryEmbedding);
 
@@ -112,6 +112,24 @@ class SearchSemanticsApiIntegrationTest extends IntegrationTest {
     assertThat(results.get(1).path("type").asText()).isEqualTo("client");
     assertThat(results.get(1).path("client").path("id").asText()).isEqualTo(johnId);
     assertThat(results.toString()).contains(johnDocumentId, maryDocumentId);
+  }
+
+  @Test
+  void scopesAPossessiveClientNameEvenWhenACategoryIsAnotherClientsName() throws Exception {
+    String minaId = createClient("Mina", "Ortiz", "mina.possessive@example.com");
+    String billId = createClient("Bill", "Carter", "bill.possessive@example.com");
+    String minaDocumentId = createDocument(minaId, "Utility Bill", "Mina's utility bill");
+    String billDocumentId = createDocument(billId, "Utility Bill", "Bill's utility bill");
+    float[] billEmbedding = embedder.embed("bill");
+    setOnlyChunkEmbedding(minaDocumentId, billEmbedding);
+    setOnlyChunkEmbedding(billDocumentId, billEmbedding);
+
+    JsonNode results = search("Mina's bill");
+
+    assertThat(results.get(0).path("type").asText()).isEqualTo("document");
+    assertThat(results.get(0).path("document").path("client_id").asText()).isEqualTo(minaId);
+    assertThat(results.get(1).path("type").asText()).isEqualTo("client");
+    assertThat(results.get(1).path("client").path("id").asText()).isEqualTo(minaId);
   }
 
   @Test
@@ -144,7 +162,12 @@ class SearchSemanticsApiIntegrationTest extends IntegrationTest {
   }
 
   private JsonNode search(String query) throws Exception {
-    var response = get(port, "/search?q=" + query.replace(" ", "%20"), TEST_API_KEY);
+    var response =
+        get(
+            port,
+            "/search?q="
+                + java.net.URLEncoder.encode(query, java.nio.charset.StandardCharsets.UTF_8),
+            TEST_API_KEY);
     assertThat(response.statusCode()).isEqualTo(200);
     return JSON.readTree(response.body());
   }
@@ -208,6 +231,15 @@ class SearchSemanticsApiIntegrationTest extends IntegrationTest {
       inverse[i] = -vector[i];
     }
     return inverse;
+  }
+
+  private static JsonNode resultForDocument(JsonNode results, String documentId) {
+    for (JsonNode result : results) {
+      if (documentId.equals(result.path("document").path("id").asText())) {
+        return result;
+      }
+    }
+    throw new AssertionError("search results did not contain document " + documentId);
   }
 
   private static String extractId(String json) {

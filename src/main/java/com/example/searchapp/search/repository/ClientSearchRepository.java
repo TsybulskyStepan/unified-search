@@ -1,6 +1,7 @@
 package com.example.searchapp.search.repository;
 
 import com.example.searchapp.search.entity.SearchClient;
+import com.example.searchapp.search.planner.MentionCandidate;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
@@ -60,7 +61,7 @@ public class ClientSearchRepository {
         .list();
   }
 
-  public List<ClientMention> findMentions(List<String> tokens) {
+  public List<MentionCandidate> findMentionCandidates(List<String> tokens) {
     if (tokens.isEmpty()) {
       return List.of();
     }
@@ -79,34 +80,42 @@ public class ClientSearchRepository {
                     ('name', c.first_name || ' ' || c.last_name),
                     ('email', c.email::text)
                 ) AS fields(field, value)
+                WHERE char_length(query_tokens.token) >= 3
             ), token_matches AS (
                 SELECT DISTINCT ON (id, position) id, position, field, score
                 FROM token_scores
                 WHERE score >= :mention_floor
                 ORDER BY id, position, score DESC, field
             ), first_non_identity_token AS (
-                SELECT coalesce(min(query_tokens.position), :token_count + 1) AS position
-                FROM query_tokens
-                WHERE NOT EXISTS (
+                SELECT c.id,
+                       coalesce(min(query_tokens.position), :token_count + 1) AS position
+                FROM client c
+                CROSS JOIN query_tokens
+                WHERE char_length(query_tokens.token) >= 3
+                  AND NOT EXISTS (
                     SELECT 1
                     FROM token_matches
-                    WHERE token_matches.position = query_tokens.position
+                    WHERE token_matches.id = c.id
+                      AND token_matches.position = query_tokens.position
                 )
+                GROUP BY c.id
             )
-            SELECT id,
+            SELECT token_matches.id,
                    (array_agg(field ORDER BY score DESC, field))[1] AS field,
                    max(score) AS score,
-                   count(*) AS matched_token_count
+                   max(token_matches.position) AS matched_through_position
             FROM token_matches
-            WHERE position < (SELECT position FROM first_non_identity_token)
-            GROUP BY id
+            JOIN first_non_identity_token
+              ON first_non_identity_token.id = token_matches.id
+            WHERE token_matches.position < first_non_identity_token.position
+            GROUP BY token_matches.id
             ORDER BY max(score) DESC, id
             LIMIT 2
             """)
         .param("tokens", queryTokens)
         .param("mention_floor", MENTION_FLOOR)
         .param("token_count", queryTokens.length)
-        .query((resultSet, rowNumber) -> mapMention(resultSet, queryTokens.length))
+        .query(ClientSearchRepository::mapMention)
         .list();
   }
 
@@ -132,11 +141,12 @@ public class ClientSearchRepository {
         resultSet.getTimestamp("created_at").toInstant());
   }
 
-  private static ClientMention mapMention(ResultSet resultSet, int tokenCount) throws SQLException {
-    return new ClientMention(
+  private static MentionCandidate mapMention(ResultSet resultSet, int rowNumber)
+      throws SQLException {
+    return new MentionCandidate(
         resultSet.getObject("id", UUID.class),
         resultSet.getString("field"),
         resultSet.getDouble("score"),
-        resultSet.getInt("matched_token_count") < tokenCount);
+        resultSet.getInt("matched_through_position"));
   }
 }

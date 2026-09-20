@@ -70,6 +70,9 @@ class ObservabilityIntegrationTest extends IntegrationTest {
         .contains(
             "request_id=" + requestId,
             "query_length=" + query.length(),
+            "plan_shape=",
+            "intent_count=",
+            "mention_present=",
             "lexical_hits=",
             "semantic_hits=",
             "returned=",
@@ -102,6 +105,7 @@ class ObservabilityIntegrationTest extends IntegrationTest {
     assertThat(metrics.body())
         .contains(
             "search.lexical",
+            "search.plan",
             "search.embed_query",
             "search.semantic",
             "search.total",
