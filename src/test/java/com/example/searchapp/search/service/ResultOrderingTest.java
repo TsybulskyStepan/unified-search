@@ -15,6 +15,9 @@ class ResultOrderingTest {
   private static final UUID MARY = UUID.fromString("00000000-0000-0000-0000-000000000002");
   private static final UUID JOHNS_BILL = UUID.fromString("00000000-0000-0000-0000-000000000011");
   private static final UUID MARYS_BILL = UUID.fromString("00000000-0000-0000-0000-000000000012");
+  private static final UUID OTHER_JOHN = UUID.fromString("00000000-0000-0000-0000-000000000005");
+  private static final UUID OTHER_JOHNS_BILL =
+      UUID.fromString("00000000-0000-0000-0000-000000000013");
 
   @Test
   void promotesTheOneMentionedClientsQualifiedDocumentsThenTheClient() {
@@ -41,7 +44,7 @@ class ResultOrderingTest {
   }
 
   @Test
-  void keepsDefaultOrderingForAmbiguousMentionsAndInsertsARecognizedClientWithoutDocuments() {
+  void keepsDefaultOrderingWithoutAMentionAndInsertsARecognizedClientWithoutDocuments() {
     var clients = List.of(client(MARY), client(JOHN));
     var documents = List.of(document(MARYS_BILL, MARY));
 
@@ -49,7 +52,7 @@ class ResultOrderingTest {
             ResultOrdering.order(
                 clients,
                 documents,
-                new QueryPlan("john mary", null, "john mary", java.util.Set.of())))
+                new QueryPlan("john mary", List.of(), "john mary", java.util.Set.of())))
         .extracting(ResultOrdering.Candidate::id)
         .containsExactly(MARY, JOHN, MARYS_BILL);
     assertThat(ResultOrdering.order(clients, documents, plan(JOHN, "utility bill")))
@@ -58,12 +61,39 @@ class ResultOrderingTest {
   }
 
   @Test
+  void promotesEveryTiedClientsDocumentsAheadOfOtherClientsDocuments() {
+    var candidates =
+        ResultOrdering.order(
+            List.of(client(MARY)),
+            List.of(
+                document(MARYS_BILL, MARY),
+                document(JOHNS_BILL, JOHN),
+                document(OTHER_JOHNS_BILL, OTHER_JOHN)),
+            tiedPlan("utility bill", JOHN, OTHER_JOHN));
+
+    assertThat(candidates)
+        .extracting(ResultOrdering.Candidate::id)
+        .containsExactly(JOHNS_BILL, OTHER_JOHNS_BILL, JOHN, OTHER_JOHN, MARYS_BILL, MARY);
+  }
+
+  @Test
+  void keepsATiedClientsOwnRetrievedMatchAndNeverListsItTwice() {
+    var candidates =
+        ResultOrdering.order(
+            List.of(client(OTHER_JOHN), client(JOHN)), List.of(), tiedPlan("", JOHN, OTHER_JOHN));
+
+    assertThat(candidates)
+        .extracting(ResultOrdering.Candidate::id)
+        .containsExactly(JOHN, OTHER_JOHN);
+  }
+
+  @Test
   void placesContextClientsAfterDocumentsWhileKeepingIdentityClientsFirst() {
     var candidates =
         ResultOrdering.order(
             List.of(client(JOHN, "identity"), client(MARY, "context")),
             List.of(document(MARYS_BILL, MARY)),
-            new QueryPlan("advisory fees", null, "advisory fees", java.util.Set.of()));
+            new QueryPlan("advisory fees", List.of(), "advisory fees", java.util.Set.of()));
 
     assertThat(candidates)
         .extracting(ResultOrdering.Candidate::id)
@@ -83,9 +113,15 @@ class ResultOrderingTest {
   }
 
   private static QueryPlan plan(UUID clientId, String residual) {
+    return tiedPlan(residual, clientId);
+  }
+
+  private static QueryPlan tiedPlan(String residual, UUID... clientIds) {
     return new QueryPlan(
         residual.isEmpty() ? "john" : "john " + residual,
-        new ClientMention(clientId, "name", 1.0),
+        java.util.Arrays.stream(clientIds)
+            .map(clientId -> new ClientMention(clientId, "name", 1.0))
+            .toList(),
         residual,
         java.util.Set.of());
   }
@@ -110,9 +146,9 @@ class ResultOrderingTest {
   void movesResultsWithoutDroppingOrDuplicatingAnyOfThemInEitherShape() {
     var clients = List.of(client(MARY, "context"), client(JOHN, "identity"));
     var documents = List.of(document(MARYS_BILL, MARY), document(JOHNS_BILL, JOHN));
-    var noMention = new QueryPlan("bill", null, "bill", java.util.Set.of());
+    var noMention = new QueryPlan("bill", List.of(), "bill", java.util.Set.of());
 
-    for (QueryPlan plan : List.of(noMention, plan(JOHN, "bill"))) {
+    for (QueryPlan plan : List.of(noMention, plan(JOHN, "bill"), tiedPlan("bill", JOHN, MARY))) {
       var candidates = ResultOrdering.order(clients, documents, plan);
 
       assertThat(candidates)

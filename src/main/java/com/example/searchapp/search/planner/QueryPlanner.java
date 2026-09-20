@@ -62,39 +62,33 @@ public class QueryPlanner {
   }
 
   public QueryPlan plan(NormalizedQuery query, List<MentionCandidate> candidates) {
-    MentionCandidate mentionCandidate = mentionCandidate(query, candidates);
-    ClientMention mention =
-        mentionCandidate == null
-            ? null
-            : new ClientMention(
-                mentionCandidate.clientId(), mentionCandidate.field(), mentionCandidate.score());
-    int consumedTokens = mentionCandidate == null ? 0 : mentionCandidate.matchedThroughPosition();
+    int longestMatch =
+        candidates.stream().mapToInt(MentionCandidate::matchedThroughPosition).max().orElse(0);
+    List<ClientMention> mentions = mentions(query, candidates, longestMatch);
+    int consumedTokens = mentions.isEmpty() ? 0 : longestMatch;
     List<String> residualTokens =
         query.tokens().subList(consumedTokens, query.tokens().size()).stream()
             .map(NormalizedToken::text)
             .toList();
     String residual = String.join(" ", residualTokens);
-    return new QueryPlan(query.text(), mention, residual, intents(residualTokens));
+    return new QueryPlan(query.text(), mentions, residual, intents(residualTokens));
   }
 
-  private MentionCandidate mentionCandidate(
-      NormalizedQuery query, List<MentionCandidate> candidates) {
-    int longestMatch =
-        candidates.stream().mapToInt(MentionCandidate::matchedThroughPosition).max().orElse(0);
-    List<MentionCandidate> longestCandidates =
-        candidates.stream()
-            .filter(candidate -> candidate.matchedThroughPosition() == longestMatch)
-            .toList();
-    if (longestCandidates.size() != 1) {
-      return null;
+  /** Every client tied on the longest leading run: one when the name is unique, more when not. */
+  private List<ClientMention> mentions(
+      NormalizedQuery query, List<MentionCandidate> candidates, int longestMatch) {
+    if (longestMatch == 0
+        || (longestMatch == 1
+            && singleTokenSynonyms.contains(canonical(query.tokens().getFirst().text()))
+            && !query.tokens().getFirst().possessive())) {
+      return List.of();
     }
-    MentionCandidate candidate = longestCandidates.getFirst();
-    if (candidate.matchedThroughPosition() == 1
-        && singleTokenSynonyms.contains(canonical(query.tokens().getFirst().text()))
-        && !query.tokens().getFirst().possessive()) {
-      return null;
-    }
-    return candidate;
+    return candidates.stream()
+        .filter(candidate -> candidate.matchedThroughPosition() == longestMatch)
+        .map(
+            candidate ->
+                new ClientMention(candidate.clientId(), candidate.field(), candidate.score()))
+        .toList();
   }
 
   private Set<String> intents(List<String> tokens) {

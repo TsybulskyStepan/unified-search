@@ -97,7 +97,7 @@ public class SearchService {
                         normalizedQuery.tokens().stream().map(NormalizedToken::text).toList());
                 return queryPlanner.plan(normalizedQuery, mentionCandidates);
               });
-      mentionPresent = plan.mention() != null;
+      mentionPresent = !plan.mentions().isEmpty();
       intentCount = plan.intents().size();
       planShape = mentionPresent ? (plan.hasResidual() ? "compound" : "identity") : "document";
 

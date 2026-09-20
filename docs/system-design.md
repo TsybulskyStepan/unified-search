@@ -433,13 +433,13 @@ If any retriever fails the request returns `500`. Partial results would make doc
 
 **Normalisation.** Lowercase, Unicode NFKC, strip possessives (`john's`, `john’s` → `john`), collapse whitespace, keep intra-token hyphens (`w-9`) and also index the de-hyphenated form (`w9`).
 
-**Plan.** `QueryPlanner.plan(q)` returns the normalised whole-query text, `mention`, `residual`,
+**Plan.** `QueryPlanner.plan(q)` returns the normalised whole-query text, `mentions`, `residual`,
 and `intents`. The client retriever reads the whole query; every document retriever reads the
 residual.
 
-- **Mention.** Tokens are compared in order against every client's `first_name || ' ' || last_name` and `email` with `word_similarity ≥ 0.69` (just under the measured `Hendersen → Henderson` 0.70). Only the leading contiguous run of matching tokens counts, so in `john utility bill` matching stops at `utility` and a later `bill` can never become a client named Bill. Tokens under three characters are skipped. The client whose leading run is longest is the `mention`, provided it is unique: `john doe utility bill` names John Doe (two tokens) over John Smith (one). Two or more clients tied on the longest run → ambiguous, `mention = null`, and the client retriever still surfaces them (`john` alone ties every John).
-- **Ambiguity rule.** A single-token mention whose token is also a taxonomy synonym (`bill`, `statement`, `trust`) counts as a mention only if the token was possessive (`bill's`) or a second token also matched the same client (`bill carter`). Otherwise the token is treated as category text.
-- **Residual.** The tokens after the mention. Empty for an identity query (`john`, `neviswealth`, `hendersen`).
+- **Mention.** Tokens are compared in order against every client's `first_name || ' ' || last_name` and `email` with `word_similarity ≥ 0.69` (just under the measured `Hendersen → Henderson` 0.70). Only the leading contiguous run of matching tokens counts, so in `john utility bill` matching stops at `utility` and a later `bill` can never become a client named Bill. Tokens under three characters are skipped. The clients whose leading run is longest are the `mentions`: `john doe utility bill` names John Doe (two tokens) over John Smith (one), so `mentions` holds one client. Two or more clients tied on the longest run mean the name is ambiguous and `mentions` holds all of them (`john utility bill` mentions every John), because the query still names a small, known set of people and their documents are the likeliest answers. Their tokens are consumed like any mention, so the residual is `utility bill`, not `john utility bill`.
+- **Ambiguity rule.** A single-token mention (unique or tied) whose token is also a taxonomy synonym (`bill`, `statement`, `trust`) counts as a mention only if the token was possessive (`bill's`) or a second token also matched the same client (`bill carter`). Otherwise the token is treated as category text.
+- **Residual.** The tokens after the mentions. Empty for an identity query (`john`, `neviswealth`, `hendersen`).
 - **Intents.** Longest-match, non-overlapping phrase search of the residual against all type and purpose synonyms. `completion statement` matches the type, not `statement`. Result is a set of type ids and purpose ids, possibly empty.
 
 Two thresholds beyond v1's floors, both fixed. Mention 0.69 is measured. Intent matching is exact on normalised phrases, no fuzzy threshold in v2 (§13).
@@ -537,7 +537,7 @@ sort key   = (labelMatch desc, fused desc, cosine desc nulls last, created_at de
 
 `ResultOrdering` is a pure function of the plan, the two client tiers `I` (identity, whole-query `word_similarity ≥ 0.6` on name, email or social links) and `X` (context, description), and the fused document list `D` (already sorted by §6.4, tagged matches first). The plan selects one of two shapes.
 
-**Shape A, no mention.** Covers category queries (`utility bill`), free text, and identity hits the mention detector cannot see because it only reads names and emails (`linkedin.com/company/neviswealth` scores 1.0 against John's social link but no token clears 0.69 against his name or email).
+**Shape A, no mentions.** Covers category queries (`utility bill`), free text, and identity hits the mention detector cannot see because it only reads names and emails (`linkedin.com/company/neviswealth` scores 1.0 against John's social link but no token clears 0.69 against his name or email).
 
 | Tier | Content | Why |
 |---|---|---|
@@ -545,34 +545,35 @@ sort key   = (labelMatch desc, fused desc, cosine desc nulls last, created_at de
 | 2 | `D` | The answer to a category or free-text query, tagged matches before untagged |
 | 3 | `X` | Weak evidence, shown but never above the documents it would otherwise hide |
 
-**Shape B, one mention.** Covers identity queries (`John`, `NevisWealth`, `Hendersen`, residual empty so `D` is empty) and compound queries (`John's bill`).
+**Shape B, one or more mentions.** Covers identity queries (`John`, `NevisWealth`, `Hendersen`, residual empty so `D` is empty) and compound queries (`John's bill`, `John utility bill`). With one mention the client is a qualifier. With several tied mentions every tied client's documents are treated as equally likely and keep their §6.4 order among themselves.
 
 | Tier | Content | Why |
 |---|---|---|
-| 1 | `D` where `client_id` is the mentioned client | In a compound query the client is a qualifier and the document is the target |
-| 2 | The mentioned client | Confirms who was recognised, even when the whole query did not clear the identity floor (`john utility bill` scores 0.28 against `John Doe`) |
-| 3 | `D` where `client_id` is another client | Fallback when the advisor named the wrong person or the client has no such document |
-| 4 | `I` minus the mentioned client | Rare, another client whose identity also matches the whole query |
+| 1 | `D` where `client_id` is a mentioned client | In a compound query the client is a qualifier and the document is the target |
+| 2 | The mentioned clients, in mention order | Confirms who was recognised, even when the whole query did not clear the identity floor (`john utility bill` scores 0.28 against `John Doe`) |
+| 3 | `D` where `client_id` is not a mentioned client | Fallback when the advisor named the wrong person or the client has no such document |
+| 4 | `I` minus the mentioned clients | Rare, another client whose identity also matches the whole query |
 | 5 | `X` | As in Shape A |
 
 ```
 order(plan, I, X, D) =
-    plan.mention == null
+    plan.mentions == {}
         ? I ++ D ++ X
-        : D[client == m] ++ [m] ++ D[client != m] ++ (I \ {m}) ++ X      where m = plan.mention
+        : D[client in M] ++ M ++ D[client not in M] ++ (I \ M) ++ X      where M = plan.mentions
 ```
 
-Properties. Total and deterministic, so pagination is a slice. No score is compared across types. A mention has no filtering authority, it only reorders documents that qualified through §6.3. Two or more clients tied on the longest matched run (`John Doe` twice in the corpus) means `plan.mention == null`, Shape A applies and both clients sit in `I`.
+Properties. Total and deterministic, so pagination is a slice. No score is compared across types. A mention has no filtering authority, it only reorders documents that qualified through §6.3. Two or more clients tied on the longest matched run are all in `M`, so a shared first name promotes every one of those clients' qualified documents instead of leaving them buried among every other client's.
 
 **Worked examples on the seed corpus**
 
 | Query | Plan | Top of the list |
 |---|---|---|
-| `John` | mention John, residual empty | John (identity, name) |
+| `John` | mentions John Doe and John Whitfield (tied), residual empty | Both Johns (identity, name) |
+| `John utility bill` | mentions both Johns (tied), residual `utility bill`, intents {utility_bill} | John Doe's 2024 Utility Bill, John Whitfield's Electricity Bill Oct to Dec 2026, their other qualifying documents, both Johns, then everyone else's bills |
 | `NevisWealth` | mention John via email 1.0, residual empty | John (identity, email) |
 | `Hendersen` | mention Mary 0.70, residual empty | Mary |
 | `utility bill` | no mention, intents {utility_bill} | John's bill, Samuel's bill (label + lexical + semantic), then other documents, zero clients |
-| `John's bill` | mention John, residual `bill`, intents {utility_bill, council_tax_bill} | John's 2024 Utility Bill, John, then the other bills |
+| `John's bill` | mentions John Doe and John Whitfield (tied), residual `bill`, intents {utility_bill, council_tax_bill} | John Doe's 2024 Utility Bill, John Whitfield's Electricity Bill Oct to Dec 2026, the two Johns, then the other bills |
 | `Bill's statement` | mention Bill Carter (possessive lifts the ambiguity rule), intents {bank_statement} | Bill's Current Account Statement, Bill Carter, Samuel's statement |
 | `bill` | ambiguity rule blocks the mention, whole-query identity hit on Bill Carter, intents {utility_bill, council_tax_bill} | Bill Carter, then the four bills |
 | `tax residency` | intents {tax_status} | Mary's W-9, Bill's Tax Return, then Council Tax Bills (untagged for this intent), zero clients |
@@ -724,7 +725,8 @@ Queries at the current 50-client, 126-document corpus.
 
 - `first`: `NevisWealth` (John Doe), `Hendersen` (Mary Henderson), `bill` (Bill Carter), `letter of authority`.
 - `all_within`: `John` (both Johns, 2), `address proof` and `proof of address` (53), `utility bill` (13), `tax residency` (14), `source of funds` (5), `advisory fees` (12), `proof of identity` (22), `risk tolerance` (8), `trust restructuring` (6), `W-9` (2).
-- `compound`: possessive `Bill's statement`, `Mary's tax form`, `Elena's completion statement`, and bare `John Doe utility bill`, `Priya Shah tenancy`. Mentions are unambiguous on purpose. `John's bill` and `Priya tenancy` tie two clients (John Doe and John Whitfield, Priya Shah and Priyanka Raman), so §6.1 correctly yields no mention.
+- `compound`: possessive `Bill's statement`, `Mary's tax form`, `Elena's completion statement`, and bare `John Doe utility bill`, `Priya Shah tenancy`. Mentions are unambiguous on purpose. Ambiguous names are covered by the `all_within` and `first` entries below.
+- Tied mentions (§6.1): `John utility bill` and `John's bill` are `all_within 2` (John Doe's 2024 Utility Bill and John Whitfield's Electricity Bill Oct to Dec 2026), and `Priya tenancy` (Priya Shah and Priyanka Raman tie) is `first` Priya Shah's Assured Shorthold Tenancy Agreement. Before tied mentions their reciprocal ranks were 0.50, 0.17 and 0.14 (best expected document at rank 2, 6 and 7). After, all three are 1.0, and over the 28-query set MRR went from 0.905 to 1.000 and mean recall@n from 0.848 to 0.957.
 - `none`: five out-of-domain queries. `weather forecast for the weekend` was replaced by `how to bake sourdough bread` because `weather` is a substring of the client Zoë Fairweather and trigram `word_similarity` admits her on the email. This is a known limit of the lexical floor, not a fixed bug, and the old eval only asserted "no documents" so it never saw it.
 
 `semanticFloor` is set by this test as the midpoint of the gap between the lowest positive and highest negative cosine (currently 0.2917 and 0.1836, midpoint 0.2377), and the build fails if the gap closes or if `application.yaml` drifts from the midpoint. `lexicalFloor` stays 0.6 and is guarded from both sides at the endpoint: `Hendersen` (0.70) is admitted and `joe` (0.50) is not. The classifier must reach 100% on `classification.json`.
