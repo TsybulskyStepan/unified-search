@@ -41,16 +41,19 @@ public class Reclassifier implements ApplicationRunner {
   private final DocumentClassifier classifier;
   private final Embedder embedder;
   private final Taxonomy taxonomy;
+  private final ClassificationOutcomeMetrics classificationOutcomes;
 
   public Reclassifier(
       DocumentRepository documents,
       DocumentClassifier classifier,
       Embedder embedder,
-      Taxonomy taxonomy) {
+      Taxonomy taxonomy,
+      ClassificationOutcomeMetrics classificationOutcomes) {
     this.documents = documents;
     this.classifier = classifier;
     this.embedder = embedder;
     this.taxonomy = taxonomy;
+    this.classificationOutcomes = classificationOutcomes;
   }
 
   @Override
@@ -84,6 +87,7 @@ public class Reclassifier implements ApplicationRunner {
         Classification.SOURCE_REQUEST.equals(row.classificationSource())
             ? classifier.relabel(row.documentType(), row.purposes(), row.classificationSource())
             : classifier.classify(row.title(), row.content(), null, List.of());
+    classificationOutcomes.record(classification);
     float[] labelEmbedding =
         embedder.embed(Chunker.labelEmbeddingInput(row.title(), classification.labelText()));
     return new ReclassifiedRow(row.id(), classification, labelEmbedding);
