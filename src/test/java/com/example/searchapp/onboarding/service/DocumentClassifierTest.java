@@ -61,12 +61,37 @@ class DocumentClassifierTest {
   void anUnrecognisedDocumentIsUnknownWithNoPurposes() {
     Classification classification =
         classifier.classify(
-            "Broadband and Landline Bill", "Nothing here matches a pattern.", null, List.of());
+            "Holiday Itinerary", "Nothing here matches a pattern.", null, List.of());
 
     assertThat(classification.documentType()).isEqualTo(Taxonomy.UNKNOWN_TYPE);
     assertThat(classification.purposes()).isEmpty();
     assertThat(classification.source()).isEqualTo(Classification.SOURCE_UNKNOWN);
     assertThat(classification.labelText()).isEmpty();
+  }
+
+  @Test
+  void aSingleContentPatternIsTooWeakToClassify() {
+    // "beneficiaries" is one trust_deed content pattern (1 point): a letter of authority that
+    // merely mentions beneficiaries is not a trust deed.
+    Classification classification =
+        classifier.classify(
+            "Letter of Authority",
+            "This authority does not permit the firm to change beneficiaries.",
+            null,
+            List.of());
+
+    assertThat(classification.documentType()).isEqualTo(Taxonomy.UNKNOWN_TYPE);
+    assertThat(classification.source()).isEqualTo(Classification.SOURCE_UNKNOWN);
+  }
+
+  @Test
+  void aBroadbandBillIsAUtilityBillByItsTitle() {
+    Classification classification =
+        classifier.classify(
+            "Broadband and Landline Bill July 2024", "Nothing else matches.", null, List.of());
+
+    assertThat(classification.documentType()).isEqualTo("utility_bill");
+    assertThat(classification.purposes()).containsExactly("proof_of_address");
   }
 
   @Test

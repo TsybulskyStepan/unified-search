@@ -4,12 +4,12 @@
 # code change is required. `unknown` is reserved by the loader and must not appear here.
 #
 # A synonym must never equal a type or purpose id: the loader rejects that as ambiguous (§3.1).
-version: 1
+version: 2
 types:
   utility_bill:
     label: utility bill
     purposes: [proof_of_address]
-    title_patterns: [utility bill, energy, electricity, gas bill, water bill]
+    title_patterns: [utility bill, energy, electricity, gas bill, water bill, broadband]
     content_patterns: [kwh, meter, supply address, standing charge]
     synonyms: [utility bill, energy bill, electricity bill, gas bill, water bill, bill]
   council_tax_bill:
