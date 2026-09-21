@@ -282,15 +282,15 @@ Summaries need one environment variable (an LLM API key). Without it the system 
 
 ### 7.2 Cloud Run (production)
 
-Cloud Run + Cloud SQL (Postgres 17 with `pgvector`, `pg_trgm`, `citext`), ≥2 GiB memory for the in-process model, CPU always allocated so the summary worker runs between requests, and secrets from Secret Manager in place of environment variables. The existing Cloud SQL instance is used as-is; `db/setup/init-db.sh` creates the database, the extensions and the application role (with its password) once, and Flyway migrations create everything else on first app startup.
+Cloud Run + Cloud SQL (Postgres with `pgvector`, `pg_trgm`, `citext`), ≥2 GiB memory for the in-process model, and secrets from Secret Manager in place of environment variables. The existing Cloud SQL instance is used as-is: the application owns a `unified_search` schema in it, and Flyway migrations create everything else on first app startup.
 
 **Deployment pipeline:**
-1. `db/setup/init-db.sh` — one-time database setup (database, extensions, application role and password)
-2. Secret Manager — `DB_USER`, `DB_PASSWORD` (same value as step 1), `API_KEY`, and optionally `GEMINI_API_KEY`. The Gemini secret is mounted only when `_GEMINI_API_KEY_SECRET` is set, so summaries stay optional
-3. `gcloud builds submit --config=cloudbuild.yaml` — build, push, deploy to Cloud Run
+1. Secret Manager — the database password, `API_KEY`, and optionally `GEMINI_API_KEY`, so summaries stay optional
+2. Build a `linux/amd64` image and push it to Artifact Registry
+3. `gcloud run deploy` with the Cloud SQL instance attached
 4. Cloud Run assigns a default `*.run.app` HTTPS URL automatically
 
-The `cloudrun` Spring profile (`application-cloudrun.yaml`) configures the Cloud SQL socket factory and HikariCP pool. See `README.md` for the full walkthrough.
+The `cloudrun` Spring profile (`application-cloudrun.yaml`) sizes the HikariCP pool; the Cloud SQL socket factory is a runtime dependency selected by `DB_URL`. See `README.md` for the commands.
 
 ---
 
