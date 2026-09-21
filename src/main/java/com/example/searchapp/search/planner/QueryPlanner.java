@@ -21,14 +21,12 @@ import org.springframework.stereotype.Component;
 public class QueryPlanner {
   private static final Pattern POSSESSIVE = Pattern.compile("(.+?)(?:'s|’s)$");
 
+  private final Taxonomy taxonomy;
   private final List<IntentPhrase> intentPhrases;
   private final Set<String> singleTokenSynonyms;
-  private final Set<String> typeIds;
-  private final Set<String> purposeIds;
 
   public QueryPlanner(Taxonomy taxonomy) {
-    typeIds = Set.copyOf(taxonomy.types().keySet());
-    purposeIds = Set.copyOf(taxonomy.purposes().keySet());
+    this.taxonomy = taxonomy;
     Map<List<String>, Set<String>> idsByPhrase = new LinkedHashMap<>();
     taxonomy.types().values().forEach(type -> addPhrases(idsByPhrase, type.id(), type.synonyms()));
     taxonomy
@@ -49,8 +47,7 @@ public class QueryPlanner {
   }
 
   public NormalizedQuery normalize(String query) {
-    String normalized = Normalizer.normalize(query, Normalizer.Form.NFKC).toLowerCase(Locale.ROOT);
-    String[] rawTokens = normalized.trim().split("\\s+");
+    String[] rawTokens = normalizeText(query).trim().split("\\s+");
     List<NormalizedToken> tokens = new ArrayList<>(rawTokens.length);
     for (String rawToken : rawTokens) {
       Matcher matcher = POSSESSIVE.matcher(rawToken);
@@ -71,26 +68,20 @@ public class QueryPlanner {
     List<ClientMention> mentions = mentions(query, candidates, longestMatch);
     int consumedTokens = mentions.isEmpty() ? 0 : longestMatch;
     List<String> residualTokens =
-        query.tokens().subList(consumedTokens, query.tokens().size()).stream()
-            .map(NormalizedToken::text)
-            .toList();
-    String residual = String.join(" ", residualTokens);
+        query.tokens().stream().skip(consumedTokens).map(NormalizedToken::text).toList();
     Set<String> intents = intents(residualTokens);
     return new QueryPlan(
         query.text(),
         mentions,
-        residual,
-        intents.stream().filter(typeIds::contains).collect(Collectors.toUnmodifiableSet()),
-        intents.stream().filter(purposeIds::contains).collect(Collectors.toUnmodifiableSet()));
+        String.join(" ", residualTokens),
+        idsIn(intents, taxonomy.types().keySet()),
+        idsIn(intents, taxonomy.purposes().keySet()));
   }
 
   /** Every client tied on the longest leading run: one when the name is unique, more when not. */
   private List<ClientMention> mentions(
       NormalizedQuery query, List<MentionCandidate> candidates, int longestMatch) {
-    if (longestMatch == 0
-        || (longestMatch == 1
-            && singleTokenSynonyms.contains(canonical(query.tokens().getFirst().text()))
-            && !query.tokens().getFirst().possessive())) {
+    if (longestMatch == 0 || (longestMatch == 1 && isBareSynonym(query.tokens().getFirst()))) {
       return List.of();
     }
     return candidates.stream()
@@ -101,16 +92,20 @@ public class QueryPlanner {
         .toList();
   }
 
+  /** A lone taxonomy synonym ("passport") names a document, not a client, unless possessive. */
+  private boolean isBareSynonym(NormalizedToken token) {
+    return singleTokenSynonyms.contains(canonical(token.text())) && !token.possessive();
+  }
+
   private Set<String> intents(List<String> tokens) {
     boolean[] consumed = new boolean[tokens.size()];
     Set<String> intents = new LinkedHashSet<>();
     for (IntentPhrase phrase : intentPhrases) {
-      for (int start = 0; start <= tokens.size() - phrase.tokens().size(); start++) {
+      int length = phrase.tokens().size();
+      for (int start = 0; start <= tokens.size() - length; start++) {
         if (matches(tokens, consumed, start, phrase.tokens())) {
           intents.addAll(phrase.ids());
-          for (int index = start; index < start + phrase.tokens().size(); index++) {
-            consumed[index] = true;
-          }
+          Arrays.fill(consumed, start, start + length, true);
         }
       }
     }
@@ -132,14 +127,17 @@ public class QueryPlanner {
       Map<List<String>, Set<String>> idsByPhrase, String id, List<String> synonyms) {
     for (String synonym : synonyms) {
       List<String> tokens =
-          Arrays.stream(
-                  Normalizer.normalize(synonym, Normalizer.Form.NFKC)
-                      .toLowerCase(Locale.ROOT)
-                      .split("\\s+"))
-              .map(QueryPlanner::canonical)
-              .toList();
+          Arrays.stream(normalizeText(synonym).split("\\s+")).map(QueryPlanner::canonical).toList();
       idsByPhrase.computeIfAbsent(tokens, ignored -> new LinkedHashSet<>()).add(id);
     }
+  }
+
+  private static Set<String> idsIn(Set<String> intents, Set<String> ids) {
+    return intents.stream().filter(ids::contains).collect(Collectors.toUnmodifiableSet());
+  }
+
+  private static String normalizeText(String text) {
+    return Normalizer.normalize(text, Normalizer.Form.NFKC).toLowerCase(Locale.ROOT);
   }
 
   private static String canonical(String token) {
