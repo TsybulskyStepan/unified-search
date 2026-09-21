@@ -1,6 +1,6 @@
 # Unified Search
 
-Search API over advisors' clients and documents: lexical matching for clients, semantic matching for documents, one ranked list. Take-home assignment; reviewers read the code *and* the history.
+Search API over advisors' clients and documents: lexical matching for clients, semantic matching for documents, one ranked list.
 
 ## Sources of truth
 
@@ -30,13 +30,8 @@ Java 25 via Gradle toolchain. Integration tests need Docker (Testcontainers, `pg
 Each one is enforced by a test once its code exists. Adding code that could break one means adding or extending that test.
 
 - **Module boundary.** `onboarding` and `search` never import each other; both may use `shared`. They share two contracts, not one: the database schema, and the vector space — which is why `Embedder` lives in `shared`. Enforced by package structure only, not by a test; the ArchUnit test that once checked this was removed in `61c4854`.
-- **Searchable on `201`.** A document row and all its chunk embeddings commit in one transaction.
-- **No PII in logs.** Never log query text, names, emails, titles or content. Log IDs, lengths, counts and timings. Applies to the running service. The relevance eval may log its own fixture queries, which are synthetic, so its report is readable.
-- **SQL is bound, never concatenated.** `JdbcClient` with parameters; no JPA.
-- **One embedding model.** `Embedder` is the only class that imports LangChain4j. Every chunk records the model that produced it and search filters on it, so a model change can never silently mix vector spaces.
+- **SQL is bound, never concatenated.** `JdbcClient` with parameters. No JPA.
 - **Migrations are additive** (expand/contract), Flyway only.
-- **Errors are RFC 9457 ProblemDetail** and never expose stack traces, SQL or constraint names.
-- **Search never depends on summaries.** Summary failure leaves documents searchable.
 
 ## How to work here
 
