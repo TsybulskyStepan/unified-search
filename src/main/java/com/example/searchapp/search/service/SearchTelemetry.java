@@ -85,7 +85,7 @@ public class SearchTelemetry {
     }
 
     /** Only called when retrieval ran, so a skipped retrieval leaves its timers untouched. */
-    public void retrieved(DocumentRetriever.Measurements measured) {
+    public void retrieved(RetrievalMeasurements measured) {
       record(Stage.LABEL, measured.labelNanos());
       record(Stage.LEXICAL, measured.lexicalNanos());
       record(Stage.EMBED_QUERY, measured.queryEmbeddingNanos());

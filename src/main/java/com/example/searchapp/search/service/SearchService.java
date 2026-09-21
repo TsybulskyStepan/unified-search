@@ -1,6 +1,7 @@
 package com.example.searchapp.search.service;
 
 import com.example.searchapp.search.dto.SearchMatch;
+import com.example.searchapp.search.dto.SearchPage;
 import com.example.searchapp.search.dto.SearchRequest;
 import com.example.searchapp.search.dto.SearchResult;
 import com.example.searchapp.search.entity.SearchClient;
@@ -82,7 +83,7 @@ public class SearchService {
             searchExecutor);
     // The client query must already be running when retrieve() blocks, so the two overlap and
     // latency stays the slower of them rather than their sum.
-    DocumentRetriever.Result retrieval = retriever.retrieve(plan);
+    RetrievalResult retrieval = retriever.retrieve(plan);
     if (retrieval.ran()) {
       recording.retrieved(retrieval.measurements());
     }
@@ -103,7 +104,7 @@ public class SearchService {
   }
 
   private List<SearchResult> toResults(
-      List<ResultOrdering.Candidate> pageCandidates, DocumentRetriever.Result retrieval) {
+      List<ResultOrdering.Candidate> pageCandidates, RetrievalResult retrieval) {
     PageMatches matches = partition(pageCandidates);
     Map<UUID, SearchClient> clientsById =
         clients.findByIds(matches.clientIds()).stream()
@@ -160,10 +161,7 @@ public class SearchService {
     searchExecutor.close();
   }
 
-  private record Ranking(
-      List<ResultOrdering.Candidate> candidates, DocumentRetriever.Result retrieval) {}
+  private record Ranking(List<ResultOrdering.Candidate> candidates, RetrievalResult retrieval) {}
 
   private record PageMatches(List<UUID> clientIds, List<DocumentMatch> documentMatches) {}
-
-  public record SearchPage(List<SearchResult> results, int total) {}
 }

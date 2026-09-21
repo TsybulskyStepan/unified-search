@@ -24,7 +24,7 @@ class DocumentRetrieverIntegrationTest extends IntegrationTest {
   void doesNothingWhenThePlanHasNoResidual() {
     QueryPlan plan = new QueryPlan("john", List.of(), "", Set.of(), Set.of());
 
-    DocumentRetriever.Result result = retriever.retrieve(plan);
+    RetrievalResult result = retriever.retrieve(plan);
 
     assertThat(result.matches()).isEmpty();
     assertThat(result.ran()).isFalse();
@@ -33,7 +33,7 @@ class DocumentRetrieverIntegrationTest extends IntegrationTest {
 
   @Test
   void doesNothingWhenTheResidualIsOnlyStopWords() {
-    DocumentRetriever.Result result = retriever.retrieve(planner.plan("the and", List.of()));
+    RetrievalResult result = retriever.retrieve(planner.plan("the and", List.of()));
 
     assertThat(result.matches()).isEmpty();
     assertThat(result.ran()).isFalse();
@@ -44,7 +44,7 @@ class DocumentRetrieverIntegrationTest extends IntegrationTest {
   void retrievesAndFusesMatchesAndKeepsTheQueryVector() throws Exception {
     UUID documentId = createClientWithDocument("retrieves");
 
-    DocumentRetriever.Result result =
+    RetrievalResult result =
         retriever.retrieve(planner.plan("occupancy registered address", List.of()));
 
     assertThat(result.ran()).isTrue();
@@ -56,7 +56,7 @@ class DocumentRetrieverIntegrationTest extends IntegrationTest {
   @Test
   void hydratesTheBestPassageWithoutTheCallerHoldingTheVector() throws Exception {
     UUID documentId = createClientWithDocument("hydrates");
-    DocumentRetriever.Result result =
+    RetrievalResult result =
         retriever.retrieve(planner.plan("occupancy registered address", List.of()));
 
     Map<UUID, HydratedDocument> hydrated = retriever.hydrate(result.matches(), result);
@@ -68,7 +68,7 @@ class DocumentRetrieverIntegrationTest extends IntegrationTest {
 
   @Test
   void hydratingNoMatchesNeedsNoVector() {
-    DocumentRetriever.Result skipped =
+    RetrievalResult skipped =
         retriever.retrieve(new QueryPlan("john", List.of(), "", Set.of(), Set.of()));
 
     assertThat(retriever.hydrate(List.of(), skipped)).isEmpty();

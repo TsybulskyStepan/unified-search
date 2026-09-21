@@ -55,7 +55,7 @@ class SearchTelemetryTest {
             Set.of("proof_of_address")));
     recording.timed(Stage.CLIENTS, () -> "clients");
     recording.retrieved(
-        new DocumentRetriever.Measurements(1_000_000, 2_000_000, 3_000_000, 4_000_000, 5, 6, 7));
+        new RetrievalMeasurements(1_000_000, 2_000_000, 3_000_000, 4_000_000, 5, 6, 7));
     recording.clientHits(2);
 
     recording.finish(9, 3);
@@ -89,7 +89,7 @@ class SearchTelemetryTest {
     Recording recording = telemetry.start();
     recording.timed(Stage.PLAN, () -> "planned");
     recording.timed(Stage.CLIENTS, () -> "clients");
-    recording.retrieved(new DocumentRetriever.Measurements(1, 2, 3, 4, 0, 0, 0));
+    recording.retrieved(new RetrievalMeasurements(1, 2, 3, 4, 0, 0, 0));
 
     recording.finish(1, 0);
 
