@@ -8,8 +8,8 @@ so no later ticket can quietly cross it. A Testcontainers base class gives every
 test a real pgvector database rather than a substitute that lacks the extensions.
 
 The container image arrives here rather than late (system-design §15 puts it at step 8) because
-§11.4's compose file runs the app container: the one command the brief grades cannot work until the
-image exists. Building it first keeps that command green for every ticket after this one.
+§11.4's compose file runs the app container: `docker compose up`, the one command that has to work,
+cannot until the image exists. Building it first keeps that command green for every ticket after this one.
 
 **Blocked by:** None — can start immediately.
 

@@ -1,6 +1,6 @@
 # WealthTech Domain Analysis
 
-Context research for the Nevis search assignment. The conclusion that matters most is in §5: **the two examples in the brief are not arbitrary test cases — they encode two real advisor workflows**, and knowing which ones changes how the search should behave.
+Context research for the Nevis search system. The conclusion that matters most is in §5: **the two example queries are not arbitrary test cases — they encode two real advisor workflows**, and knowing which ones changes how the search should behave.
 
 ---
 
@@ -29,11 +29,11 @@ Context research for the Nevis search assignment. The conclusion that matters mo
    - **Status / follow-up queries** — "clients not contacted recently," "compliance docs due for renewal" — filtering more than free-text search, but often entered as a search box query in practice
    - **Ad-hoc keyword recall** — an advisor half-remembering a document ("the one about the trust restructuring") with no idea which client or field it lives in
 
-   The two brief examples are the first two categories; the assignment does not require the latter three, but they explain why the response is a single ranked list rather than a client-only or document-only endpoint — the advisor doesn't know in advance which category their query falls into.
+   The two example queries are the first two categories; the latter three are not required, but they explain why the response is a single ranked list rather than a client-only or document-only endpoint — the advisor doesn't know in advance which category their query falls into.
 5. Client-ready emails in the advisor's voice
 6. Account opening automation (data collection, custodian submission)
 
-> **Item 4 is this assignment.** The take-home is a scaled-down version of a feature Nevis actually ships. That raises the bar on search *quality* judgement specifically — this is the part of the product they know intimately and will review against lived experience.
+> **Item 4 is this project.** It is a scaled-down version of a feature Nevis actually ships. That raises the bar on search *quality* judgement specifically — this is the part of the product they know intimately and will review against lived experience.
 >
 > **What we actually know about how they built it: very little.** No engineering blog, no published architecture, no disclosed indexing or embedding approach. The ICONIQ funding writeup describes only the product outcome — "integrates data across CRM, portfolio reporting, planning, custodial, communication, and file storage tools, creating a unified data layer that becomes the firm's system of record" — not the mechanism. The one concrete technical signal is the enterprise agreements with **OpenAI and Anthropic**, which suggests their production stack likely calls hosted LLM/embedding APIs rather than running models in-process — the opposite of the locked local-embedding decision here (§7, row 1). That divergence is fine: it is driven by our reproducibility and compliance requirements (NFR-6, NFR-28), not by a belief that hosted APIs are the wrong architecture. It should be named as a deliberate deviation, not left implicit.
 
@@ -60,7 +60,7 @@ The documented consequences:
 
 **Why this makes search the wedge product:** when data is scattered across ten systems, the single highest-leverage feature is not another system — it is one box that searches all of them. Search is how a unified platform proves its value on day one.
 
-This is also why the brief insists on **one endpoint returning both clients and documents**. A mixed-entity result list is not an API-design curiosity; it is the product thesis in miniature. An advisor asking "Henderson" does not know or care whether the answer is a person record or a PDF.
+This is also why the product needs **one endpoint returning both clients and documents**. A mixed-entity result list is not an API-design curiosity; it is the product thesis in miniature. An advisor asking "Henderson" does not know or care whether the answer is a person record or a PDF.
 
 ### 2.2 Compliance shapes everything
 
@@ -113,7 +113,7 @@ The pattern noted across 2026 industry coverage: these products "are morphing in
 
 ---
 
-## 5. Decoding the brief's two examples
+## 5. Decoding the two example queries
 
 This is the payoff of the research. Both examples map to named Nevis product capabilities.
 
@@ -121,7 +121,7 @@ This is the payoff of the research. Both examples map to named Nevis product cap
 
 This is **organizational lookup**. An advisor searching a firm or employer name to surface every contact associated with it — before a meeting with that organization, or when an introduction comes in from it. It maps to Nevis's *Smart Meeting Prep*.
 
-The workflow consequence: matching the **domain segment of an email address** is the actual requirement, not incidental string matching. The same logic should extend to `social_links` (a LinkedIn company URL carries the same organizational signal), which is likely *why* `social_links` appears in the schema at all — the brief's field list is a hint.
+The workflow consequence: matching the **domain segment of an email address** is the actual requirement, not incidental string matching. The same logic should extend to `social_links` (a LinkedIn company URL carries the same organizational signal), which explains why `social_links` is worth indexing.
 
 **This reinforces the tokenization finding in FR-11:** emails and URLs must be decomposed into component terms. Not a workaround for Postgres tokenization quirks — a direct encoding of how advisors actually search.
 
@@ -152,7 +152,7 @@ Production systems facing this exact split — lexical precision for identifiers
 
 The reasoning is symmetric and well-documented: dense retrieval fails on exact strings (embeddings encode meaning, not characters — `RTX-4090` and `RTX-4070` sit almost on top of each other in embedding space despite being different products), while sparse retrieval fails on paraphrase (no shared tokens between "address proof" and "utility bill"). Neither subsumes the other; production systems run both and combine results, never one instead of the other.
 
-**This is already this project's shape** — FR-11 (lexical, clients) and FR-12 (semantic, documents) split along the same line, just partitioned by entity type rather than run over every field. That partition is a reasonable simplification for this scale (clients are short structured records where lexical alone is defensible; document content is the one field where paraphrase actually occurs) and matches how the brief itself splits the two examples.
+**This is already this project's shape** — FR-11 (lexical, clients) and FR-12 (semantic, documents) split along the same line, just partitioned by entity type rather than run over every field. That partition is a reasonable simplification for this scale (clients are short structured records where lexical alone is defensible; document content is the one field where paraphrase actually occurs) and matches how the two example queries split.
 
 ### 7.2 Reciprocal Rank Fusion is the standard answer to the score-normalization problem
 
@@ -162,11 +162,11 @@ The reasoning is symmetric and well-documented: dense retrieval fails on exact s
 
 ### 7.3 A cross-encoder reranking stage is common but not required here
 
-Full production stacks add a reranking model over the fused top-N (e.g., top 50 → reranked to top 10) for a further relevance lift. At this assignment's scale (§1.2: ~10⁴ documents) this is a legitimate cut — it adds real latency and a second model to host for a corpus small enough that the base retrievers are unlikely to need the correction. Worth one sentence in the README as a "what we'd add at 10x the scale" note, not worth building.
+Full production stacks add a reranking model over the fused top-N (e.g., top 50 → reranked to top 10) for a further relevance lift. At this project's scale (§1.2: ~10⁴ documents) this is a legitimate cut — it adds real latency and a second model to host for a corpus small enough that the base retrievers are unlikely to need the correction. Worth one sentence in the README as a "what we'd add at 10x the scale" note, not worth building.
 
 ### 7.4 The organizational-lookup case is a named, solved problem: entity resolution
 
-§5.1's requirement — decompose `john.doe@neviswealth.com` to recover the organizational segment — is a specific instance of **entity/record linking**, a well-studied CRM and data-integration problem (matching records that refer to the same real-world entity — here, "the same organization" — despite no shared exact field). The lightweight version that fits this assignment's scope is exactly what FR-11 already proposes: tokenize identifiers on their structural delimiters (`@ . - /`) and index the fragments, rather than building a general entity-resolution pipeline (which would be over-engineering for ~10³ clients). Confirms FR-11's approach rather than changing it.
+§5.1's requirement — decompose `john.doe@neviswealth.com` to recover the organizational segment — is a specific instance of **entity/record linking**, a well-studied CRM and data-integration problem (matching records that refer to the same real-world entity — here, "the same organization" — despite no shared exact field). The lightweight version that fits this project's scope is exactly what FR-11 already proposes: tokenize identifiers on their structural delimiters (`@ . - /`) and index the fragments, rather than building a general entity-resolution pipeline (which would be over-engineering for ~10³ clients). Confirms FR-11's approach rather than changing it.
 
 ## 7. What this changes in the requirements
 
@@ -176,9 +176,9 @@ Concrete deltas against [requirements.md](requirements.md):
 |---|---|---|
 | 1 | **Promote the compliance argument for local embeddings** to the lead design decision (NFR-28) | Document content never crossing the trust boundary is a stronger, more domain-native justification than reviewer convenience — and mirrors Nevis's own published stance |
 | 2 | **Add `firm_id`/tenant column to the data model** even though multi-tenancy stays out of scope | The real product is multi-tenant B2B; a schema that structurally precludes isolation is the wrong answer even in a demo. Cheap now, expensive later |
-| 3 | **Extend FR-11 lexical matching to `social_links`** | Same organizational-lookup workflow as the email domain; explains why the field is in the brief's schema |
+| 3 | **Extend FR-11 lexical matching to `social_links`** | Same organizational-lookup workflow as the email domain; explains why the field is worth indexing |
 | 4 | **Make the seed corpus a realistic KYC/onboarding document set** (NFR-5) | Demonstrates the actual §5.2 workflow rather than a toy synonym pair |
-| 5 | **Add a small relevance evaluation set** — ~10 query→expected-result pairs run as a test | Turns "semantic search works" from an assertion into evidence; directly addresses the "correctness" axis the brief says it is grading |
+| 5 | **Add a small relevance evaluation set** — ~10 query→expected-result pairs run as a test | Turns "semantic search works" from an assertion into evidence |
 | 6 | **Reframe search logging (NFR-24) as audit-relevant**, and require queries be logged without PII leakage | Rule 204-2 makes retrieval activity a records concern; client names and emails in plaintext logs are a liability |
 | 7 | **State the append-only growth assumption** in §1.2 scale assumptions | Five-year mandated retention means the corpus only grows; it frames why index strategy matters beyond demo scale |
 | 8 | **Replace FR-13's `[0,1]`-normalize-and-blend merge with Reciprocal Rank Fusion** | §6.2: RRF is the industry-standard answer to exactly this score-incompatibility problem, needs no tuned weighting constant, and is a stronger thing to defend than a hand-normalized blend |

@@ -11,7 +11,6 @@ clean clone needs no credentials and no network.
 |---|---|
 | How it is built, and why | [docs/system-design.md](docs/system-design.md) |
 | What the product must do | [docs/prd.md](docs/prd.md) |
-| The original brief | [docs/assignment.md](docs/assignment.md) |
 
 ## Setup
 

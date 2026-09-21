@@ -9,7 +9,6 @@ Read the relevant section before changing behaviour. Don't restate these docs he
 | Question | Document |
 |---|---|
 | What a reviewer reads first: setup, worked examples, decisions, cuts | [README.md](README.md) |
-| What is graded | [docs/assignment.md](docs/assignment.md) |
 | What the product must do | [docs/prd.md](docs/prd.md) |
 | How it is built: packages, schema, API contract, tests | [docs/system-design.md](docs/system-design.md) |
 
