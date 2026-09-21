@@ -496,10 +496,7 @@ DB_PASSWORD='YOUR_STRONG_DB_PASSWORD' \
 This creates the `unified_search` database, installs `vector`, `pg_trgm` and `citext`, creates the
 `unified_search` role with `DB_PASSWORD` as its password, and grants it access. Store the same value
 in the `DB_PASSWORD` secret below. **Flyway migrations run automatically** on the first app startup —
-they create the tables and indexes.
-
-This script is a privileged bootstrap and the one exception to "Flyway only": Cloud SQL lets only a
-superuser run `CREATE EXTENSION`, and the application role does not exist yet. Run it once.
+they create the tables and indexes. Run this script once.
 
 Alternatively, create the database and run the SQL directly:
 
