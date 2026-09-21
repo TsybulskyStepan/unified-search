@@ -1,11 +1,12 @@
 package com.example.searchapp.search.service;
 
 import com.example.searchapp.search.planner.QueryPlan;
-import com.example.searchapp.search.repository.DocumentMatch;
 import com.example.searchapp.search.repository.DocumentSearchRepository;
-import com.example.searchapp.search.repository.HydratedDocument;
-import com.example.searchapp.search.repository.LabelDocumentMatch;
-import com.example.searchapp.search.repository.RankedDocumentMatch;
+import com.example.searchapp.search.repository.model.DocumentMatch;
+import com.example.searchapp.search.repository.model.HydratedDocument;
+import com.example.searchapp.search.repository.model.LabelDocumentMatch;
+import com.example.searchapp.search.repository.model.RankedDocumentMatch;
+import com.example.searchapp.shared.TimedOperation;
 import com.example.searchapp.shared.embedding.Embedder;
 import com.example.searchapp.shared.embedding.QueryEmbedding;
 import jakarta.annotation.PreDestroy;
@@ -49,31 +50,31 @@ public class DocumentRetriever {
     if (!plan.hasResidual() || !documents.hasSearchableTerms(plan.residual())) {
       return RetrievalResult.SKIPPED;
     }
-    CompletableFuture<Timed<List<LabelDocumentMatch>>> labels =
+    CompletableFuture<TimedOperation<List<LabelDocumentMatch>>> labels =
         timedAsync(() -> documents.findLabelMatches(plan.types(), plan.purposes()));
-    CompletableFuture<Timed<List<RankedDocumentMatch>>> lexical =
+    CompletableFuture<TimedOperation<List<RankedDocumentMatch>>> lexical =
         timedAsync(() -> documents.findLexicalMatches(plan.residual()));
-    CompletableFuture<Timed<QueryEmbedding>> embedded =
+    CompletableFuture<TimedOperation<QueryEmbedding>> embedded =
         timedAsync(() -> embedder.embedQuery(plan.residual()));
-    CompletableFuture<Timed<List<RankedDocumentMatch>>> semantic =
+    CompletableFuture<TimedOperation<List<RankedDocumentMatch>>> semantic =
         embedded.thenApplyAsync(
-            embedding -> timed(() -> semanticMatches(embedding.value())), executor);
+            embedding -> TimedOperation.run(() -> semanticMatches(embedding.result())), executor);
 
-    Timed<List<LabelDocumentMatch>> labelResult = labels.join();
-    Timed<List<RankedDocumentMatch>> lexicalResult = lexical.join();
-    Timed<List<RankedDocumentMatch>> semanticResult = semantic.join();
-    Timed<QueryEmbedding> embeddedResult = embedded.join();
+    TimedOperation<List<LabelDocumentMatch>> labelResult = labels.join();
+    TimedOperation<List<RankedDocumentMatch>> lexicalResult = lexical.join();
+    TimedOperation<List<RankedDocumentMatch>> semanticResult = semantic.join();
+    TimedOperation<QueryEmbedding> embeddedResult = embedded.join();
     return new RetrievalResult(
-        DocumentFusion.fuse(labelResult.value(), lexicalResult.value(), semanticResult.value()),
-        Optional.of(embeddedResult.value().vector()),
+        DocumentFusion.fuse(labelResult.result(), lexicalResult.result(), semanticResult.result()),
+        Optional.of(embeddedResult.result().vector()),
         new RetrievalMeasurements(
-            labelResult.nanos(),
-            lexicalResult.nanos(),
-            embeddedResult.nanos(),
-            semanticResult.nanos(),
-            labelResult.value().size(),
-            lexicalResult.value().size(),
-            semanticResult.value().size()));
+            labelResult.elapsedNanos(),
+            lexicalResult.elapsedNanos(),
+            embeddedResult.elapsedNanos(),
+            semanticResult.elapsedNanos(),
+            labelResult.result().size(),
+            lexicalResult.result().size(),
+            semanticResult.result().size()));
   }
 
   /** Loads the given matches with the passage of each that best matches the retrieved query. */
@@ -96,20 +97,12 @@ public class DocumentRetriever {
         : List.of();
   }
 
-  private <T> CompletableFuture<Timed<T>> timedAsync(Supplier<T> operation) {
-    return CompletableFuture.supplyAsync(() -> timed(operation), executor);
-  }
-
-  private static <T> Timed<T> timed(Supplier<T> operation) {
-    long startNanos = System.nanoTime();
-    T value = operation.get();
-    return new Timed<>(value, System.nanoTime() - startNanos);
+  private <T> CompletableFuture<TimedOperation<T>> timedAsync(Supplier<T> operation) {
+    return CompletableFuture.supplyAsync(() -> TimedOperation.run(operation), executor);
   }
 
   @PreDestroy
   void closeExecutor() {
     executor.close();
   }
-
-  private record Timed<T>(T value, long nanos) {}
 }

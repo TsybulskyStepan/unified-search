@@ -6,11 +6,13 @@ import com.example.searchapp.onboarding.exception.ClientNotFoundException;
 import com.example.searchapp.onboarding.exception.DocumentNotFoundException;
 import com.example.searchapp.onboarding.repository.ClientRepository;
 import com.example.searchapp.onboarding.repository.DocumentRepository;
+import com.example.searchapp.onboarding.service.model.Classification;
+import com.example.searchapp.onboarding.service.model.DocumentChunkSet;
+import com.example.searchapp.shared.TimedOperation;
 import com.example.searchapp.shared.embedding.Embedder;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -58,17 +60,12 @@ public class DocumentService {
             request.title(), request.content(), request.documentType(), request.purposes());
     classificationOutcomes.record(classification);
 
-    long embeddingStartNanos = System.nanoTime();
-    long embeddingNanos;
-    DocumentChunkSet chunkSet;
-    try {
-      chunkSet =
-          DocumentChunkSet.embed(
-              embedder, request.title(), request.content(), classification.labelText());
-    } finally {
-      embeddingNanos = System.nanoTime() - embeddingStartNanos;
-      embeddingTimer.record(embeddingNanos, TimeUnit.NANOSECONDS);
-    }
+    TimedOperation<DocumentChunkSet> embedded =
+        TimedOperation.run(
+            () ->
+                DocumentChunkSet.embed(
+                    embedder, request.title(), request.content(), classification.labelText()),
+            embeddingTimer);
 
     Document document =
         documents.insert(
@@ -76,8 +73,8 @@ public class DocumentService {
             request.title(),
             request.content(),
             classification,
-            chunkSet.labelEmbedding(),
-            chunkSet.bodyChunks(),
+            embedded.result().labelEmbedding(),
+            embedded.result().bodyChunks(),
             embedder.modelId());
     log.info(
         "Document indexed document_id={} document_type={} classification_source={}"
@@ -85,8 +82,8 @@ public class DocumentService {
         document.id(),
         document.documentType(),
         document.classificationSource(),
-        chunkSet.bodyChunks().size(),
-        TimeUnit.NANOSECONDS.toMillis(embeddingNanos));
+        embedded.result().bodyChunks().size(),
+        embedded.elapsedMillis());
     return document;
   }
 

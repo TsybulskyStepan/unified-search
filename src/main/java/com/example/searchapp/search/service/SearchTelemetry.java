@@ -1,6 +1,7 @@
 package com.example.searchapp.search.service;
 
 import com.example.searchapp.search.planner.QueryPlan;
+import com.example.searchapp.shared.TimedOperation;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import java.util.EnumMap;
@@ -70,12 +71,9 @@ public class SearchTelemetry {
 
     /** Runs the stage and records how long it took, including when it throws. */
     public <T> T timed(Stage stage, Supplier<T> operation) {
-      long stageStartNanos = System.nanoTime();
-      try {
-        return operation.get();
-      } finally {
-        record(stage, System.nanoTime() - stageStartNanos);
-      }
+      TimedOperation<T> timed = TimedOperation.run(operation, stageTimers.get(stage));
+      stageNanos.set(stage.ordinal(), timed.elapsedNanos());
+      return timed.result();
     }
 
     public void planned(QueryPlan plan) {
@@ -86,10 +84,10 @@ public class SearchTelemetry {
 
     /** Only called when retrieval ran, so a skipped retrieval leaves its timers untouched. */
     public void retrieved(RetrievalMeasurements measured) {
-      record(Stage.LABEL, measured.labelNanos());
-      record(Stage.LEXICAL, measured.lexicalNanos());
-      record(Stage.EMBED_QUERY, measured.queryEmbeddingNanos());
-      record(Stage.SEMANTIC, measured.semanticNanos());
+      recordNanos(Stage.LABEL, measured.labelNanos());
+      recordNanos(Stage.LEXICAL, measured.lexicalNanos());
+      recordNanos(Stage.EMBED_QUERY, measured.queryEmbeddingNanos());
+      recordNanos(Stage.SEMANTIC, measured.semanticNanos());
       labelHits = measured.labelHits();
       lexicalHits = measured.lexicalHits();
       semanticHits = measured.semanticHits();
@@ -126,7 +124,7 @@ public class SearchTelemetry {
           TimeUnit.NANOSECONDS.toMillis(totalNanos));
     }
 
-    private void record(Stage stage, long nanos) {
+    private void recordNanos(Stage stage, long nanos) {
       stageTimers.get(stage).record(nanos, TimeUnit.NANOSECONDS);
       stageNanos.set(stage.ordinal(), nanos);
     }

@@ -1,8 +1,10 @@
 package com.example.searchapp.onboarding.service;
 
 import com.example.searchapp.onboarding.exception.PermanentSummarizationException;
-import com.example.searchapp.onboarding.repository.ClaimedSummaryJob;
 import com.example.searchapp.onboarding.repository.DocumentRepository;
+import com.example.searchapp.onboarding.repository.model.ClaimedSummaryJob;
+import com.example.searchapp.onboarding.service.summarizer.Summarizer;
+import com.example.searchapp.shared.TimedOperation;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
@@ -10,7 +12,6 @@ import jakarta.annotation.PreDestroy;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -102,12 +103,8 @@ public class SummaryWorker {
   }
 
   private String timeSummaryCall(ClaimedSummaryJob job) {
-    long startNanos = System.nanoTime();
-    try {
-      return summarizer.summarize(job.title(), job.content());
-    } finally {
-      summaryTimer.record(System.nanoTime() - startNanos, TimeUnit.NANOSECONDS);
-    }
+    return TimedOperation.run(() -> summarizer.summarize(job.title(), job.content()), summaryTimer)
+        .result();
   }
 
   @PreDestroy
