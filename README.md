@@ -41,9 +41,193 @@ export KEY=dev-only-insecure-key-do-not-use-in-production-env
 ```
 
 Interactive docs, no key required: <http://localhost:8080/swagger-ui.html>. The SPA is on
-<http://localhost:8080/>. Every endpoint also exists as a runnable request in [`http/`](http/) — six
-`.http` files for VS Code or IntelliJ, covering clients, documents, search, summaries and error
-shapes.
+<http://localhost:8080/>.
+
+## Example queries and responses
+
+Every response below was copied from a run of this code against a freshly seeded database. Where a
+response is long it is trimmed, never edited: `…` marks elided prose, and the JSON blocks drop `id`,
+`client_id`, `created_at`, `summary` and `social_links` to keep the shape readable.
+
+### 1. A company name inside an email address finds the client
+
+```bash
+curl -s "localhost:8080/search?q=NevisWealth&limit=5" -H "X-API-Key: $KEY"
+```
+
+```json
+[
+  {
+    "type": "client",
+    "score": 1.0,
+    "match": { "field": "email", "tier": "identity" },
+    "client": {
+      "first_name": "John",
+      "last_name": "Doe",
+      "email": "john.doe@neviswealth.com",
+      "description": "Long-standing private client, onboarded through the NevisWealth referral programme. …"
+    }
+  }
+]
+```
+
+`pg_trgm` splits the address into `john`, `doe`, `neviswealth`, `com`, so the company name matches the
+email at 1.0. `match.tier` says this was an identity field, which is what lets it outrank documents.
+
+### 2. A KYC category finds documents that never use the words
+
+```bash
+curl -s "localhost:8080/search?q=address%20proof&limit=15" -H "X-API-Key: $KEY"
+```
+
+The brief asks that `address proof` also return documents containing "utility bill". It does.
+`X-Total-Count` is `73`. The first page is bank statements, tenancy agreements and a council tax bill;
+entry 13 is the document the brief names:
+
+```json
+[
+  {
+    "type": "document",
+    "score": 0.029877,
+    "match": {
+      "signals": [
+        "label",
+        "lexical",
+        "semantic"
+      ],
+      "labels": [
+        "purpose:proof_of_address"
+      ]
+    },
+    "document": {
+      "title": "Savings Account Statement Q3 2024",
+      "document_type": "bank_statement"
+    }
+  }
+]
+```
+
+**None of the documents on that page contains the phrase "address proof" or "proof of address"
+anywhere in its title or content.** They match because they are *tagged* `proof_of_address`, and the
+label text is indexed alongside the content, so the tag is reachable both lexically and semantically.
+That is the difference between this and cosine over raw text.
+
+`match.signals` names which of the three signals admitted each document, and `match.labels` names the
+tag that matched, so a surprising ranking can be explained from the response alone.
+
+### Other query shapes
+
+**A fuzzy name.** A misspelling still finds the client, through trigram similarity rather than an
+index of corrections — `?q=Hendersen` returns Mary Henderson at 0.7.
+
+**An identity query** returns people, not their paperwork. `?q=John` returns both Johns — John Doe and
+John Whitfield — each at 1.0 on `match.field: "name"`, and no documents.
+
+**A compound query** names a person *and* a category, and the person becomes a qualifier rather than
+the answer:
+
+```bash
+curl -s "localhost:8080/search?q=John%20Doe%20utility%20bill&limit=5" -H "X-API-Key: $KEY"
+```
+
+```json
+[
+  {
+    "type": "document",
+    "score": 0.032787,
+    "match": {
+      "signals": [
+        "label",
+        "lexical",
+        "semantic"
+      ],
+      "labels": [
+        "type:utility_bill"
+      ]
+    },
+    "document": {
+      "title": "2024 Utility Bill",
+      "client_name": "John Doe",
+      "document_type": "utility_bill"
+    }
+  },
+  {
+    "type": "document",
+    "score": 0.009174,
+    "match": {
+      "signals": [
+        "semantic"
+      ],
+      "labels": []
+    },
+    "document": {
+      "title": "Advisory Engagement Letter",
+      "client_name": "John Doe",
+      "document_type": "engagement_letter"
+    }
+  },
+  {
+    "type": "client",
+    "score": 1.0,
+    "match": {
+      "field": "email",
+      "tier": "identity"
+    },
+    "client": {
+      "first_name": "John",
+      "last_name": "Doe",
+      "email": "john.doe@neviswealth.com"
+    }
+  },
+  {
+    "type": "document",
+    "score": 0.032258,
+    "match": {
+      "signals": [
+        "label",
+        "lexical",
+        "semantic"
+      ],
+      "labels": [
+        "type:utility_bill"
+      ]
+    },
+    "document": {
+      "title": "2024 Utility Bill",
+      "client_name": "Samuel Okafor",
+      "document_type": "utility_bill"
+    }
+  }
+]
+```
+
+Read the order: John's bill, then his other qualifying document, then John himself, then everyone
+else's bills. Note the second entry was admitted by the semantic signal alone, with no label and no
+shared words.
+
+**A query with no honest answer** returns `[]` rather than the nearest thing in the corpus.
+`?q=how%20to%20bake%20sourdough%20bread` and `?q=sdfewferdvrevrennfg` both return `[]` — the second
+because a readability check rejects text the embedding model cannot read as words, which no cosine
+threshold can do.
+
+## Summaries (optional)
+
+Summaries are the one feature that sends document text to a third party, so they are **off unless you
+opt in** — and fully observable without a key, because the failure is a state, not an error. Seeded
+ids are random per volume, so find one first:
+
+`none → pending → failed`, with no key, in about a second. The same path handles a bad or revoked key,
+so the degradation you see locally is the one that runs in production. To turn summaries on, copy
+`.env.example` to `.env` and set `GEMINI_API_KEY`, then restart; the state machine is identical and
+ends at `ready`.
+
+**Egress.** With a key set, a document's title and content are sent to the Google Gemini API when a
+summary is requested — never on create, never on read, never during search. Leaving `GEMINI_API_KEY`
+unset removes that egress entirely; nothing else in the system makes an outbound call.
+
+**Search never depends on it.** The document above is `failed` and still ranks first for
+`utility bill`. Search never reads the `summary` column.
+
 
 ## How it works
 
