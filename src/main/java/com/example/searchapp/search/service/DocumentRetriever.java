@@ -50,26 +50,14 @@ public class DocumentRetriever {
       return RetrievalResult.SKIPPED;
     }
     CompletableFuture<Timed<List<LabelDocumentMatch>>> labels =
-        CompletableFuture.supplyAsync(
-            () -> timed(() -> documents.findLabelMatches(plan.types(), plan.purposes())), executor);
+        timedAsync(() -> documents.findLabelMatches(plan.types(), plan.purposes()));
     CompletableFuture<Timed<List<RankedDocumentMatch>>> lexical =
-        CompletableFuture.supplyAsync(
-            () -> timed(() -> documents.findLexicalMatches(plan.residual())), executor);
+        timedAsync(() -> documents.findLexicalMatches(plan.residual()));
     CompletableFuture<Timed<QueryEmbedding>> embedded =
-        CompletableFuture.supplyAsync(
-            () -> timed(() -> embedder.embedQuery(plan.residual())), executor);
+        timedAsync(() -> embedder.embedQuery(plan.residual()));
     CompletableFuture<Timed<List<RankedDocumentMatch>>> semantic =
         embedded.thenApplyAsync(
-            embedding ->
-                timed(
-                    () ->
-                        embedding.value().readable()
-                            ? documents.findSemanticMatches(
-                                embedding.value().vector(), embedder.modelId())
-                            : List.of()),
-            executor);
-
-    CompletableFuture.allOf(labels, lexical, semantic).join();
+            embedding -> timed(() -> semanticMatches(embedding.value())), executor);
 
     Timed<List<LabelDocumentMatch>> labelResult = labels.join();
     Timed<List<RankedDocumentMatch>> lexicalResult = lexical.join();
@@ -100,6 +88,16 @@ public class DocumentRetriever {
                 () -> new IllegalStateException("Cannot hydrate matches: retrieval did not run"));
     return documents.findByMatches(matches, queryVector, embedder.modelId()).stream()
         .collect(Collectors.toMap(hydrated -> hydrated.document().id(), Function.identity()));
+  }
+
+  private List<RankedDocumentMatch> semanticMatches(QueryEmbedding embedding) {
+    return embedding.readable()
+        ? documents.findSemanticMatches(embedding.vector(), embedder.modelId())
+        : List.of();
+  }
+
+  private <T> CompletableFuture<Timed<T>> timedAsync(Supplier<T> operation) {
+    return CompletableFuture.supplyAsync(() -> timed(operation), executor);
   }
 
   private static <T> Timed<T> timed(Supplier<T> operation) {
