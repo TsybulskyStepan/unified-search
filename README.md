@@ -101,31 +101,31 @@ email at 1.0. `match.tier` says this was an identity field, which is what lets i
 ### 2. A KYC category finds documents that never use the words
 
 ```bash
-curl -s "localhost:8080/search?q=address%20proof&limit=10" \
+curl -s "localhost:8080/search?q=address%20proof&limit=15" \
   -H "X-API-Key: dev-only-insecure-key-do-not-use-in-production-env"
 ```
 
 The brief asks that `address proof` also return documents containing "utility bill". It does. The
-response is an array; the first page is bank statements, tenancy agreements and utility bills, and
-the eighth entry is the one the brief names:
+response is an array; the first page is bank statements, tenancy agreements and a council tax bill,
+and the thirteenth entry is the one the brief names:
 
 ```json
 [
-  { "type": "document", "score": 0.030214,
+  { "type": "document", "score": 0.029877,
     "match": { "signals": ["label", "lexical", "semantic"], "labels": ["purpose:proof_of_address"] },
-    "document": { "title": "Bank Statement February 2024", "document_type": "bank_statement" } },
+    "document": { "title": "Savings Account Statement Q3 2024", "document_type": "bank_statement" } },
 
-  { "type": "document", "score": 0.028405,
+  { "type": "document", "score": 0.029551,
     "match": { "signals": ["label", "lexical", "semantic"], "labels": ["purpose:proof_of_address"] },
-    "document": { "title": "Assured Shorthold Tenancy Agreement", "document_type": "tenancy_agreement" } },
+    "document": { "title": "Bank Statement October 2025", "document_type": "bank_statement" } },
 ```
 
-Entries 1 and 3 to 6 are four more statements and a second tenancy, all scoring between those two.
-Entry 7 is the document the brief asks for:
+Entries 3 to 12 are five more statements, four tenancy agreements and a Council Tax Bill, all scoring
+between the second entry and the last. Entry 13 is the document the brief asks for:
 
 ```json
 
-  { "type": "document", "score": 0.026621,
+  { "type": "document", "score": 0.025522,
     "match": {
       "passage": "account holder's name and confirms occupancy at the registered address for the period shown above.",
       "signals": ["label", "lexical", "semantic"],
@@ -139,10 +139,10 @@ Entry 7 is the document the brief asks for:
 ]
 ```
 
-`X-Total-Count` is `70`; 53 of those carry the `proof_of_address` label and the rest are lexical or
+`X-Total-Count` is `73`; 55 of those carry the `proof_of_address` label and the rest are lexical or
 semantic matches ranked below them.
 
-**None of the documents on that first page contains the phrase "address proof" or "proof of address"
+**None of the documents on that page contains the phrase "address proof" or "proof of address"
 anywhere in its title or content.** They match because they are *tagged* `proof_of_address`, and the
 label text is indexed alongside the content, so the tag is reachable both lexically and semantically.
 That is the difference between this and cosine over raw text.
@@ -208,7 +208,7 @@ curl -s "localhost:8080/search?q=utility%20bill&limit=5" -H "X-API-Key: $KEY"
     "document": { "title": "2024 Utility Bill", "client_name": "Samuel Okafor", "document_type": "utility_bill" } },
   { "type": "document", "score": 0.030798,
     "match": { "signals": ["label", "lexical", "semantic"], "labels": ["type:utility_bill"] },
-    "document": { "title": "Electricity Bill Oct to Dec 2024", "client_name": "Daniel Okafor", "document_type": "utility_bill" } }
+    "document": { "title": "Water Services Bill 2024/25", "client_name": "Zoë Fairweather", "document_type": "utility_bill" } }
 ]
 ```
 
@@ -235,7 +235,7 @@ curl -s "localhost:8080/search?q=John%20Doe%20utility%20bill&limit=5" -H "X-API-
     "document": { "title": "2024 Utility Bill", "client_name": "Samuel Okafor", "document_type": "utility_bill" } },
   { "type": "document", "score": 0.030798,
     "match": { "signals": ["label", "lexical", "semantic"], "labels": ["type:utility_bill"] },
-    "document": { "title": "Electricity Bill Oct to Dec 2024", "client_name": "Daniel Okafor", "document_type": "utility_bill" } }
+    "document": { "title": "Water Services Bill 2024/25", "client_name": "Zoë Fairweather", "document_type": "utility_bill" } }
 ]
 ```
 
@@ -437,11 +437,6 @@ label and lexical hit. The remedies are a reranker or intent prototypes, not a b
 **A lexical false positive.** `weather forecast for the weekend` returns the client *Zoë Fairweather*
 at 0.75, because trigram similarity finds `weather` inside her email address. It is a real consequence
 of the 0.6 lexical floor that makes `Hendersen → Henderson` work at 0.70.
-
-**Two documents are invisible to the category they belong to.** The Broadband and Landline bills are
-genuine address evidence but the rules place them as `unknown`, so they are not in the 53
-`proof_of_address` documents and never surface for that query. Adding `broadband` to the utility-bill
-title patterns closes it, together with the classification fixture and the evaluation.
 
 **Short-name typos.** `jhon` (0.20) and `joe` (0.50) against "John Doe" cannot clear any floor that
 keeps the rest of the corpus correct. Levenshtein behind a length limit is the follow-up.

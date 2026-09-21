@@ -46,7 +46,7 @@ class TaxonomyLoaderTest {
   void loadsTheBundledTaxonomy() {
     Taxonomy taxonomy = TaxonomyLoader.load(TaxonomyLoader.TAXONOMY_RESOURCE);
 
-    assertThat(taxonomy.version()).isEqualTo(1);
+    assertThat(taxonomy.version()).isEqualTo(2);
     assertThat(taxonomy.types()).hasSize(EXPECTED_TYPE_PURPOSES.size() + 1); // + unknown
     assertThat(taxonomy.purposes()).hasSize(EXPECTED_PURPOSE_IDS.size());
   }
