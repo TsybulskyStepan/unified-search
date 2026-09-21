@@ -34,7 +34,7 @@ Each one is enforced by a test once its code exists. Adding code that could brea
 - **No PII in logs.** Never log query text, names, emails, titles or content. Log IDs, lengths, counts and timings. Applies to the running service. The relevance eval may log its own fixture queries, which are synthetic, so its report is readable.
 - **SQL is bound, never concatenated.** `JdbcClient` with parameters; no JPA.
 - **One embedding model.** `Embedder` is the only class that imports LangChain4j. Every chunk records the model that produced it and search filters on it, so a model change can never silently mix vector spaces.
-- **Migrations are additive** (expand/contract), Flyway only. The one exception is the privileged Cloud SQL bootstrap in `db/setup/` (extensions, application role), recorded in system-design's Cloud Run section.
+- **Migrations are additive** (expand/contract), Flyway only.
 - **Errors are RFC 9457 ProblemDetail** and never expose stack traces, SQL or constraint names.
 - **Search never depends on summaries.** Summary failure leaves documents searchable.
 

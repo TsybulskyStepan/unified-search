@@ -301,46 +301,41 @@ It also re-derives the semantic floor and fails the build if the margin it depen
 
 ## Deploy (GCP Cloud Run)
 
-One Cloud Run service against an existing Cloud SQL Postgres 17 instance, with secrets from Secret
-Manager. [The design](docs/system-design.md#cloud-run-production) covers the shape and the reasoning;
-these are the commands.
+One Cloud Run service against a Cloud SQL Postgres instance, secrets from Secret Manager.
+[The design](docs/system-design.md#cloud-run-production) covers the shape and the reasoning; these are
+the commands, and they match the running service. There is no pipeline file: the image is built and
+pushed by hand, then deployed.
 
-**One-time**, as the `postgres` user — creates the `unified_search` database, installs `vector`,
-`pg_trgm` and `citext`, and creates the application role. Flyway does everything else on first
-startup:
+**Once.** The database needs the `unified_search` schema and the `vector`, `pg_trgm` and `citext`
+extensions. Flyway creates every table and index on first startup. Create one Secret Manager secret
+each for the database password and the API key (at least 32 characters), and a third for
+`GEMINI_API_KEY` only if you want summaries.
+
+**Build.** Cloud Run runs `linux/amd64`, so say so when building on an ARM machine:
 
 ```bash
-DB_PASSWORD='YOUR_STRONG_DB_PASSWORD' \
-  ./db/setup/init-db.sh --project=YOUR_PROJECT_ID --instance=YOUR_INSTANCE_NAME
+IMAGE=europe-west4-docker.pkg.dev/PROJECT/unified-search/unified-search:$(git rev-parse --short HEAD)-amd64
+docker buildx build --platform linux/amd64 --push -t "$IMAGE" .
 ```
 
-**Secrets and registry.** `API_KEY` must be at least 32 characters. Grant the Cloud Run service
-account access to each secret:
+**Deploy.** The startup probe is long because the embedding model loads before the port opens:
 
 ```bash
-echo -n 'unified_search'          | gcloud secrets create DB_USER     --replication-policy=automatic --data-file=-
-echo -n 'YOUR_STRONG_DB_PASSWORD' | gcloud secrets create DB_PASSWORD --replication-policy=automatic --data-file=-
-echo -n 'YOUR_STRONG_API_KEY'     | gcloud secrets create API_KEY     --replication-policy=automatic --data-file=-
-echo -n 'YOUR_GEMINI_KEY'         | gcloud secrets create GEMINI_API_KEY --replication-policy=automatic --data-file=-  # optional
-
-gcloud artifacts repositories create unified-search --repository-format=docker --location=us-central1
+gcloud run deploy unified-search --region=europe-west4 --image="$IMAGE" \
+  --service-account=RUN_SERVICE_ACCOUNT \
+  --cpu=1 --memory=2Gi --max-instances=1 --cpu-boost --allow-unauthenticated \
+  --add-cloudsql-instances=PROJECT:europe-west4:INSTANCE \
+  --startup-probe=tcpSocket.port=8080,periodSeconds=240,timeoutSeconds=240,failureThreshold=1 \
+  --set-env-vars="SPRING_PROFILES_ACTIVE=cloudrun,SEED_ENABLED=true,DB_USER=DB_USER,\
+SPRING_FLYWAY_DEFAULT_SCHEMA=unified_search,SPRING_FLYWAY_SCHEMAS=unified_search,\
+DB_URL=jdbc:postgresql:///DB_NAME?cloudSqlInstance=PROJECT:europe-west4:INSTANCE&socketFactory=com.google.cloud.sql.postgres.SocketFactory&sslmode=disable&currentSchema=unified_search,public" \
+  --set-secrets="DB_PASSWORD=DB_PASSWORD_SECRET:latest,API_KEY=API_KEY_SECRET:latest"
+# summaries: append ,GEMINI_API_KEY=GEMINI_SECRET:latest to --set-secrets
 ```
 
-**Deploy.** Summaries stay disabled unless you name the Gemini secret — add
-`--gemini-secret=GEMINI_API_KEY`, or `,_GEMINI_API_KEY_SECRET=GEMINI_API_KEY` to `--substitutions`:
+`--allow-unauthenticated` only lets the request reach the app; every data endpoint still needs
+`X-API-Key`. Cloud Run assigns a `*.run.app` HTTPS URL, used exactly like the local endpoint:
 
 ```bash
-./deploy.sh --project=YOUR_PROJECT_ID --instance=YOUR_INSTANCE_NAME --region=us-central1
-
-# or manually
-gcloud builds submit --region=us-central1 --config=cloudbuild.yaml \
-  --substitutions=_DB_INSTANCE=PROJECT_ID:us-central1:INSTANCE_NAME
-```
-
-Cloud Run assigns a default `*.run.app` HTTPS URL, used exactly like the local endpoint with the same
-`X-API-Key` header. The SPA is at the root — open it and enter the API key in the modal.
-
-```bash
-gcloud run services describe unified-search \
-  --region=us-central1 --project=YOUR_PROJECT_ID --format='value(status.url)'
+gcloud run services describe unified-search --region=europe-west4 --format='value(status.url)'
 ```
