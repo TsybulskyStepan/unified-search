@@ -1,5 +1,6 @@
 package com.example.searchapp.onboarding.service;
 
+import com.example.searchapp.onboarding.service.summarizer.Summarizer;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;

@@ -1,4 +1,4 @@
-package com.example.searchapp.onboarding.service;
+package com.example.searchapp.onboarding.service.model;
 
 import java.util.UUID;
 

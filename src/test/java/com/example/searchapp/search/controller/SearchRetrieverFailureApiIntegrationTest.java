@@ -4,7 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.searchapp.IntegrationTest;
 import com.example.searchapp.search.repository.DocumentSearchRepository;
-import com.example.searchapp.search.repository.RankedDocumentMatch;
+import com.example.searchapp.search.repository.model.RankedDocumentMatch;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.TestConfiguration;

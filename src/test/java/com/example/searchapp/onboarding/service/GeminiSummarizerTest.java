@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.searchapp.onboarding.exception.PermanentSummarizationException;
 import com.example.searchapp.onboarding.exception.TransientSummarizationException;
+import com.example.searchapp.onboarding.service.summarizer.GeminiSummarizer;
 import com.google.genai.errors.ApiException;
 import com.google.genai.errors.ClientException;
 import com.google.genai.errors.ServerException;

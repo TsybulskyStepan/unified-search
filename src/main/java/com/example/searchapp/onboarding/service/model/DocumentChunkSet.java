@@ -1,5 +1,6 @@
-package com.example.searchapp.onboarding.service;
+package com.example.searchapp.onboarding.service.model;
 
+import com.example.searchapp.onboarding.service.Chunker;
 import com.example.searchapp.shared.embedding.Embedder;
 import java.util.ArrayList;
 import java.util.List;

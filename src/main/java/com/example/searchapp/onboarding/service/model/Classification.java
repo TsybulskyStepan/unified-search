@@ -1,12 +1,12 @@
-package com.example.searchapp.onboarding.service;
+package com.example.searchapp.onboarding.service.model;
 
 import java.util.List;
 
 /**
- * The output of {@link DocumentClassifier} (§3.3): what a document is, which KYC questions it
- * answers, how that was decided, and against which taxonomy version. Stamped onto the document row
- * (§2.1) and used to build the label chunk (§5.3). {@link #labelText()} is empty exactly when
- * {@link #documentType()} is {@link com.example.searchapp.shared.taxonomy.Taxonomy#UNKNOWN_TYPE}.
+ * The output of DocumentClassifier: what a document is, which KYC questions it answers, how that
+ * was decided, and against which taxonomy version. Stamped onto the document row (§2.1) and used to
+ * build the label chunk (§5.3). {@link #labelText()} is empty exactly when {@link #documentType()}
+ * is {@link com.example.searchapp.shared.taxonomy.Taxonomy#UNKNOWN_TYPE}.
  */
 public record Classification(
     String documentType,

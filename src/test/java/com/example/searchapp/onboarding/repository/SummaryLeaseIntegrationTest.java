@@ -4,9 +4,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.searchapp.IntegrationTest;
 import com.example.searchapp.onboarding.dto.CreateClientRequest;
-import com.example.searchapp.onboarding.service.Chunk;
-import com.example.searchapp.onboarding.service.Classification;
-import com.example.searchapp.onboarding.service.EmbeddedChunk;
+import com.example.searchapp.onboarding.repository.model.ClaimedSummaryJob;
+import com.example.searchapp.onboarding.service.model.Chunk;
+import com.example.searchapp.onboarding.service.model.Classification;
+import com.example.searchapp.onboarding.service.model.EmbeddedChunk;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;

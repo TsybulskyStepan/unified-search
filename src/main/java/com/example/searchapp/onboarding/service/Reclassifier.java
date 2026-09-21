@@ -1,7 +1,10 @@
 package com.example.searchapp.onboarding.service;
 
 import com.example.searchapp.onboarding.repository.DocumentRepository;
-import com.example.searchapp.onboarding.repository.StaleDocument;
+import com.example.searchapp.onboarding.repository.model.StaleDocument;
+import com.example.searchapp.onboarding.service.model.Classification;
+import com.example.searchapp.onboarding.service.model.DocumentChunkSet;
+import com.example.searchapp.onboarding.service.model.ReclassifiedRow;
 import com.example.searchapp.shared.embedding.Embedder;
 import com.example.searchapp.shared.taxonomy.Taxonomy;
 import java.util.List;

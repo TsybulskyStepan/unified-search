@@ -2,6 +2,9 @@ package com.example.searchapp.onboarding.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.example.searchapp.onboarding.service.summarizer.DisabledSummarizer;
+import com.example.searchapp.onboarding.service.summarizer.GeminiSummarizer;
+import com.example.searchapp.onboarding.service.summarizer.SummarizerConfig;
 import org.junit.jupiter.api.Test;
 
 /**

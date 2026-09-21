@@ -1,5 +1,6 @@
 package com.example.searchapp.onboarding.service;
 
+import com.example.searchapp.onboarding.service.model.Classification;
 import com.example.searchapp.shared.taxonomy.DocumentType;
 import com.example.searchapp.shared.taxonomy.Purpose;
 import com.example.searchapp.shared.taxonomy.Taxonomy;

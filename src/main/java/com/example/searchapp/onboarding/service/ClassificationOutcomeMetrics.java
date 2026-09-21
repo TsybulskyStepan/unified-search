@@ -1,5 +1,6 @@
 package com.example.searchapp.onboarding.service;
 
+import com.example.searchapp.onboarding.service.model.Classification;
 import io.micrometer.core.instrument.MeterRegistry;
 import org.springframework.stereotype.Component;
 

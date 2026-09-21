@@ -3,6 +3,9 @@ package com.example.searchapp.onboarding.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.example.searchapp.onboarding.service.model.Chunk;
+import com.example.searchapp.onboarding.service.model.DocumentChunkSet;
+import com.example.searchapp.onboarding.service.model.EmbeddedChunk;
 import com.example.searchapp.shared.embedding.Cosine;
 import com.example.searchapp.shared.embedding.Embedder;
 import java.util.List;

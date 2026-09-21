@@ -1,4 +1,4 @@
-package com.example.searchapp.onboarding.repository;
+package com.example.searchapp.onboarding.repository.model;
 
 import java.util.List;
 import java.util.UUID;

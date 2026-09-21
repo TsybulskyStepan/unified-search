@@ -5,9 +5,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.example.searchapp.IntegrationTest;
 import com.example.searchapp.onboarding.dto.CreateClientRequest;
-import com.example.searchapp.onboarding.service.Chunk;
-import com.example.searchapp.onboarding.service.Classification;
-import com.example.searchapp.onboarding.service.EmbeddedChunk;
+import com.example.searchapp.onboarding.service.model.Chunk;
+import com.example.searchapp.onboarding.service.model.Classification;
+import com.example.searchapp.onboarding.service.model.EmbeddedChunk;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

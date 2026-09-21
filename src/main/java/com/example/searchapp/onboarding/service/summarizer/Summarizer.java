@@ -1,4 +1,4 @@
-package com.example.searchapp.onboarding.service;
+package com.example.searchapp.onboarding.service.summarizer;
 
 import com.example.searchapp.onboarding.exception.PermanentSummarizationException;
 import com.example.searchapp.onboarding.exception.TransientSummarizationException;

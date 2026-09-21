@@ -1,4 +1,4 @@
-package com.example.searchapp.onboarding.service;
+package com.example.searchapp.onboarding.service.summarizer;
 
 import com.example.searchapp.onboarding.exception.PermanentSummarizationException;
 import com.example.searchapp.onboarding.exception.TransientSummarizationException;
@@ -23,7 +23,7 @@ import com.google.genai.types.ThinkingConfig;
  * summarize, never as instructions to follow, and no {@code Tool} is attached, so the worst a
  * prompt injection can do is produce a misleading summary of that one document.
  */
-final class GeminiSummarizer implements Summarizer {
+public final class GeminiSummarizer implements Summarizer {
   /** Comfortably under {@code SummaryWorker}'s 2-minute claim lease (§7.2). */
   private static final int TIMEOUT_MILLIS = 20_000;
 
@@ -40,7 +40,7 @@ final class GeminiSummarizer implements Summarizer {
   private final Client client;
   private final String model;
 
-  GeminiSummarizer(String apiKey, String model) {
+  public GeminiSummarizer(String apiKey, String model) {
     this.client = Client.builder().apiKey(apiKey).build();
     this.model = model;
   }
@@ -68,7 +68,7 @@ final class GeminiSummarizer implements Summarizer {
    * permanent (ticket 11 AC). {@code code() == 429} is the one 4xx that means "retry later" rather
    * than "this request will never succeed".
    */
-  static RuntimeException classify(ApiException exception) {
+  public static RuntimeException classify(ApiException exception) {
     if (exception instanceof ClientException && exception.code() != 429) {
       return new PermanentSummarizationException(
           "Gemini rejected the request (" + exception.code() + ")", exception);
@@ -77,7 +77,7 @@ final class GeminiSummarizer implements Summarizer {
         "Gemini call failed (" + exception.code() + ")", exception);
   }
 
-  GenerateContentConfig config() {
+  public GenerateContentConfig config() {
     return GenerateContentConfig.builder()
         .systemInstruction(Content.fromParts(Part.fromText(SYSTEM_INSTRUCTION)))
         // Flash models spend part of maxOutputTokens on a hidden "thinking" trace unless this is

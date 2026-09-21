@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.example.searchapp.eval.EvalCorpusLoader;
 import com.example.searchapp.onboarding.seed.DemoCorpus;
+import com.example.searchapp.onboarding.service.model.Classification;
 import com.example.searchapp.shared.taxonomy.Taxonomy;
 import com.example.searchapp.shared.taxonomy.TaxonomyLoader;
 import com.example.searchapp.shared.web.RequestValidationException;

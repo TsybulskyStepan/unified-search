@@ -1,4 +1,4 @@
-package com.example.searchapp.onboarding.service;
+package com.example.searchapp.onboarding.service.summarizer;
 
 import com.example.searchapp.onboarding.exception.PermanentSummarizationException;
 
@@ -8,7 +8,7 @@ import com.example.searchapp.onboarding.exception.PermanentSummarizationExceptio
  * (§7.3). Every requested summary reaches {@code failed} within one nudge, by the same code path a
  * bad or revoked key would take once {@link GeminiSummarizer} rejects it.
  */
-class DisabledSummarizer implements Summarizer {
+public class DisabledSummarizer implements Summarizer {
   @Override
   public String summarize(String title, String content) {
     throw new PermanentSummarizationException("No summarizer is configured");

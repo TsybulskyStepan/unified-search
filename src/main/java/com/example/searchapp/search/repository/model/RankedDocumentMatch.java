@@ -1,4 +1,4 @@
-package com.example.searchapp.search.repository;
+package com.example.searchapp.search.repository.model;
 
 import java.time.Instant;
 import java.util.UUID;

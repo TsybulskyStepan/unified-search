@@ -1,6 +1,6 @@
 package com.example.searchapp.search.service;
 
-import com.example.searchapp.search.repository.DocumentMatch;
+import com.example.searchapp.search.repository.model.DocumentMatch;
 import java.util.List;
 import java.util.Optional;
 

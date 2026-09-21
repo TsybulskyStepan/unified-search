@@ -1,5 +1,6 @@
 package com.example.searchapp.onboarding.service;
 
+import com.example.searchapp.onboarding.service.model.Chunk;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -56,7 +57,7 @@ public final class Chunker {
    * title alone when {@code labelText} is empty ({@code unknown} documents, §3.3) — there is no
    * label to append, and no reason to embed a trailing blank line.
    */
-  static String labelEmbeddingInput(String title, String labelText) {
+  public static String labelEmbeddingInput(String title, String labelText) {
     return labelText.isEmpty() ? title : title + "\n" + labelText;
   }
 

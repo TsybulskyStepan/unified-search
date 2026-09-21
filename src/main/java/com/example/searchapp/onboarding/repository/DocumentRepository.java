@@ -2,10 +2,12 @@ package com.example.searchapp.onboarding.repository;
 
 import com.example.searchapp.onboarding.entity.Document;
 import com.example.searchapp.onboarding.entity.SummaryStatus;
-import com.example.searchapp.onboarding.service.Chunk;
-import com.example.searchapp.onboarding.service.Classification;
-import com.example.searchapp.onboarding.service.EmbeddedChunk;
-import com.example.searchapp.onboarding.service.ReclassifiedRow;
+import com.example.searchapp.onboarding.repository.model.ClaimedSummaryJob;
+import com.example.searchapp.onboarding.repository.model.StaleDocument;
+import com.example.searchapp.onboarding.service.model.Chunk;
+import com.example.searchapp.onboarding.service.model.Classification;
+import com.example.searchapp.onboarding.service.model.EmbeddedChunk;
+import com.example.searchapp.onboarding.service.model.ReclassifiedRow;
 import com.pgvector.PGvector;
 import java.sql.ResultSet;
 import java.sql.SQLException;

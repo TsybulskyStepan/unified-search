@@ -1,4 +1,4 @@
-package com.example.searchapp.onboarding.service;
+package com.example.searchapp.onboarding.service.summarizer;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -14,11 +14,11 @@ import org.springframework.context.annotation.Configuration;
  * overridden without a rebuild (§11.2).
  */
 @Configuration
-class SummarizerConfig {
+public class SummarizerConfig {
   static final String DEFAULT_MODEL = "gemini-3.6-flash";
 
   @Bean
-  Summarizer summarizer(
+  public Summarizer summarizer(
       @Value("${GEMINI_API_KEY:}") String apiKey, @Value("${SUMMARY_MODEL:}") String model) {
     if (apiKey == null || apiKey.isBlank()) {
       return new DisabledSummarizer();

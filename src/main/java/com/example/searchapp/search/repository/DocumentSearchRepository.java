@@ -1,6 +1,10 @@
 package com.example.searchapp.search.repository;
 
 import com.example.searchapp.search.entity.SearchDocument;
+import com.example.searchapp.search.repository.model.DocumentMatch;
+import com.example.searchapp.search.repository.model.HydratedDocument;
+import com.example.searchapp.search.repository.model.LabelDocumentMatch;
+import com.example.searchapp.search.repository.model.RankedDocumentMatch;
 import com.pgvector.PGvector;
 import java.sql.ResultSet;
 import java.sql.SQLException;

@@ -2,6 +2,7 @@ package com.example.searchapp.onboarding.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.example.searchapp.onboarding.service.model.Chunk;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
