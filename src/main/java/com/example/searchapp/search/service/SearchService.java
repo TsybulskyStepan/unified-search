@@ -143,7 +143,7 @@ public class SearchService {
   private static SearchResult clientResult(ClientMatch match, SearchClient client) {
     BigDecimal score = BigDecimal.valueOf(match.score()).setScale(6, RoundingMode.HALF_UP);
     return new SearchResult(
-        "client", score, SearchMatch.field(match.field(), match.tier()), client, null);
+        "client", score, new SearchMatch.Field(match.field(), match.tier()), client, null);
   }
 
   private static SearchResult documentResult(DocumentMatch match, HydratedDocument document) {
@@ -151,7 +151,7 @@ public class SearchService {
     return new SearchResult(
         "document",
         score,
-        SearchMatch.passage(document.passage(), match.signals(), match.labels()),
+        new SearchMatch.Passage(document.passage(), match.signals(), match.labels()),
         null,
         document.document());
   }
