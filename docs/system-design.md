@@ -320,9 +320,9 @@ One Cloud Run service (1 vCPU, 2 GiB, `min-instances=0`, `max-instances=1`, CPU 
 
 1. **Database setup (one-time).** Create the isolated `unified_search` schema in the existing database and install `vector`, `pg_trgm` and `citext`. Flyway creates the application tables and indexes on first startup.
 
-2. **Secrets.** `DB_USER`, `DB_PASSWORD` (the value used in step 1), `API_KEY` and optional `GEMINI_API_KEY` in Secret Manager. The Cloud Run service account needs `secretmanager.versions.access` on each. `cloudbuild.yaml` mounts the Gemini secret only when `_GEMINI_API_KEY_SECRET` is set, so a deployment without summaries needs no such secret.
+2. **Secrets.** `DB_PASSWORD`, `API_KEY` and optional `GEMINI_API_KEY` in Secret Manager, mounted as environment variables; `DB_USER` is a plain environment variable. The Cloud Run service account needs `secretmanager.versions.access` on each. The Gemini secret is mounted only when summaries are wanted, so a deployment without them needs no such secret.
 
-3. **Build and deploy.** `cloudbuild.yaml` builds the Docker image, pushes to Artifact Registry, and deploys to Cloud Run. The `cloudrun` Spring profile (`application-cloudrun.yaml`) configures the Cloud SQL socket factory and HikariCP pool.
+3. **Build and deploy.** There is no pipeline file: a `linux/amd64` image is built and pushed to Artifact Registry by hand, then `gcloud run deploy` attaches the Cloud SQL instance and sets the environment. The `cloudrun` Spring profile (`application-cloudrun.yaml`) sizes the HikariCP pool, and the Cloud SQL socket factory is selected by `DB_URL`.
 
 4. **Public endpoint.** Cloud Run assigns a default `*.run.app` HTTPS URL. No custom domain needed.
 
