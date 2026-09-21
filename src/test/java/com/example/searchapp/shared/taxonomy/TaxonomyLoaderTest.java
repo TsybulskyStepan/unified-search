@@ -57,7 +57,7 @@ class TaxonomyLoaderTest {
 
     EXPECTED_TYPE_PURPOSES.forEach(
         (id, expectedPurposes) -> {
-          Taxonomy.DocumentType type = taxonomy.types().get(id);
+          DocumentType type = taxonomy.types().get(id);
           assertThat(type).as("type '%s'", id).isNotNull();
           assertThat(type.id()).isEqualTo(id);
           assertThat(type.label()).as("label of '%s'", id).isNotBlank();
@@ -72,7 +72,7 @@ class TaxonomyLoaderTest {
     Taxonomy taxonomy = TaxonomyLoader.load(TaxonomyLoader.TAXONOMY_RESOURCE);
 
     for (String id : EXPECTED_PURPOSE_IDS) {
-      Taxonomy.Purpose purpose = taxonomy.purposes().get(id);
+      Purpose purpose = taxonomy.purposes().get(id);
       assertThat(purpose).as("purpose '%s'", id).isNotNull();
       assertThat(purpose.id()).isEqualTo(id);
       assertThat(purpose.label()).as("label of '%s'", id).isNotBlank();
@@ -84,7 +84,7 @@ class TaxonomyLoaderTest {
   void unknownIsALegalTypeCarryingNoPurposes() {
     Taxonomy taxonomy = TaxonomyLoader.load(TaxonomyLoader.TAXONOMY_RESOURCE);
 
-    Taxonomy.DocumentType unknown = taxonomy.types().get(Taxonomy.UNKNOWN_TYPE);
+    DocumentType unknown = taxonomy.types().get(Taxonomy.UNKNOWN_TYPE);
     assertThat(unknown).isNotNull();
     assertThat(unknown.defaultPurposes()).isEmpty();
   }

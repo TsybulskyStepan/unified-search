@@ -2,6 +2,8 @@ package com.example.searchapp.search.planner;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.example.searchapp.shared.taxonomy.DocumentType;
+import com.example.searchapp.shared.taxonomy.Purpose;
 import com.example.searchapp.shared.taxonomy.Taxonomy;
 import java.util.List;
 import java.util.Map;
@@ -252,11 +254,11 @@ class QueryPlannerTest {
             "fees_and_terms", purpose("fees_and_terms", "advisory fees")));
   }
 
-  private static Taxonomy.DocumentType type(String id, String label, String... synonyms) {
-    return new Taxonomy.DocumentType(id, label, List.of(), List.of(), List.of(), List.of(synonyms));
+  private static DocumentType type(String id, String label, String... synonyms) {
+    return new DocumentType(id, label, List.of(), List.of(), List.of(), List.of(synonyms));
   }
 
-  private static Taxonomy.Purpose purpose(String id, String... synonyms) {
-    return new Taxonomy.Purpose(id, id, List.of(synonyms));
+  private static Purpose purpose(String id, String... synonyms) {
+    return new Purpose(id, id, List.of(synonyms));
   }
 }

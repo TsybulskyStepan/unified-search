@@ -56,8 +56,8 @@ public class TaxonomyLoader {
       throw new IllegalStateException(source + ": 'version' must be an integer");
     }
 
-    Map<String, Taxonomy.Purpose> purposes = parsePurposes(root, source);
-    Map<String, Taxonomy.DocumentType> types = parseTypes(root, source, purposes);
+    Map<String, Purpose> purposes = parsePurposes(root, source);
+    Map<String, DocumentType> types = parseTypes(root, source, purposes);
     checkIdsDisjoint(types, purposes, source);
     types.put(Taxonomy.UNKNOWN_TYPE, unknownType());
 
@@ -66,9 +66,8 @@ public class TaxonomyLoader {
     return new Taxonomy(version, types, purposes);
   }
 
-  private static Map<String, Taxonomy.Purpose> parsePurposes(
-      Map<String, Object> root, String source) {
-    Map<String, Taxonomy.Purpose> purposes = new LinkedHashMap<>();
+  private static Map<String, Purpose> parsePurposes(Map<String, Object> root, String source) {
+    Map<String, Purpose> purposes = new LinkedHashMap<>();
     for (Map.Entry<String, Object> entry :
         mapOf(root.get("purposes"), source, "purposes").entrySet()) {
       String id = entry.getKey();
@@ -76,7 +75,7 @@ public class TaxonomyLoader {
       Map<String, Object> fields = mapOf(entry.getValue(), source, "purposes." + id);
       purposes.put(
           id,
-          new Taxonomy.Purpose(
+          new Purpose(
               id,
               stringOf(fields.get("label"), source, "purposes." + id + ".label"),
               stringListOf(fields.get("synonyms"), source, "purposes." + id + ".synonyms")));
@@ -84,9 +83,9 @@ public class TaxonomyLoader {
     return purposes;
   }
 
-  private static Map<String, Taxonomy.DocumentType> parseTypes(
-      Map<String, Object> root, String source, Map<String, Taxonomy.Purpose> purposes) {
-    Map<String, Taxonomy.DocumentType> types = new LinkedHashMap<>();
+  private static Map<String, DocumentType> parseTypes(
+      Map<String, Object> root, String source, Map<String, Purpose> purposes) {
+    Map<String, DocumentType> types = new LinkedHashMap<>();
     for (Map.Entry<String, Object> entry : mapOf(root.get("types"), source, "types").entrySet()) {
       String id = entry.getKey();
       requireNotReserved(id, source, "type");
@@ -101,7 +100,7 @@ public class TaxonomyLoader {
       }
       types.put(
           id,
-          new Taxonomy.DocumentType(
+          new DocumentType(
               id,
               stringOf(fields.get("label"), source, "types." + id + ".label"),
               defaultPurposes,
@@ -113,8 +112,8 @@ public class TaxonomyLoader {
     return types;
   }
 
-  private static Taxonomy.DocumentType unknownType() {
-    return new Taxonomy.DocumentType(
+  private static DocumentType unknownType() {
+    return new DocumentType(
         Taxonomy.UNKNOWN_TYPE, Taxonomy.UNKNOWN_TYPE, List.of(), List.of(), List.of(), List.of());
   }
 
@@ -129,9 +128,7 @@ public class TaxonomyLoader {
    * matching map, so an id in both would be counted and matched as each.
    */
   private static void checkIdsDisjoint(
-      Map<String, Taxonomy.DocumentType> types,
-      Map<String, Taxonomy.Purpose> purposes,
-      String source) {
+      Map<String, DocumentType> types, Map<String, Purpose> purposes, String source) {
     for (String id : types.keySet()) {
       if (purposes.containsKey(id)) {
         throw new IllegalStateException(source + ": '" + id + "' is both a type and a purpose id");
@@ -145,13 +142,11 @@ public class TaxonomyLoader {
    * meant to route to whatever the synonym maps to.
    */
   private static void checkSynonymCollisions(
-      Map<String, Taxonomy.DocumentType> types,
-      Map<String, Taxonomy.Purpose> purposes,
-      String source) {
+      Map<String, DocumentType> types, Map<String, Purpose> purposes, String source) {
     Set<String> ids = new HashSet<>();
     ids.addAll(types.keySet());
     ids.addAll(purposes.keySet());
-    for (Taxonomy.DocumentType type : types.values()) {
+    for (DocumentType type : types.values()) {
       for (String synonym : type.synonyms()) {
         if (ids.contains(synonym)) {
           throw new IllegalStateException(
@@ -164,7 +159,7 @@ public class TaxonomyLoader {
         }
       }
     }
-    for (Taxonomy.Purpose purpose : purposes.values()) {
+    for (Purpose purpose : purposes.values()) {
       for (String synonym : purpose.synonyms()) {
         if (ids.contains(synonym)) {
           throw new IllegalStateException(
