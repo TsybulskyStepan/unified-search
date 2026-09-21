@@ -50,54 +50,69 @@ public class SearchService {
     SearchTelemetry.Recording recording = telemetry.start();
     int returned = 0;
     try {
-      QueryPlan plan =
-          recording.timed(
-              Stage.PLAN,
-              () -> {
-                NormalizedQuery normalizedQuery = queryPlanner.normalize(request.query());
-                List<MentionCandidate> mentionCandidates =
-                    clients.findMentionCandidates(
-                        normalizedQuery.tokens().stream().map(NormalizedToken::text).toList());
-                return queryPlanner.plan(normalizedQuery, mentionCandidates);
-              });
-      recording.planned(plan);
-
-      CompletableFuture<List<ClientMatch>> clientMatches =
-          CompletableFuture.supplyAsync(
-              () -> recording.timed(Stage.CLIENTS, () -> clients.findMatches(plan.query())),
-              searchExecutor);
-      // The client query must already be running when retrieve() blocks, so the two overlap and
-      // latency stays the slower of them rather than their sum.
-      DocumentRetriever.Result retrieval = retriever.retrieve(plan);
-      if (retrieval.ran()) {
-        recording.retrieved(retrieval.measurements());
-      }
-
-      List<ClientMatch> clientResults = clientMatches.join();
-      recording.clientHits(clientResults.size());
-      List<ResultOrdering.Candidate> candidates =
-          ResultOrdering.order(clientResults, retrieval.matches(), plan);
-      if (request.offset() >= candidates.size()) {
-        return new SearchPage(List.of(), candidates.size());
-      }
-      int end = Math.min(candidates.size(), request.offset() + request.limit());
-      List<ResultOrdering.Candidate> pageCandidates = candidates.subList(request.offset(), end);
-
-      PageMatches matches = partition(pageCandidates);
-      Map<UUID, SearchClient> clientsById =
-          clients.findByIds(matches.clientIds()).stream()
-              .collect(Collectors.toMap(SearchClient::id, Function.identity()));
-      Map<UUID, HydratedDocument> documentsById =
-          retriever.hydrate(matches.documentMatches(), retrieval);
-      List<SearchResult> page =
-          pageCandidates.stream()
-              .map(candidate -> toResult(candidate, clientsById, documentsById))
-              .toList();
-      returned = page.size();
-      return new SearchPage(page, candidates.size());
+      QueryPlan plan = plan(request.query(), recording);
+      Ranking ranking = rank(plan, recording);
+      SearchPage page = pageOf(ranking, request);
+      returned = page.results().size();
+      return page;
     } finally {
       recording.finish(request.query().length(), returned);
     }
+  }
+
+  private QueryPlan plan(String query, SearchTelemetry.Recording recording) {
+    QueryPlan plan =
+        recording.timed(
+            Stage.PLAN,
+            () -> {
+              NormalizedQuery normalizedQuery = queryPlanner.normalize(query);
+              List<MentionCandidate> mentionCandidates =
+                  clients.findMentionCandidates(
+                      normalizedQuery.tokens().stream().map(NormalizedToken::text).toList());
+              return queryPlanner.plan(normalizedQuery, mentionCandidates);
+            });
+    recording.planned(plan);
+    return plan;
+  }
+
+  private Ranking rank(QueryPlan plan, SearchTelemetry.Recording recording) {
+    CompletableFuture<List<ClientMatch>> clientMatches =
+        CompletableFuture.supplyAsync(
+            () -> recording.timed(Stage.CLIENTS, () -> clients.findMatches(plan.query())),
+            searchExecutor);
+    // The client query must already be running when retrieve() blocks, so the two overlap and
+    // latency stays the slower of them rather than their sum.
+    DocumentRetriever.Result retrieval = retriever.retrieve(plan);
+    if (retrieval.ran()) {
+      recording.retrieved(retrieval.measurements());
+    }
+
+    List<ClientMatch> clientResults = clientMatches.join();
+    recording.clientHits(clientResults.size());
+    return new Ranking(ResultOrdering.order(clientResults, retrieval.matches(), plan), retrieval);
+  }
+
+  private SearchPage pageOf(Ranking ranking, SearchRequest request) {
+    List<ResultOrdering.Candidate> candidates = ranking.candidates();
+    if (request.offset() >= candidates.size()) {
+      return new SearchPage(List.of(), candidates.size());
+    }
+    int end = Math.min(candidates.size(), request.offset() + request.limit());
+    List<ResultOrdering.Candidate> pageCandidates = candidates.subList(request.offset(), end);
+    return new SearchPage(toResults(pageCandidates, ranking.retrieval()), candidates.size());
+  }
+
+  private List<SearchResult> toResults(
+      List<ResultOrdering.Candidate> pageCandidates, DocumentRetriever.Result retrieval) {
+    PageMatches matches = partition(pageCandidates);
+    Map<UUID, SearchClient> clientsById =
+        clients.findByIds(matches.clientIds()).stream()
+            .collect(Collectors.toMap(SearchClient::id, Function.identity()));
+    Map<UUID, HydratedDocument> documentsById =
+        retriever.hydrate(matches.documentMatches(), retrieval);
+    return pageCandidates.stream()
+        .map(candidate -> toResult(candidate, clientsById, documentsById))
+        .toList();
   }
 
   private static PageMatches partition(List<ResultOrdering.Candidate> candidates) {
@@ -144,6 +159,9 @@ public class SearchService {
   void closeSearchExecutor() {
     searchExecutor.close();
   }
+
+  private record Ranking(
+      List<ResultOrdering.Candidate> candidates, DocumentRetriever.Result retrieval) {}
 
   private record PageMatches(List<UUID> clientIds, List<DocumentMatch> documentMatches) {}
 
