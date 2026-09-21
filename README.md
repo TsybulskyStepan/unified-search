@@ -7,31 +7,11 @@ One Spring Boot service (Java 25) on one PostgreSQL 17 database with `pgvector`,
 `citext`. No broker, no vector service, no second datastore. Embeddings run inside the process, so a
 clean clone needs no credentials and no network.
 
-Every response below was copied from a run of this code against a freshly seeded database. Where a
-response is long it is trimmed, never edited: `…` marks elided prose, and the JSON blocks drop
-`id`, `client_id`, `created_at`, `summary` and `social_links` to keep the shape readable. Send the
-request yourself and you get the same values with those fields present.
-
-## Why it is not a thin wrapper around an embedding model
-
-The brief budgets 10 to 14 hours, and this is more than that, so the extra structure should justify
-itself before you read the architecture.
-
-The obvious build — embed the documents, embed the query, sort by cosine — was built first. It failed
-four of eight evaluation queries. Swapping MiniLM for E5 reproduced the same four failures, which
-ruled out the model and pointed at the shape of the problem: similarity has no notion of what a
-document is *for*.
-
-| Query | Similarity alone | Why | Fix |
-|---|---|---|---|
-| `tax residency` | Council Tax Bills first | The bills literally say "residency", and word overlap beats meaning for any embedding model | Documents carry KYC purpose labels. The bills are `proof_of_address`; the W-9 and tax return are `tax_status` |
-| `source of funds` | Engagement letter first | The completion statement's answer sits in one sentence inside a chunk full of currency figures | A `source_of_funds` label, and one label chunk per document that is immune to dilution |
-| `proof of address` | 5 of 7 found | Two bills never use address wording at all | Label retrieval admits every tagged document, whatever its wording |
-| `advisory fees` | Client "Grace Kim" first | Her description says "advisory arrangements", and clients outranked every document | Description hits became a context tier ranked *below* documents |
-
-So documents are classified at write time into a small closed vocabulary, queries are parsed into a
-plan before retrieval, and three signals are fused rather than one. That is the whole of the extra
-complexity, and each piece traces back to a row in that table.
+| | |
+|---|---|
+| How it is built, and why | [docs/system-design.md](docs/system-design.md) |
+| What the product must do | [docs/prd.md](docs/prd.md) |
+| The original brief | [docs/assignment.md](docs/assignment.md) |
 
 ## Setup
 
@@ -49,32 +29,33 @@ First start takes a minute or two: it builds the image, runs migrations and seed
 docker compose down -v && docker compose up -d   # reset to a clean database
 ```
 
-Everything below was produced this way: a `down -v` onto an empty volume, then one `docker compose
-up -d` with no `.env` and no credentials of any kind.
-
 You need that reset if **`NevisWealth` returns `[]`**. The seeder deliberately skips a database that
 already has clients in it, so a single client created before the first successful seed leaves the
 corpus absent and every example below empty. `down -v` drops the volume, which is what makes the
 next start seed again.
 
-The API key is a dev-only default baked into `docker-compose.yaml`. Every request below sends it:
+The API key is a dev-only default baked into `docker-compose.yaml`. Export it once and every command
+below is copy-pasteable:
 
-```
-X-API-Key: dev-only-insecure-key-do-not-use-in-production-env
+```bash
+export KEY=dev-only-insecure-key-do-not-use-in-production-env
 ```
 
 Interactive docs, no key required: <http://localhost:8080/swagger-ui.html>. The SPA is on
 <http://localhost:8080/>. Every endpoint also exists as a runnable request in [`http/`](http/) — six
 `.http` files for VS Code or IntelliJ, covering clients, documents, search, summaries and error
-shapes, with the same reset note.
+shapes.
 
-## The two cases from the brief
+## Example queries and responses
+
+Every response below was copied from a run of this code against a freshly seeded database. Where a
+response is long it is trimmed, never edited: `…` marks elided prose, and the JSON blocks drop `id`,
+`client_id`, `created_at`, `summary` and `social_links` to keep the shape readable.
 
 ### 1. A company name inside an email address finds the client
 
 ```bash
-curl -s "localhost:8080/search?q=NevisWealth&limit=5" \
-  -H "X-API-Key: dev-only-insecure-key-do-not-use-in-production-env"
+curl -s "localhost:8080/search?q=NevisWealth&limit=5" -H "X-API-Key: $KEY"
 ```
 
 ```json
@@ -84,12 +65,10 @@ curl -s "localhost:8080/search?q=NevisWealth&limit=5" \
     "score": 1.0,
     "match": { "field": "email", "tier": "identity" },
     "client": {
-      "id": "c6fbf6c7-28d6-435e-986b-07acd4c06826",
       "first_name": "John",
       "last_name": "Doe",
       "email": "john.doe@neviswealth.com",
-      "description": "Long-standing private client, onboarded through the NevisWealth referral programme. …",
-      "social_links": ["https://www.linkedin.com/in/john-doe-nevis", "https://www.linkedin.com/company/neviswealth"]
+      "description": "Long-standing private client, onboarded through the NevisWealth referral programme. …"
     }
   }
 ]
@@ -101,13 +80,12 @@ email at 1.0. `match.tier` says this was an identity field, which is what lets i
 ### 2. A KYC category finds documents that never use the words
 
 ```bash
-curl -s "localhost:8080/search?q=address%20proof&limit=15" \
-  -H "X-API-Key: dev-only-insecure-key-do-not-use-in-production-env"
+curl -s "localhost:8080/search?q=address%20proof&limit=15" -H "X-API-Key: $KEY"
 ```
 
-The brief asks that `address proof` also return documents containing "utility bill". It does. The
-response is an array; the first page is bank statements, tenancy agreements and a council tax bill,
-and the thirteenth entry is the one the brief names:
+The brief asks that `address proof` also return documents containing "utility bill". It does.
+`X-Total-Count` is `73`. The first page is bank statements, tenancy agreements and a council tax bill;
+entry 13 is the document the brief names:
 
 ```json
 [
@@ -115,15 +93,7 @@ and the thirteenth entry is the one the brief names:
     "match": { "signals": ["label", "lexical", "semantic"], "labels": ["purpose:proof_of_address"] },
     "document": { "title": "Savings Account Statement Q3 2024", "document_type": "bank_statement" } },
 
-  { "type": "document", "score": 0.029551,
-    "match": { "signals": ["label", "lexical", "semantic"], "labels": ["purpose:proof_of_address"] },
-    "document": { "title": "Bank Statement October 2025", "document_type": "bank_statement" } },
-```
-
-Entries 3 to 12 are five more statements, four tenancy agreements and a Council Tax Bill, all scoring
-between the second entry and the last. Entry 13 is the document the brief asks for:
-
-```json
+  … entries 2 to 12: six more statements, four tenancy agreements, a Council Tax Bill …
 
   { "type": "document", "score": 0.025522,
     "match": {
@@ -139,57 +109,21 @@ between the second entry and the last. Entry 13 is the document the brief asks f
 ]
 ```
 
-`X-Total-Count` is `73`; 55 of those carry the `proof_of_address` label and the rest are lexical or
-semantic matches ranked below them.
-
 **None of the documents on that page contains the phrase "address proof" or "proof of address"
 anywhere in its title or content.** They match because they are *tagged* `proof_of_address`, and the
 label text is indexed alongside the content, so the tag is reachable both lexically and semantically.
 That is the difference between this and cosine over raw text.
 
-`match.signals` names which of the three admitted each document, and `match.labels` names the tag that
-matched, so a surprising ranking can be explained from the response alone.
+`match.signals` names which of the three signals admitted each document, and `match.labels` names the
+tag that matched, so a surprising ranking can be explained from the response alone.
 
-## Other query shapes
-
-Each of these sends the same header as above. It is written `-H "X-API-Key: $KEY"` for width; export
-it once and every command here is copy-pasteable:
-
-```bash
-export KEY=dev-only-insecure-key-do-not-use-in-production-env
-```
+### Other query shapes
 
 **A fuzzy name.** A misspelling still finds the client, through trigram similarity rather than an
-index of corrections:
+index of corrections — `?q=Hendersen` returns Mary Henderson at 0.7.
 
-```bash
-curl -s "localhost:8080/search?q=Hendersen&limit=3" -H "X-API-Key: $KEY"
-```
-
-```json
-[ { "type": "client", "score": 0.7,
-    "match": { "field": "name", "tier": "identity" },
-    "client": { "first_name": "Mary", "last_name": "Henderson", "email": "mary.henderson@example.com" } } ]
-```
-
-**An identity query** returns people, not their paperwork:
-
-```bash
-curl -s "localhost:8080/search?q=John&limit=5" -H "X-API-Key: $KEY"
-```
-
-```json
-[
-  { "type": "client", "score": 1.0,
-    "match": { "field": "name", "tier": "identity" },
-    "client": { "first_name": "John", "last_name": "Doe", "email": "john.doe@neviswealth.com" } },
-  { "type": "client", "score": 1.0,
-    "match": { "field": "name", "tier": "identity" },
-    "client": { "first_name": "John", "last_name": "Whitfield", "email": "j.whitfield@whitfield-consulting.example" } }
-]
-```
-
-Both Johns, and no documents: an identity query is answered by people.
+**An identity query** returns people, not their paperwork. `?q=John` returns both Johns — John Doe and
+John Whitfield — each at 1.0 on `match.field: "name"`, and no documents.
 
 **A category query** returns documents and no clients at all, even though a client named *Bill Carter*
 exists:
@@ -205,15 +139,12 @@ curl -s "localhost:8080/search?q=utility%20bill&limit=5" -H "X-API-Key: $KEY"
     "document": { "title": "2024 Utility Bill", "client_name": "John Doe", "document_type": "utility_bill" } },
   { "type": "document", "score": 0.032258,
     "match": { "signals": ["label", "lexical", "semantic"], "labels": ["type:utility_bill"] },
-    "document": { "title": "2024 Utility Bill", "client_name": "Samuel Okafor", "document_type": "utility_bill" } },
-  { "type": "document", "score": 0.030798,
-    "match": { "signals": ["label", "lexical", "semantic"], "labels": ["type:utility_bill"] },
-    "document": { "title": "Water Services Bill 2024/25", "client_name": "Zoë Fairweather", "document_type": "utility_bill" } }
+    "document": { "title": "2024 Utility Bill", "client_name": "Samuel Okafor", "document_type": "utility_bill" } }
 ]
 ```
 
-**A compound query** names a person *and* a category, and the person is treated as a qualifier rather
-than the answer:
+**A compound query** names a person *and* a category, and the person becomes a qualifier rather than
+the answer:
 
 ```bash
 curl -s "localhost:8080/search?q=John%20Doe%20utility%20bill&limit=5" -H "X-API-Key: $KEY"
@@ -232,16 +163,13 @@ curl -s "localhost:8080/search?q=John%20Doe%20utility%20bill&limit=5" -H "X-API-
     "client": { "first_name": "John", "last_name": "Doe", "email": "john.doe@neviswealth.com" } },
   { "type": "document", "score": 0.032258,
     "match": { "signals": ["label", "lexical", "semantic"], "labels": ["type:utility_bill"] },
-    "document": { "title": "2024 Utility Bill", "client_name": "Samuel Okafor", "document_type": "utility_bill" } },
-  { "type": "document", "score": 0.030798,
-    "match": { "signals": ["label", "lexical", "semantic"], "labels": ["type:utility_bill"] },
-    "document": { "title": "Water Services Bill 2024/25", "client_name": "Zoë Fairweather", "document_type": "utility_bill" } }
+    "document": { "title": "2024 Utility Bill", "client_name": "Samuel Okafor", "document_type": "utility_bill" } }
 ]
 ```
 
 Read the order: John's bill, then his other qualifying document, then John himself, then everyone
-else's bills. The person he named is a filter on the answer, not the answer — and note the second
-entry was admitted by the semantic signal alone, with no label and no shared words.
+else's bills. Note the second entry was admitted by the semantic signal alone, with no label and no
+shared words.
 
 **A query with no honest answer** returns `[]` rather than the nearest thing in the corpus.
 `?q=how%20to%20bake%20sourdough%20bread` and `?q=sdfewferdvrevrennfg` both return `[]` — the second
@@ -251,54 +179,28 @@ threshold can do.
 ## Summaries (optional)
 
 Summaries are the one feature that sends document text to a third party, so they are **off unless you
-opt in**. They are also fully observable without a key, because the failure is a state, not an error.
-
-With no key — the default — request one and watch the state machine. Seeded ids are random per
-volume, so find one first:
+opt in** — and fully observable without a key, because the failure is a state, not an error. Seeded
+ids are random per volume, so find one first:
 
 ```bash
-export KEY=dev-only-insecure-key-do-not-use-in-production-env
 CID=$(curl -s "localhost:8080/search?q=NevisWealth" -H "X-API-Key: $KEY" \
       | python3 -c 'import sys,json; print(json.load(sys.stdin)[0]["client"]["id"])')
 DID=$(curl -s "localhost:8080/clients/$CID/documents" -H "X-API-Key: $KEY" \
       | python3 -c 'import sys,json; print(json.load(sys.stdin)[0]["id"])')
-```
 
-```bash
-# 1. before
-curl -s "localhost:8080/clients/$CID/documents/$DID" -H "X-API-Key: $KEY"
-```
-```json
-{ "title": "2024 Utility Bill", "summary": null, "summary_status": "none" }
-```
-
-```bash
-# 2. request it → HTTP 202
-curl -s -X POST "localhost:8080/clients/$CID/documents/$DID/summary" -H "X-API-Key: $KEY"
-```
-```json
-{ "title": "2024 Utility Bill", "summary": null, "summary_status": "pending" }
-```
-
-```bash
-# 3. read it again about a second later
-curl -s "localhost:8080/clients/$CID/documents/$DID" -H "X-API-Key: $KEY"
-```
-```json
-{ "title": "2024 Utility Bill", "summary": null, "summary_status": "failed" }
+curl -s      "localhost:8080/clients/$CID/documents/$DID"         -H "X-API-Key: $KEY"  # summary_status: none
+curl -s -X POST "localhost:8080/clients/$CID/documents/$DID/summary" -H "X-API-Key: $KEY"  # 202, pending
+curl -s      "localhost:8080/clients/$CID/documents/$DID"         -H "X-API-Key: $KEY"  # a second later: failed
 ```
 
 `none → pending → failed`, with no key, in about a second. The same path handles a bad or revoked key,
-so the degradation you see locally is the one that runs in production.
-
-To turn summaries on, copy `.env.example` to `.env` and set `GEMINI_API_KEY`, then restart. The state
-machine is identical and ends at `ready` with the summary text stored. `SUMMARY_MODEL` overrides the
-model id without a rebuild, which matters because Google retires ids on its own schedule.
+so the degradation you see locally is the one that runs in production. To turn summaries on, copy
+`.env.example` to `.env` and set `GEMINI_API_KEY`, then restart; the state machine is identical and
+ends at `ready`.
 
 **Egress.** With a key set, a document's title and content are sent to the Google Gemini API when a
 summary is requested — never on create, never on read, never during search. Leaving `GEMINI_API_KEY`
-unset removes that egress entirely; nothing else in the system makes an outbound call. Embeddings are
-computed in-process precisely so that the mandatory path has no third-party data flow.
+unset removes that egress entirely; nothing else in the system makes an outbound call.
 
 **Search never depends on it.** The document above is `failed` and still ranks first for
 `utility bill`. Search never reads the `summary` column.
@@ -315,32 +217,23 @@ query ─► plan ─┬─► client search (trigram, identity + context tiers)
 
 **Plan.** The query is normalised, then split into the client it names (if any), the residual text,
 and the taxonomy labels that text refers to. `John's bill` names John and asks for bills; `bill` alone
-does not name Bill Carter, because a single token that is also a category word is treated as a
-category unless it was possessive or a second token confirmed the person.
+does not name Bill Carter.
 
 **Retrieve.** Client search and the three document signals run concurrently on virtual threads.
 Documents are fused with reciprocal rank fusion over the two *ranked* signals; a label match is a
-boolean tier flag rather than a score, because "is tagged proof of address" is not a quantity.
+boolean tier flag rather than a score.
 
-**Order.** Deterministic tiers chosen by the plan's shape, never a blended score. Identity clients
-outrank documents; description-only matches rank below them. Because the order is total, a page is a
-slice and deep pages are stable.
+**Order.** Deterministic tiers chosen by the plan's shape, never a blended score. Because the order is
+total, a page is a slice and deep pages are stable.
 
-`docs/system-design.md` has the full design; `docs/prd.md` has the product framing.
+[The system design](docs/system-design.md) carries the schema, the API contract, the retrieval detail
+and the reasoning behind each choice.
 
 ## The taxonomy, and what it costs to change
 
-The closed vocabulary of document types and KYC purposes lives in one file:
-
-```
-src/main/resources/taxonomy/taxonomy.yaml
-```
-
-It is the one part of this system a reader is expected to edit. A type entry carries a label, its
-default purposes, the title and content patterns that identify it, and the query synonyms that reach
-it.
-
-**Adding a type means touching four things:**
+The closed vocabulary of document types and KYC purposes lives in
+`src/main/resources/taxonomy/taxonomy.yaml`. It is the one part of this system a reader is expected to
+edit. Adding a type means touching four things:
 
 1. The type entry in `taxonomy.yaml`.
 2. The `version` at the top of that file. Raising it is what triggers reclassification.
@@ -348,237 +241,43 @@ it.
    document and must stay at 100%.
 4. The evaluation queries, if the new type should answer a question that is measured.
 
-**Reclassification runs at startup.** Rows written under an older taxonomy version are re-labelled in
-batches of 100 — rule-classified rows are re-run, rows whose type came from a request keep it, and
-every row gets fresh label text and a fresh label chunk. It is not blocking: readiness does not wait
-for it, so the service answers requests while it proceeds. A row that has not been reached yet is
-searchable under its *old* labels, so the window is briefly stale, never absent, and an interrupted
-pass simply resumes on the next start.
-
-## Design decisions
-
-**Embeddings run in-process, not through a hosted API.** The model (`all-MiniLM-L6-v2`, ONNX) ships
-inside the jar, so a clean clone searches with no key, no network and no per-request cost, and
-document text never leaves the process on the mandatory path. The costs are real: a larger image, a
-384-dimension model rather than a stronger hosted one, and CPU-bound embedding on write. For a corpus
-this size that trade is clearly worth it, and the evidence that a bigger model would not have helped
-is in the table at the top.
-
-**Results are ordered by type and provenance, not by a fused score.** A trigram similarity and a
-cosine distance are not comparable quantities, and normalising them into one number would invent a
-weight nobody could defend. Instead the plan's shape picks a tier order: naming a person is the
-highest-precision signal in the system, so identity hits lead; a description match is weak evidence,
-so it ranks below the documents it would otherwise hide. The ordering is a pure function, which is why
-it is unit-tested without a database and why pagination is a slice.
-
-**Documents are classified by rules, not by an LLM at ingest.** Rules are deterministic, add no
-latency to `POST`, need no credential, and are exhaustively testable — the classifier is asserted
-against every seed document. An LLM at ingest would put a network call and an API key on the write
-path, which would end the zero-credential local run and make `201` depend on a third party. KYC
-document types are a small, stable vocabulary, which is exactly where rules win. Documents the rules
-cannot place become `unknown` rather than a guess, and classifying those asynchronously is a
-documented follow-up.
-
-**The database is Postgres alone.** Trigram, full-text and vector search are three extensions of one
-store, which keeps a document and its embeddings in a single transaction. That is what makes a
-document searchable the moment `201` returns.
-
-## Cut on purpose
-
-| Cut | Why |
-|---|---|
-| **Load testing** | No benchmark was run, so no measured latency is claimed (see below). Per-stage timers are in place so the numbers can be taken in operation, which is the only place they would mean anything. |
-| **Multi-tenancy** | No tenant column, no row-level security. It changes every query and every index, and the brief describes one advisor's view. The migration path is noted in the design. |
-| **An ANN index** | Exact scan over roughly 4×10⁴ chunks. HNSW is worth adding when the scan exceeds its budget and not before; at this corpus size it would only add a parameter to tune. |
-| **Update and delete endpoints** | The brief describes create and search. Reclassification is the one internal write to an existing row, and it only changes labels. |
-| **Authentication beyond a static key** | One shared key in a header. Real auth is an identity provider and a session model, which is a different assignment. |
+**Reclassification runs at startup**, in batches of 100, without blocking readiness. A row not yet
+reached is searchable under its *old* labels, so the window is briefly stale, never absent.
 
 ## Deviations from the brief
 
-**Endpoints added.** The brief specifies `POST /clients`, `POST /clients/{id}/documents` and
-`GET /search`. This also serves `GET /clients`, `GET /clients/{id}`,
-`GET /clients/{id}/documents`, `GET /clients/{id}/documents/{documentId}`,
-`POST /clients/{id}/documents/{documentId}/summary`, `GET /health`, the OpenAPI document and Swagger
-UI, and a React SPA at `/`. The reads exist so a reviewer can confirm what was written without opening
-a database, and the SPA exists because search is easier to judge through a search box.
-
-**Search results are a union, not the brief's `Document`.** A result is tagged `client` or `document`
-and carries a `match` object (`field` and `tier` for a client; `passage`, `signals` and `labels` for a
-document). The brief invites extending the model where needed, and without provenance a ranking cannot
-be argued with.
-
-**Document results omit `content`.** The brief's `Document` schema includes it. A search result
-returns the matching passage instead, and the full text is one `GET` away. Returning 126 full
-documents in a result page would be a bandwidth decision disguised as a schema decision.
-
-**The embedding input is not the raw content.** Each body chunk is embedded as
-`title + "\n\n" + chunk text`, so every chunk carries its document's title, and each document gets one
-extra synthetic *label chunk* embedded from `title + "\n" + label text`. The stored vectors therefore
-do not correspond one-to-one with spans of the original text, though the passages returned to a client
-always do.
-
-**Pagination and an API key** were added: `limit`/`offset` with `X-Total-Count`, and `X-API-Key` on
-every data endpoint. Health, the OpenAPI document, Swagger UI and the SPA's own static assets
-(`/`, `/index.html`, `/assets/*`, `.js`, `.css`, images) are exempt, because a browser cannot attach
-a header when fetching them.
+| Deviation | Why |
+|---|---|
+| **Endpoints added** beyond the three specified: `GET /clients`, `GET /clients/{id}`, `GET /clients/{id}/documents`, `GET /clients/{id}/documents/{documentId}`, `POST …/summary`, `GET /health`, OpenAPI, Swagger UI, and a React SPA at `/` | The reads let a reviewer confirm what was written without opening a database, and search is easier to judge through a search box |
+| **Search results are a union**, not the brief's `Document`: tagged `client` or `document`, carrying a `match` object | The brief invites extending the model, and without provenance a ranking cannot be argued with |
+| **Document results omit `content`** | A result returns the matching passage instead; the full text is one `GET` away. Returning 126 full documents per page is a bandwidth decision disguised as a schema one |
+| **The embedding input is not the raw content**: each body chunk is embedded as `title + "\n\n" + chunk`, plus one synthetic label chunk per document | Every chunk carries its document's title, and the tag is reachable semantically. Stored vectors therefore do not map one-to-one onto spans of the original text, though returned passages always do |
+| **Pagination and an API key**: `limit`/`offset` with `X-Total-Count`, `X-API-Key` on every data endpoint | Health, OpenAPI, Swagger UI and the SPA's static assets are exempt, because a browser cannot attach a header when fetching them |
 
 ## Known limits
 
-**The semantic floor is a coarse gate, not a tuned threshold.** It is currently `0.238`, derived by
-the evaluation as the midpoint between the lowest true positive and the highest true negative. It does
-not cleanly separate near-domain noise from genuine paraphrase: measured on this corpus,
-`cheap hotel deals in Rome` scores 0.328 against a lease and `weekend flight to Lisbon` 0.297 against a
-passport, while a real paraphrase such as `evidence of where the client lives` scores as low as 0.12
-against one electricity bill. Those ranges overlap, so raising the floor would drop real answers before
-it dropped travel noise. Such matches are admitted by the semantic signal alone and rank below every
-label and lexical hit. The remedies are a reranker or intent prototypes, not a better number.
+**The semantic floor is a coarse gate, not a tuned threshold.** At `0.238` it does not cleanly
+separate near-domain noise from genuine paraphrase: `cheap hotel deals in Rome` scores 0.328 against a
+lease, while a real paraphrase such as `evidence of where the client lives` scores as low as 0.12
+against one electricity bill. Those ranges overlap, so raising the floor would drop real answers
+before it dropped travel noise. Such matches rank below every label and lexical hit. The remedies are
+a reranker or intent prototypes, not a better number.
 
 **A lexical false positive.** `weather forecast for the weekend` returns the client *Zoë Fairweather*
-at 0.75, because trigram similarity finds `weather` inside her email address. It is a real consequence
-of the 0.6 lexical floor that makes `Hendersen → Henderson` work at 0.70.
+at 0.75, because trigram similarity finds `weather` inside her email address — a real consequence of
+the 0.6 floor that makes `Hendersen → Henderson` work at 0.70.
 
 **Short-name typos.** `jhon` (0.20) and `joe` (0.50) against "John Doe" cannot clear any floor that
-keeps the rest of the corpus correct. Levenshtein behind a length limit is the follow-up.
+keeps the rest of the corpus correct. Queries of one or two characters, non-English synonyms and
+non-English stemming are all out of scope.
 
-Queries of one or two characters, non-English synonyms and non-English stemming are all out of scope.
+Load testing, multi-tenancy, an ANN index, update/delete endpoints and real authentication were
+[cut on purpose](docs/prd.md#83-cuts-taken-deliberately); the remaining ideas and their order are in
+[the design's follow-ups](docs/system-design.md#follow-ups-and-ideas-not-adopted).
 
-## Performance
-
-**These are estimates, not measurements. No load test was run and none of these figures is
-benchmarked.** They are budget arithmetic from the stages the timers cover, recorded so the design can
-be argued about; the real numbers would come from the Micrometer timers in operation.
-
-A search is estimated at **about 45 to 110 ms** against a p99 budget of 300 ms, dominated by the
-semantic scan at 25 to 75 ms. Document creation is embedding plus one transaction: an estimated 10 to
-50 ms typically, and up to about a second for a document at the 64 000-character cap, because cost is
-linear in length. The per-stage breakdown lives in
-[the system design](docs/system-design.md#performance-and-capacity) so the figures have one home
-rather than two.
-
-## Production deployment (GCP Cloud Run)
-
-This branch adds production deployment support. The application runs on **Cloud Run** with a **Cloud SQL
-PostgreSQL 17** database. One command builds, pushes and deploys.
-
-### Architecture
-
-```
-Cloud Run (2 vCPU, 2 GiB, min 1, max 2, CPU always allocated)
-  │
-  ├── Cloud SQL PostgreSQL 17 (existing instance)
-  │     └── pgvector, pg_trgm, citext extensions
-  │
-  └── Secret Manager
-        ├── DB_USER / DB_PASSWORD  — Cloud SQL credentials
-        ├── API_KEY                — application auth
-        └── GEMINI_API_KEY         — optional, for summaries
-```
-
-Cloud Run's default `run.app` domain provides a public HTTPS endpoint. No custom domain needed.
-
-### Prerequisites
-
-1. A GCP project with billing enabled.
-2. A Cloud SQL PostgreSQL 17 instance already running (the one you created).
-3. `gcloud` CLI installed and authenticated.
-
-### One-time database setup
-
-The Cloud SQL instance exists but needs the schema extensions. Connect as the `postgres` user
-(cloudsqlsuperuser) and run the setup script:
-
-```bash
-# Create the database, extensions and application role
-DB_PASSWORD='YOUR_STRONG_DB_PASSWORD' \
-  ./db/setup/init-db.sh --project=YOUR_PROJECT_ID --instance=YOUR_INSTANCE_NAME
-```
-
-This creates the `unified_search` database, installs `vector`, `pg_trgm` and `citext`, creates the
-`unified_search` role with `DB_PASSWORD` as its password, and grants it access. Store the same value
-in the `DB_PASSWORD` secret below. **Flyway migrations run automatically** on the first app startup —
-they create the tables and indexes. Run this script once.
-
-Alternatively, create the database and run the SQL directly:
-
-```bash
-gcloud sql databases create unified_search --instance=YOUR_INSTANCE
-DB_PASSWORD='YOUR_STRONG_DB_PASSWORD' \
-  gcloud sql connect YOUR_INSTANCE --user=postgres --database=postgres < db/setup/init-db.sql
-```
-
-### Secrets
-
-Create secrets in Secret Manager. The application reads these at startup:
-
-```bash
-echo -n 'unified_search' | gcloud secrets create DB_USER --replication-policy=automatic --data-file=-
-echo -n 'YOUR_STRONG_DB_PASSWORD' | gcloud secrets create DB_PASSWORD --replication-policy=automatic --data-file=-   # same value as the setup step
-echo -n 'YOUR_STRONG_API_KEY' | gcloud secrets create API_KEY --replication-policy=automatic --data-file=-
-# Optional: for summaries
-echo -n 'YOUR_GEMINI_KEY' | gcloud secrets create GEMINI_API_KEY --replication-policy=automatic --data-file=-
-```
-
-The API key must be at least 32 characters (same requirement as local). Grant the Cloud Run
-compute service account access to these secrets.
-
-### Artifact Registry
-
-```bash
-gcloud artifacts repositories create unified-search \
-  --repository-format=docker \
-  --location=us-central1
-```
-
-### Deploy
-
-```bash
-./deploy.sh --project=YOUR_PROJECT_ID --instance=YOUR_INSTANCE_NAME --region=us-central1
-```
-
-Or manually:
-
-```bash
-gcloud builds submit --region=us-central1 --config=cloudbuild.yaml \
-  --substitutions=_DB_INSTANCE=PROJECT_ID:us-central1:INSTANCE_NAME
-```
-
-Summaries stay disabled unless you name the Gemini secret: add `--gemini-secret=GEMINI_API_KEY` to
-`deploy.sh`, or `,_GEMINI_API_KEY_SECRET=GEMINI_API_KEY` to `--substitutions`. Without it the secret
-is not mounted, so a deployment without that secret works.
-
-### Public endpoint
-
-Cloud Run assigns a default HTTPS URL:
-```
-https://unified-search-xxxxxxxxxx-uc.a.run.app
-```
-
-Find it with:
-
-```bash
-gcloud run services describe unified-search \
-  --region=us-central1 --project=YOUR_PROJECT_ID \
-  --format='value(status.url)'
-```
-
-Use it exactly like the local endpoint, with the same `X-API-Key` header:
-
-```bash
-curl -s "https://YOUR_URL/search?q=NevisWealth" \
-  -H "X-API-Key: YOUR_API_KEY"
-```
-
-The SPA is at the root URL — open it in a browser and enter the API key in the modal.
-
-### Cloud Run profile
-
-The `cloudrun` Spring profile (activated by `SPRING_PROFILES_ACTIVE=cloudrun`) configures:
-
-- **Port**: respects `$PORT` from Cloud Run.
-- **Database**: connects via the Cloud SQL socket factory (Unix socket, no public IP needed).
-- **Pool**: HikariCP with 10 max connections (sufficient for 2 instances at 80 concurrent requests).
-
-See `src/main/resources/application-cloudrun.yaml`.
+**No latency is measured.** The figures in
+[the design](docs/system-design.md#performance-and-capacity) are budget arithmetic, not benchmarks;
+Micrometer timers are in place so the real numbers can be taken in operation.
 
 ## Tests
 
@@ -590,29 +289,58 @@ Integration tests need Docker; they run the real schema on `pgvector/pgvector:pg
 Testcontainers and the real embedding model, not stubs.
 
 Relevance is guarded by an evaluation set rather than by taste. It holds **34 queries**: 26 declare a
-positive expectation (an exact first result, full recall within *n* positions, or a compound
-ordering) and 8 are negatives that must return nothing. Every document query also asserts that no
-client outranks an expected document. The last run logged:
+positive expectation (an exact first result, full recall within *n* positions, or a compound ordering)
+and 8 are negatives that must return nothing. Every document query also asserts that no client
+outranks an expected document. The last run logged:
 
 ```
 eval summary queries=34 MRR=1.0 meanRecall@n=0.9615384615384616
 ```
 
-It also re-derives the semantic floor and fails the build if the margin it depends on disappears. The
-four failures in the table at the top of this file are all in it.
+It also re-derives the semantic floor and fails the build if the margin it depends on disappears.
 
-## Layout
+## Deploy (GCP Cloud Run)
 
+One Cloud Run service against an existing Cloud SQL Postgres 17 instance, with secrets from Secret
+Manager. [The design](docs/system-design.md#cloud-run-production) covers the shape and the reasoning;
+these are the commands.
+
+**One-time**, as the `postgres` user — creates the `unified_search` database, installs `vector`,
+`pg_trgm` and `citext`, and creates the application role. Flyway does everything else on first
+startup:
+
+```bash
+DB_PASSWORD='YOUR_STRONG_DB_PASSWORD' \
+  ./db/setup/init-db.sh --project=YOUR_PROJECT_ID --instance=YOUR_INSTANCE_NAME
 ```
-src/main/java/…/onboarding/   write side: clients, documents, classification, chunking, summaries
-src/main/java/…/search/       read side: planning, retrieval, fusion, ordering, hydration
-src/main/java/…/shared/       embedding model, taxonomy, web plumbing
-src/main/resources/taxonomy/    the vocabulary you are expected to edit
-src/main/resources/application-cloudrun.yaml  Cloud Run profile
-frontend/                       React SPA, built into the jar
-http/                           runnable requests for every endpoint
-docs/                           system design, PRD, the original brief
-db/setup/                       Cloud SQL database init scripts
-cloudbuild.yaml                 Cloud Build pipeline
-deploy.sh                       one-command deploy script
+
+**Secrets and registry.** `API_KEY` must be at least 32 characters. Grant the Cloud Run service
+account access to each secret:
+
+```bash
+echo -n 'unified_search'          | gcloud secrets create DB_USER     --replication-policy=automatic --data-file=-
+echo -n 'YOUR_STRONG_DB_PASSWORD' | gcloud secrets create DB_PASSWORD --replication-policy=automatic --data-file=-
+echo -n 'YOUR_STRONG_API_KEY'     | gcloud secrets create API_KEY     --replication-policy=automatic --data-file=-
+echo -n 'YOUR_GEMINI_KEY'         | gcloud secrets create GEMINI_API_KEY --replication-policy=automatic --data-file=-  # optional
+
+gcloud artifacts repositories create unified-search --repository-format=docker --location=us-central1
+```
+
+**Deploy.** Summaries stay disabled unless you name the Gemini secret — add
+`--gemini-secret=GEMINI_API_KEY`, or `,_GEMINI_API_KEY_SECRET=GEMINI_API_KEY` to `--substitutions`:
+
+```bash
+./deploy.sh --project=YOUR_PROJECT_ID --instance=YOUR_INSTANCE_NAME --region=us-central1
+
+# or manually
+gcloud builds submit --region=us-central1 --config=cloudbuild.yaml \
+  --substitutions=_DB_INSTANCE=PROJECT_ID:us-central1:INSTANCE_NAME
+```
+
+Cloud Run assigns a default `*.run.app` HTTPS URL, used exactly like the local endpoint with the same
+`X-API-Key` header. The SPA is at the root — open it and enter the API key in the modal.
+
+```bash
+gcloud run services describe unified-search \
+  --region=us-central1 --project=YOUR_PROJECT_ID --format='value(status.url)'
 ```
