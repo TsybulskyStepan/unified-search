@@ -1,3 +1,7 @@
+server:
+  # Cloud Run terminates TLS and forwards plain http; without this springdoc advertises an http://
+  # server URL and browsers block Swagger UI's "Try it out" calls as mixed content.
+  forward-headers-strategy: native
 spring:
   application:
     name: unified-search
