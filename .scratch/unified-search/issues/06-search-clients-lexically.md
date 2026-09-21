@@ -9,7 +9,7 @@ Matches below the lexical floor are dropped, so an unrelated query returns an em
 the least-bad client. Paging and the total are in place from the start, because they are cheap now
 and awkward to retrofit once documents join the list.
 
-This is where the brief's first example becomes an executable test, along with the misspelling case
+This is where the first core example (J1) becomes an executable test, along with the misspelling case
 that falls out of the same mechanism.
 
 **Blocked by:** 04 — Create and fetch clients.

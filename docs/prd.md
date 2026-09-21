@@ -6,8 +6,7 @@
 
 | Document | Role |
 |---|---|
-| [assignment.md](assignment.md) | The original brief. Source of truth for what is being graded. |
-| **prd.md** (this) | Product definition and behavioural spec. **Source of truth for system design.** Where the documents above disagree, this document reconciles them. |
+| **prd.md** (this) | Product definition and behavioural spec. **Source of truth for system design.** Where the documents disagree, this document reconciles them. |
 | [system-design.md](system-design.md) | Technical design: architecture, data model, API contract, and non-functional requirements. |
 
 ---
@@ -54,24 +53,24 @@ Neither retrieval method subsumes the other. The system must run both and merge 
 - Client creation and retrieval
 - Document creation under a client, with content indexed for semantic retrieval
 - Unified search across both, single ranked response
-- LLM-generated document summaries, generated on explicit request — **optional**: the brief lists summarization as optional, and nothing else in the system depends on it
+- LLM-generated document summaries, generated on explicit request — **optional**: nothing else in the system depends on it
 - API-key authentication
-- Pagination on search — **optional**: the brief does not ask for it
+- Pagination on search — **optional**: the core search does not need it
 - Local, reproducible deployment via `docker compose up`, with a React UI for advisor workflows and Swagger UI for API exploration
-- Production deployment on Cloud Run + Cloud SQL. The brief calls deployment a "plus"; the graded deliverable is still the local system
+- Production deployment on Cloud Run + Cloud SQL, in addition to the local system, which remains the primary target
 
 ### 3.2 Out of scope — and why
 
 | Excluded | Reason |
 |---|---|
-| Lexical retrieval over documents | The brief scopes documents to similarity matching. Named as a cut, not an oversight |
+| Lexical retrieval over documents | Documents are matched by similarity only. Named as a cut, not an oversight |
 | Load testing | Latency is stated as reasoning and instrumented, not benchmarked |
 | Multi-tenancy (firm isolation), advisor accounts, RBAC | Considered and deliberately excluded. A single shared API key and a single tenant are sufficient for the demo |
 | Document update and delete | No API is exposed; documents are only created |
-| File upload / PDF parsing | Brief's schema takes `content` as plain text |
+| File upload / PDF parsing | A document's `content` is plain text |
 | Cross-encoder reranking | Standard in full production stacks, correctly cut at ~10⁴ documents. Named as a scale-aware decision, not an oversight |
-| Document versioning, audit history | Not in the brief |
-| Conversational RAG / Q&A over documents | The brief asks for search and summarization, not retrieval-augmented generation |
+| Document versioning, audit history | Not part of the product |
+| Conversational RAG / Q&A over documents | The product does search and summarization, not retrieval-augmented generation |
 | Change streams, external index synchronization | Indexing happens inside the write transaction; there is no external index to sync |
 | i18n | Seed corpus, eval set and success criteria are English-only |
 | Sharding, multi-region | Beyond the scale in 4 |
@@ -80,7 +79,7 @@ Neither retrieval method subsumes the other. The system must run both and merge 
 
 ## 4. Scale assumptions
 
-Sized for the assignment, stated so the design's limits are visible:
+Sized for the demo corpus, stated so the design's limits are visible:
 
 | Dimension | Assumption |
 |---|---|
@@ -141,13 +140,13 @@ Matches against `first_name`, `last_name`, `email`, `description`, and **`social
 
 **Mandatory behaviour — J1.** Query `"NevisWealth"` must return the client whose email is `john.doe@neviswealth.com`.
 
-> **This is the single sharpest technical constraint in the brief.** Postgres full-text search tokenizes `john.doe@neviswealth.com` as one indivisible `email` token. A textbook `to_tsvector`/`tsquery` implementation **fails the brief's own first example.** Satisfying it requires decomposing identifiers on their structural delimiters (`@ . - / _`) and indexing the fragments — or trigram matching, or case-insensitive substring search.
+> **This is the single sharpest technical constraint in the product.** Postgres full-text search tokenizes `john.doe@neviswealth.com` as one indivisible `email` token. A textbook `to_tsvector`/`tsquery` implementation **fails J1 outright.** Satisfying it requires decomposing identifiers on their structural delimiters (`@ . - / _`) and indexing the fragments — or trigram matching, or case-insensitive substring search.
 
-`social_links` is included because a LinkedIn company URL carries the same organizational signal as an email domain, and decomposes the same way. This is likely *why* the field appears in the brief's schema at all.
+`social_links` is included because a LinkedIn company URL carries the same organizational signal as an email domain, and decomposes the same way.
 
 Matching must be case-insensitive and must match on partial tokens (`"Nevis"` also hits). Fuzzy similarity is retained deliberately, so J3's misspelling case works.
 
-**A client relevance threshold is mandatory, and it is the highest-risk number in the system.** Because clients rank above documents, a client that clears the threshold is promoted above *every* document — so the threshold alone decides both of the brief's examples, in opposite directions. Too loose and a faintly-matching client outranks the utility bill, failing J2. Too strict and `"Nevis"` returns nothing, failing J1. Matches below it are **dropped, not demoted**. It is tuned against the eval set, which asserts absence as well as presence.
+**A client relevance threshold is mandatory, and it is the highest-risk number in the system.** Because clients rank above documents, a client that clears the threshold is promoted above *every* document — so the threshold alone decides both J1 and J2, in opposite directions. Too loose and a faintly-matching client outranks the utility bill, failing J2. Too strict and `"Nevis"` returns nothing, failing J1. Matches below it are **dropped, not demoted**. It is tuned against the eval set, which asserts absence as well as presence.
 
 **Client matching also recognises a client named inside a longer query.** This uses individual query tokens against client identity, rather than the whole-query threshold: extra category words would otherwise dilute `"John utility bill"` until John is invisible. Exactly one recognised client plus an unmatched residual term activates J4; no residual preserves name-only J1/J3 behaviour, and two recognised clients are ambiguous and keep the default order.
 
@@ -159,7 +158,7 @@ The query is embedded by the same model that embedded the documents and compared
 
 **What this actually requires is category-to-instance generalization.** In wealth onboarding, "proof of address" is a regulatory *category* satisfied by several artifact types — utility bill, bank statement, council tax bill, tenancy agreement. "Proof of identity" is satisfied by passport, driver's licence, national ID. The advisor thinks in categories; documents are titled with artifact types. Semantic search bridges exactly that gap. This is a fair test for a general-purpose embedding model, not an exotic one.
 
-**Embedding input is `title + content`**, not content alone. The brief says "based on similar terms from its content"; including the title is a minor, deliberate deviation — titles in this domain are highly informative ("2024 Utility Bill — Henderson") and excluding them discards signal. Documented as a deviation in the README.
+**Embedding input is `title + content`**, not content alone. Titles in this domain are highly informative ("2024 Utility Bill — Henderson") and excluding them discards signal.
 
 **A relevance floor is mandatory.** Vector search over a small corpus always returns *something*; the nearest neighbour to an unrelated query is noise. Below-threshold results are dropped so an unrelated query returns an empty list rather than the least-bad match. The threshold is tuned empirically against the seed corpus, not guessed.
 
@@ -252,9 +251,9 @@ A React SPA is the primary advisor surface. Its home page lists clients and prov
 
 ## 6. Success criteria
 
-**The two brief examples exist as automated tests** — J1 (`"NevisWealth"` → the client) and J2 (`"address proof"` → the utility-bill document). These are the assignment's own acceptance criteria; they must be executable, not asserted in prose.
+**J1 and J2 exist as automated tests** — J1 (`"NevisWealth"` → the client) and J2 (`"address proof"` → the utility-bill document). These are the core acceptance criteria; they must be executable, not asserted in prose.
 
-**A relevance evaluation set of ~10 query→expected-result pairs runs as a test**, drawn from KYC vocabulary (proof of address → utility bill / bank statement; proof of identity → passport / driver's licence; source of funds → sale of property; etc.). This turns "semantic search works" from an assertion into evidence, and directly addresses the "correctness" axis the brief says it grades.
+**A relevance evaluation set of ~10 query→expected-result pairs runs as a test**, drawn from KYC vocabulary (proof of address → utility bill / bank statement; proof of identity → passport / driver's licence; source of funds → sale of property; etc.). This turns "semantic search works" from an assertion into evidence.
 
 **The eval set asserts absence as well as presence.** Every case states which results must *not* appear — `"address proof"` must return **zero clients**, `"NevisWealth"` must return exactly the one. Presence-only assertions cannot catch a too-loose client threshold, which is the specific way J2 breaks now that clients outrank documents. Both relevance floors are tuned against this set, and a regression in either direction fails the build.
 
@@ -321,8 +320,8 @@ Type is the ordering key: clients always precede documents, and scores are never
 - **Cross-encoder reranking** — real relevance gains in production stacks, but adds latency and a second hosted model for a corpus small enough that base retrievers are unlikely to need correcting. One README sentence as "what we'd add at 10× scale."
 - **ANN index (HNSW)** — deferred until exact scan measurably slows.
 - **General entity resolution** — delimiter tokenization is the right-sized answer at 10³ clients.
-- **Lexical retrieval over documents** — would make documents findable by firm name and give the ranking real multi-list evidence to fuse. Cut because the brief scopes documents to similarity matching, and following it exactly is worth more here than a superset nobody asked for.
-- **Load testing** — the brief asks for tests of core logic and edge cases, not a benchmark harness. Latency is stated as reasoning with its assumptions exposed, and instrumented so it can be measured in operation.
+- **Lexical retrieval over documents** — would make documents findable by firm name and give the ranking real multi-list evidence to fuse. Cut because documents are matched by similarity only, and keeping to that is worth more here than a superset nobody asked for.
+- **Load testing** — the goal is tests of core logic and edge cases, not a benchmark harness. Latency is stated as reasoning with its assumptions exposed, and instrumented so it can be measured in operation.
 
 ---
 

@@ -15,7 +15,7 @@ whole. A name term scores perfectly against its client; category terms like `uti
 score zero against any name, which is what makes the signal safe to act on.
 
 **Acting on it.** The named client's above-floor documents move to the front, followed by the client,
-then the rest in the usual order. Three rules keep this from breaking the brief's own examples, and
+then the rest in the usual order. Three rules keep this from breaking the two core examples, and
 all three need tests, not just code:
 
 - It **partitions, never filters** — only documents that already cleared the semantic floor are
@@ -23,7 +23,7 @@ all three need tests, not just code:
 - **One named client, or none** — an ambiguous query falls back to today's behaviour.
 - **A residual is required** — some term must not have matched the client. This is the rule that
   protects J1: a firm name matches a client's email perfectly, so without it, that client's documents
-  would outrank the client and the brief's first example would fail.
+  would outrank the client and J1 would fail.
 
 **Blocked by:** 07 — Add documents to search.
 

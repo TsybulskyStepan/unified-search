@@ -10,7 +10,7 @@ pretending otherwise by fusing them would dress an arbitrary tie-break in a prin
 The two retrievers run concurrently and share nothing; if either fails, the whole search fails, because
 half a corpus returned silently is indistinguishable from "no such document".
 
-This is where the brief's second example becomes an executable test — and it asserts **zero clients**,
+This is where the second core example (J2) becomes an executable test — and it asserts **zero clients**,
 because a single weak client match would take position one and demote the utility bill beneath it.
 
 **Blocked by:** 05 — Create and fetch documents; 06 — Search clients lexically.
