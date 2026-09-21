@@ -1,6 +1,7 @@
 package com.example.searchapp.search.service;
 
 import com.example.searchapp.search.dto.SearchMatch;
+import com.example.searchapp.search.dto.SearchPage;
 import com.example.searchapp.search.dto.SearchRequest;
 import com.example.searchapp.search.dto.SearchResult;
 import com.example.searchapp.search.entity.SearchClient;
@@ -17,6 +18,7 @@ import com.example.searchapp.search.service.SearchTelemetry.Stage;
 import jakarta.annotation.PreDestroy;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -50,59 +52,74 @@ public class SearchService {
     SearchTelemetry.Recording recording = telemetry.start();
     int returned = 0;
     try {
-      QueryPlan plan =
-          recording.timed(
-              Stage.PLAN,
-              () -> {
-                NormalizedQuery normalizedQuery = queryPlanner.normalize(request.query());
-                List<MentionCandidate> mentionCandidates =
-                    clients.findMentionCandidates(
-                        normalizedQuery.tokens().stream().map(NormalizedToken::text).toList());
-                return queryPlanner.plan(normalizedQuery, mentionCandidates);
-              });
-      recording.planned(plan);
-
-      CompletableFuture<List<ClientMatch>> clientMatches =
-          CompletableFuture.supplyAsync(
-              () -> recording.timed(Stage.CLIENTS, () -> clients.findMatches(plan.query())),
-              searchExecutor);
-      // The client query must already be running when retrieve() blocks, so the two overlap and
-      // latency stays the slower of them rather than their sum.
-      DocumentRetriever.Result retrieval = retriever.retrieve(plan);
-      if (retrieval.ran()) {
-        recording.retrieved(retrieval.measurements());
-      }
-
-      List<ClientMatch> clientResults = clientMatches.join();
-      recording.clientHits(clientResults.size());
-      List<ResultOrdering.Candidate> candidates =
-          ResultOrdering.order(clientResults, retrieval.matches(), plan);
-      if (request.offset() >= candidates.size()) {
-        return new SearchPage(List.of(), candidates.size());
-      }
-      int end = Math.min(candidates.size(), request.offset() + request.limit());
-      List<ResultOrdering.Candidate> pageCandidates = candidates.subList(request.offset(), end);
-
-      PageMatches matches = partition(pageCandidates);
-      Map<UUID, SearchClient> clientsById =
-          clients.findByIds(matches.clientIds()).stream()
-              .collect(Collectors.toMap(SearchClient::id, Function.identity()));
-      Map<UUID, HydratedDocument> documentsById =
-          retriever.hydrate(matches.documentMatches(), retrieval);
-      List<SearchResult> page =
-          pageCandidates.stream()
-              .map(candidate -> toResult(candidate, clientsById, documentsById))
-              .toList();
-      returned = page.size();
-      return new SearchPage(page, candidates.size());
+      QueryPlan plan = plan(request.query(), recording);
+      Ranking ranking = rank(plan, recording);
+      SearchPage page = pageOf(ranking, request);
+      returned = page.results().size();
+      return page;
     } finally {
       recording.finish(request.query().length(), returned);
     }
   }
 
+  private QueryPlan plan(String query, SearchTelemetry.Recording recording) {
+    QueryPlan plan =
+        recording.timed(
+            Stage.PLAN,
+            () -> {
+              NormalizedQuery normalizedQuery = queryPlanner.normalize(query);
+              List<MentionCandidate> mentionCandidates =
+                  clients.findMentionCandidates(
+                      normalizedQuery.tokens().stream().map(NormalizedToken::text).toList());
+              return queryPlanner.plan(normalizedQuery, mentionCandidates);
+            });
+    recording.planned(plan);
+    return plan;
+  }
+
+  private Ranking rank(QueryPlan plan, SearchTelemetry.Recording recording) {
+    CompletableFuture<List<ClientMatch>> clientMatches =
+        CompletableFuture.supplyAsync(
+            () -> recording.timed(Stage.CLIENTS, () -> clients.findMatches(plan.query())),
+            searchExecutor);
+    // The client query must already be running when retrieve() blocks, so the two overlap and
+    // latency stays the slower of them rather than their sum.
+    RetrievalResult retrieval = retriever.retrieve(plan);
+    if (retrieval.ran()) {
+      recording.retrieved(retrieval.measurements());
+    }
+
+    List<ClientMatch> clientResults = clientMatches.join();
+    recording.clientHits(clientResults.size());
+    return new Ranking(ResultOrdering.order(clientResults, retrieval.matches(), plan), retrieval);
+  }
+
+  private SearchPage pageOf(Ranking ranking, SearchRequest request) {
+    List<ResultOrdering.Candidate> candidates = ranking.candidates();
+    if (request.offset() >= candidates.size()) {
+      return new SearchPage(List.of(), candidates.size());
+    }
+    int end = Math.min(candidates.size(), request.offset() + request.limit());
+    List<ResultOrdering.Candidate> pageCandidates = candidates.subList(request.offset(), end);
+    return new SearchPage(toResults(pageCandidates, ranking.retrieval()), candidates.size());
+  }
+
+  private List<SearchResult> toResults(
+      List<ResultOrdering.Candidate> pageCandidates, RetrievalResult retrieval) {
+    PageMatches matches = partition(pageCandidates);
+    Map<UUID, SearchClient> clientsById =
+        clients.findByIds(matches.clientIds()).stream()
+            .collect(Collectors.toMap(SearchClient::id, Function.identity()));
+    Map<UUID, HydratedDocument> documentsById =
+        retriever.hydrate(matches.documentMatches(), retrieval);
+    return pageCandidates.stream()
+        .map(candidate -> toResult(candidate, clientsById, documentsById))
+        .toList();
+  }
+
   private static PageMatches partition(List<ResultOrdering.Candidate> candidates) {
-    List<UUID> clientIds = new java.util.ArrayList<>();
-    List<DocumentMatch> documentMatches = new java.util.ArrayList<>();
+    List<UUID> clientIds = new ArrayList<>();
+    List<DocumentMatch> documentMatches = new ArrayList<>();
     for (ResultOrdering.Candidate candidate : candidates) {
       switch (candidate) {
         case ResultOrdering.ClientCandidate(ClientMatch match) -> clientIds.add(match.clientId());
@@ -127,7 +144,7 @@ public class SearchService {
   private static SearchResult clientResult(ClientMatch match, SearchClient client) {
     BigDecimal score = BigDecimal.valueOf(match.score()).setScale(6, RoundingMode.HALF_UP);
     return new SearchResult(
-        "client", score, SearchMatch.field(match.field(), match.tier()), client, null);
+        "client", score, new SearchMatch.Field(match.field(), match.tier()), client, null);
   }
 
   private static SearchResult documentResult(DocumentMatch match, HydratedDocument document) {
@@ -135,7 +152,7 @@ public class SearchService {
     return new SearchResult(
         "document",
         score,
-        SearchMatch.passage(document.passage(), match.signals(), match.labels()),
+        new SearchMatch.Passage(document.passage(), match.signals(), match.labels()),
         null,
         document.document());
   }
@@ -145,7 +162,7 @@ public class SearchService {
     searchExecutor.close();
   }
 
-  private record PageMatches(List<UUID> clientIds, List<DocumentMatch> documentMatches) {}
+  private record Ranking(List<ResultOrdering.Candidate> candidates, RetrievalResult retrieval) {}
 
-  public record SearchPage(List<SearchResult> results, int total) {}
+  private record PageMatches(List<UUID> clientIds, List<DocumentMatch> documentMatches) {}
 }

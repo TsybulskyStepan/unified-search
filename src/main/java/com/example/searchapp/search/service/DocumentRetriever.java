@@ -24,8 +24,8 @@ import org.springframework.stereotype.Component;
 /**
  * Finds the documents a query's residual text asks for: label, lexical and semantic retrieval run
  * concurrently and are fused into one ranked list. The query is embedded once, and the resulting
- * vector is kept in the {@link Result} so {@link #hydrate} can pick each match's best passage
- * without the caller ever holding it.
+ * vector is kept in the {@link RetrievalResult} so {@link #hydrate} can pick each match's best
+ * passage without the caller ever holding it.
  *
  * <p>{@link #retrieve} blocks until its own fan-out completes. A caller with independent work, such
  * as the client query, must start it before calling.
@@ -42,43 +42,31 @@ public class DocumentRetriever {
   }
 
   /**
-   * Retrieval is skipped, and {@link Result#ran()} is false, when the plan has no residual or the
-   * residual has nothing the lexical index can search for (only stop words).
+   * Retrieval is skipped, and {@link RetrievalResult#ran()} is false, when the plan has no residual
+   * or the residual has nothing the lexical index can search for (only stop words).
    */
-  public Result retrieve(QueryPlan plan) {
+  public RetrievalResult retrieve(QueryPlan plan) {
     if (!plan.hasResidual() || !documents.hasSearchableTerms(plan.residual())) {
-      return Result.SKIPPED;
+      return RetrievalResult.SKIPPED;
     }
     CompletableFuture<Timed<List<LabelDocumentMatch>>> labels =
-        CompletableFuture.supplyAsync(
-            () -> timed(() -> documents.findLabelMatches(plan.types(), plan.purposes())), executor);
+        timedAsync(() -> documents.findLabelMatches(plan.types(), plan.purposes()));
     CompletableFuture<Timed<List<RankedDocumentMatch>>> lexical =
-        CompletableFuture.supplyAsync(
-            () -> timed(() -> documents.findLexicalMatches(plan.residual())), executor);
+        timedAsync(() -> documents.findLexicalMatches(plan.residual()));
     CompletableFuture<Timed<QueryEmbedding>> embedded =
-        CompletableFuture.supplyAsync(
-            () -> timed(() -> embedder.embedQuery(plan.residual())), executor);
+        timedAsync(() -> embedder.embedQuery(plan.residual()));
     CompletableFuture<Timed<List<RankedDocumentMatch>>> semantic =
         embedded.thenApplyAsync(
-            embedding ->
-                timed(
-                    () ->
-                        embedding.value().readable()
-                            ? documents.findSemanticMatches(
-                                embedding.value().vector(), embedder.modelId())
-                            : List.of()),
-            executor);
-
-    CompletableFuture.allOf(labels, lexical, semantic).join();
+            embedding -> timed(() -> semanticMatches(embedding.value())), executor);
 
     Timed<List<LabelDocumentMatch>> labelResult = labels.join();
     Timed<List<RankedDocumentMatch>> lexicalResult = lexical.join();
     Timed<List<RankedDocumentMatch>> semanticResult = semantic.join();
     Timed<QueryEmbedding> embeddedResult = embedded.join();
-    return new Result(
+    return new RetrievalResult(
         DocumentFusion.fuse(labelResult.value(), lexicalResult.value(), semanticResult.value()),
         Optional.of(embeddedResult.value().vector()),
-        new Measurements(
+        new RetrievalMeasurements(
             labelResult.nanos(),
             lexicalResult.nanos(),
             embeddedResult.nanos(),
@@ -89,7 +77,7 @@ public class DocumentRetriever {
   }
 
   /** Loads the given matches with the passage of each that best matches the retrieved query. */
-  public Map<UUID, HydratedDocument> hydrate(List<DocumentMatch> matches, Result result) {
+  public Map<UUID, HydratedDocument> hydrate(List<DocumentMatch> matches, RetrievalResult result) {
     if (matches.isEmpty()) {
       return Map.of();
     }
@@ -102,6 +90,16 @@ public class DocumentRetriever {
         .collect(Collectors.toMap(hydrated -> hydrated.document().id(), Function.identity()));
   }
 
+  private List<RankedDocumentMatch> semanticMatches(QueryEmbedding embedding) {
+    return embedding.readable()
+        ? documents.findSemanticMatches(embedding.vector(), embedder.modelId())
+        : List.of();
+  }
+
+  private <T> CompletableFuture<Timed<T>> timedAsync(Supplier<T> operation) {
+    return CompletableFuture.supplyAsync(() -> timed(operation), executor);
+  }
+
   private static <T> Timed<T> timed(Supplier<T> operation) {
     long startNanos = System.nanoTime();
     T value = operation.get();
@@ -112,30 +110,6 @@ public class DocumentRetriever {
   void closeExecutor() {
     executor.close();
   }
-
-  /**
-   * The fused matches, best first. {@code queryVector} is present exactly when retrieval ran; it is
-   * how {@link #hydrate} finds each match's passage.
-   */
-  public record Result(
-      List<DocumentMatch> matches, Optional<float[]> queryVector, Measurements measurements) {
-    private static final Result SKIPPED =
-        new Result(List.of(), Optional.empty(), new Measurements(0, 0, 0, 0, 0, 0, 0));
-
-    public boolean ran() {
-      return queryVector.isPresent();
-    }
-  }
-
-  /** Per-stage durations and how many candidates each signal produced. */
-  public record Measurements(
-      long labelNanos,
-      long lexicalNanos,
-      long queryEmbeddingNanos,
-      long semanticNanos,
-      int labelHits,
-      int lexicalHits,
-      int semanticHits) {}
 
   private record Timed<T>(T value, long nanos) {}
 }

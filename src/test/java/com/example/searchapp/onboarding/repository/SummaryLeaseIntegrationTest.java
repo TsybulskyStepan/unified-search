@@ -7,6 +7,7 @@ import com.example.searchapp.onboarding.dto.CreateClientRequest;
 import com.example.searchapp.onboarding.service.Chunk;
 import com.example.searchapp.onboarding.service.Classification;
 import com.example.searchapp.onboarding.service.EmbeddedChunk;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -64,7 +65,7 @@ class SummaryLeaseIntegrationTest extends IntegrationTest {
     Set<UUID> idsA = ids(claimedByA.get());
     Set<UUID> idsB = ids(claimedByB.get());
     assertThat(idsA).doesNotContainAnyElementsOf(idsB);
-    Set<UUID> combined = new java.util.HashSet<>(idsA);
+    Set<UUID> combined = new HashSet<>(idsA);
     combined.addAll(idsB);
     assertThat(combined).containsExactlyInAnyOrderElementsOf(pendingIds);
   }

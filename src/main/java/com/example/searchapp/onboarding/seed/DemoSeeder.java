@@ -70,7 +70,7 @@ public class DemoSeeder implements ApplicationRunner {
     }
     DemoCorpus corpus = loadCorpus();
     int seeded = 0;
-    for (DemoCorpus.DemoClient client : corpus.clients()) {
+    for (DemoClient client : corpus.clients()) {
       if (seedClient(client)) {
         seeded++;
       }
@@ -83,7 +83,7 @@ public class DemoSeeder implements ApplicationRunner {
    * through a client's documents never leaves that client half-seeded. Returns {@code false}
    * without failing startup when a concurrent instance already inserted this client's email.
    */
-  boolean seedClient(DemoCorpus.DemoClient client) {
+  boolean seedClient(DemoClient client) {
     try {
       transactionTemplate.executeWithoutResult(status -> insertClientAndDocuments(client));
       return true;
@@ -93,7 +93,7 @@ public class DemoSeeder implements ApplicationRunner {
     }
   }
 
-  private void insertClientAndDocuments(DemoCorpus.DemoClient client) {
+  private void insertClientAndDocuments(DemoClient client) {
     Client inserted =
         clients.insert(
             new CreateClientRequest(
@@ -102,7 +102,7 @@ public class DemoSeeder implements ApplicationRunner {
                 client.email(),
                 client.description(),
                 client.socialLinks()));
-    for (DemoCorpus.DemoDocument document : client.documents()) {
+    for (DemoDocument document : client.documents()) {
       documents.create(
           inserted.id(), new CreateDocumentRequest(document.title(), document.content()));
     }

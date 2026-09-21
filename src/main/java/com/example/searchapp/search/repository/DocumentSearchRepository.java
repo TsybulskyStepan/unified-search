@@ -4,6 +4,7 @@ import com.example.searchapp.search.entity.SearchDocument;
 import com.pgvector.PGvector;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -147,7 +148,7 @@ public class DocumentSearchRepository {
       ResultSet resultSet, Set<String> types, Set<String> purposes) throws SQLException {
     String documentType = resultSet.getString("document_type");
     String[] documentPurposes = (String[]) resultSet.getArray("purposes").getArray();
-    List<String> labels = new java.util.ArrayList<>();
+    List<String> labels = new ArrayList<>();
     if (types.contains(documentType)) {
       labels.add("type:" + documentType);
     }

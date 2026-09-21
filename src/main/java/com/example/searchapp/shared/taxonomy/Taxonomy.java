@@ -1,6 +1,5 @@
 package com.example.searchapp.shared.taxonomy;
 
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -26,31 +25,5 @@ public record Taxonomy(
   public Taxonomy {
     types = Map.copyOf(types);
     purposes = Map.copyOf(purposes);
-  }
-
-  /**
-   * One kind of document: its default purposes, the title and content patterns the classifier
-   * scores against (§3.3), and the query synonyms the planner matches free text against.
-   */
-  public record DocumentType(
-      String id,
-      String label,
-      List<String> defaultPurposes,
-      List<String> titlePatterns,
-      List<String> contentPatterns,
-      List<String> synonyms) {
-    public DocumentType {
-      defaultPurposes = List.copyOf(defaultPurposes);
-      titlePatterns = List.copyOf(titlePatterns);
-      contentPatterns = List.copyOf(contentPatterns);
-      synonyms = List.copyOf(synonyms);
-    }
-  }
-
-  /** One KYC question a document can answer, and the free-text queries that ask it. */
-  public record Purpose(String id, String label, List<String> synonyms) {
-    public Purpose {
-      synonyms = List.copyOf(synonyms);
-    }
   }
 }

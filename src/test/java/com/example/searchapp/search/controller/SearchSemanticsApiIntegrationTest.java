@@ -7,9 +7,12 @@ import com.example.searchapp.shared.embedding.Embedder;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pgvector.PGvector;
+import java.net.URI;
+import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -162,11 +165,7 @@ class SearchSemanticsApiIntegrationTest extends IntegrationTest {
 
   private JsonNode search(String query) throws Exception {
     var response =
-        get(
-            port,
-            "/search?q="
-                + java.net.URLEncoder.encode(query, java.nio.charset.StandardCharsets.UTF_8),
-            TEST_API_KEY);
+        get(port, "/search?q=" + URLEncoder.encode(query, StandardCharsets.UTF_8), TEST_API_KEY);
     assertThat(response.statusCode()).isEqualTo(200);
     return JSON.readTree(response.body());
   }
@@ -202,8 +201,7 @@ class SearchSemanticsApiIntegrationTest extends IntegrationTest {
     var response =
         HTTP.send(
             HttpRequest.newBuilder(
-                    java.net.URI.create(
-                        "http://localhost:" + port + "/clients/" + clientId + "/documents"))
+                    URI.create("http://localhost:" + port + "/clients/" + clientId + "/documents"))
                 .header("X-API-Key", TEST_API_KEY)
                 .header("Content-Type", "application/json")
                 .POST(

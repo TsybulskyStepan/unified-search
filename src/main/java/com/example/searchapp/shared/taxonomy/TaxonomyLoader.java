@@ -50,178 +50,171 @@ public class TaxonomyLoader {
 
   /** Package-visible so tests can exercise validation against inline YAML fixtures. */
   static Taxonomy parse(InputStream in, String source) {
-    Map<String, Object> root = readYaml(in, source);
-
-    if (!(root.get("version") instanceof Integer version)) {
-      throw new IllegalStateException(source + ": 'version' must be an integer");
-    }
-
-    Map<String, Taxonomy.Purpose> purposes = parsePurposes(root, source);
-    Map<String, Taxonomy.DocumentType> types = parseTypes(root, source, purposes);
-    checkIdsDisjoint(types, purposes, source);
-    types.put(Taxonomy.UNKNOWN_TYPE, unknownType());
-
-    checkSynonymCollisions(types, purposes, source);
-
-    return new Taxonomy(version, types, purposes);
+    return new Parser(source).parse(in);
   }
 
-  private static Map<String, Taxonomy.Purpose> parsePurposes(
-      Map<String, Object> root, String source) {
-    Map<String, Taxonomy.Purpose> purposes = new LinkedHashMap<>();
-    for (Map.Entry<String, Object> entry :
-        mapOf(root.get("purposes"), source, "purposes").entrySet()) {
-      String id = entry.getKey();
-      requireNotReserved(id, source, "purpose");
-      Map<String, Object> fields = mapOf(entry.getValue(), source, "purposes." + id);
-      purposes.put(
-          id,
-          new Taxonomy.Purpose(
-              id,
-              stringOf(fields.get("label"), source, "purposes." + id + ".label"),
-              stringListOf(fields.get("synonyms"), source, "purposes." + id + ".synonyms")));
-    }
-    return purposes;
-  }
+  /** Parses one taxonomy file; {@code source} prefixes every error so it names the file. */
+  private record Parser(String source) {
+    Taxonomy parse(InputStream in) {
+      Map<String, Object> root = readYaml(in);
 
-  private static Map<String, Taxonomy.DocumentType> parseTypes(
-      Map<String, Object> root, String source, Map<String, Taxonomy.Purpose> purposes) {
-    Map<String, Taxonomy.DocumentType> types = new LinkedHashMap<>();
-    for (Map.Entry<String, Object> entry : mapOf(root.get("types"), source, "types").entrySet()) {
-      String id = entry.getKey();
-      requireNotReserved(id, source, "type");
-      Map<String, Object> fields = mapOf(entry.getValue(), source, "types." + id);
-      List<String> defaultPurposes =
-          stringListOf(fields.get("purposes"), source, "types." + id + ".purposes");
-      for (String purposeId : defaultPurposes) {
-        if (!purposes.containsKey(purposeId)) {
-          throw new IllegalStateException(
-              source + ": type '" + id + "' names unknown purpose '" + purposeId + "'");
+      if (!(root.get("version") instanceof Integer version)) {
+        throw invalid("'version' must be an integer");
+      }
+
+      Map<String, Purpose> purposes = parsePurposes(root);
+      Map<String, DocumentType> types = parseTypes(root, purposes);
+      checkIdsDisjoint(types, purposes);
+      types.put(Taxonomy.UNKNOWN_TYPE, unknownType());
+
+      checkSynonymCollisions(types, purposes);
+
+      return new Taxonomy(version, types, purposes);
+    }
+
+    private Map<String, Purpose> parsePurposes(Map<String, Object> root) {
+      Map<String, Purpose> purposes = new LinkedHashMap<>();
+      for (Map.Entry<String, Object> entry : mapOf(root.get("purposes"), "purposes").entrySet()) {
+        String id = entry.getKey();
+        String path = "purposes." + id;
+        requireNotReserved(id, "purpose");
+        Map<String, Object> fields = mapOf(entry.getValue(), path);
+        purposes.put(
+            id,
+            new Purpose(
+                id, stringOf(fields, path, "label"), stringListOf(fields, path, "synonyms")));
+      }
+      return purposes;
+    }
+
+    private Map<String, DocumentType> parseTypes(
+        Map<String, Object> root, Map<String, Purpose> purposes) {
+      Map<String, DocumentType> types = new LinkedHashMap<>();
+      for (Map.Entry<String, Object> entry : mapOf(root.get("types"), "types").entrySet()) {
+        String id = entry.getKey();
+        String path = "types." + id;
+        requireNotReserved(id, "type");
+        Map<String, Object> fields = mapOf(entry.getValue(), path);
+        List<String> defaultPurposes = stringListOf(fields, path, "purposes");
+        for (String purposeId : defaultPurposes) {
+          if (!purposes.containsKey(purposeId)) {
+            throw invalid("type '" + id + "' names unknown purpose '" + purposeId + "'");
+          }
+        }
+        types.put(
+            id,
+            new DocumentType(
+                id,
+                stringOf(fields, path, "label"),
+                defaultPurposes,
+                stringListOf(fields, path, "title_patterns"),
+                stringListOf(fields, path, "content_patterns"),
+                stringListOf(fields, path, "synonyms")));
+      }
+      return types;
+    }
+
+    private static DocumentType unknownType() {
+      return new DocumentType(
+          Taxonomy.UNKNOWN_TYPE, Taxonomy.UNKNOWN_TYPE, List.of(), List.of(), List.of(), List.of());
+    }
+
+    private void requireNotReserved(String id, String kind) {
+      if (Taxonomy.UNKNOWN_TYPE.equals(id)) {
+        throw invalid("'" + id + "' is a reserved " + kind + " id");
+      }
+    }
+
+    /**
+     * The planner splits a query's intent ids into types and purposes by looking each up in the
+     * matching map, so an id in both would be counted and matched as each.
+     */
+    private void checkIdsDisjoint(Map<String, DocumentType> types, Map<String, Purpose> purposes) {
+      for (String id : types.keySet()) {
+        if (purposes.containsKey(id)) {
+          throw invalid("'" + id + "' is both a type and a purpose id");
         }
       }
-      types.put(
-          id,
-          new Taxonomy.DocumentType(
-              id,
-              stringOf(fields.get("label"), source, "types." + id + ".label"),
-              defaultPurposes,
-              stringListOf(fields.get("title_patterns"), source, "types." + id + ".title_patterns"),
-              stringListOf(
-                  fields.get("content_patterns"), source, "types." + id + ".content_patterns"),
-              stringListOf(fields.get("synonyms"), source, "types." + id + ".synonyms")));
     }
-    return types;
-  }
 
-  private static Taxonomy.DocumentType unknownType() {
-    return new Taxonomy.DocumentType(
-        Taxonomy.UNKNOWN_TYPE, Taxonomy.UNKNOWN_TYPE, List.of(), List.of(), List.of(), List.of());
-  }
-
-  private static void requireNotReserved(String id, String source, String kind) {
-    if (Taxonomy.UNKNOWN_TYPE.equals(id)) {
-      throw new IllegalStateException(source + ": '" + id + "' is a reserved " + kind + " id");
+    /**
+     * A synonym equal to a type or purpose id is ambiguous to anything resolving free text against
+     * this taxonomy (§3.1): it would be unclear whether the token names that entity directly or was
+     * meant to route to whatever the synonym maps to.
+     */
+    private void checkSynonymCollisions(
+        Map<String, DocumentType> types, Map<String, Purpose> purposes) {
+      Set<String> ids = new HashSet<>(types.keySet());
+      ids.addAll(purposes.keySet());
+      types.values().forEach(type -> checkSynonyms(ids, "type", type.id(), type.synonyms()));
+      purposes
+          .values()
+          .forEach(purpose -> checkSynonyms(ids, "purpose", purpose.id(), purpose.synonyms()));
     }
-  }
 
-  /**
-   * The planner splits a query's intent ids into types and purposes by looking each up in the
-   * matching map, so an id in both would be counted and matched as each.
-   */
-  private static void checkIdsDisjoint(
-      Map<String, Taxonomy.DocumentType> types,
-      Map<String, Taxonomy.Purpose> purposes,
-      String source) {
-    for (String id : types.keySet()) {
-      if (purposes.containsKey(id)) {
-        throw new IllegalStateException(source + ": '" + id + "' is both a type and a purpose id");
-      }
-    }
-  }
-
-  /**
-   * A synonym equal to a type or purpose id is ambiguous to anything resolving free text against
-   * this taxonomy (§3.1): it would be unclear whether the token names that entity directly or was
-   * meant to route to whatever the synonym maps to.
-   */
-  private static void checkSynonymCollisions(
-      Map<String, Taxonomy.DocumentType> types,
-      Map<String, Taxonomy.Purpose> purposes,
-      String source) {
-    Set<String> ids = new HashSet<>();
-    ids.addAll(types.keySet());
-    ids.addAll(purposes.keySet());
-    for (Taxonomy.DocumentType type : types.values()) {
-      for (String synonym : type.synonyms()) {
+    private void checkSynonyms(Set<String> ids, String kind, String id, List<String> synonyms) {
+      for (String synonym : synonyms) {
         if (ids.contains(synonym)) {
-          throw new IllegalStateException(
-              source
-                  + ": synonym '"
+          throw invalid(
+              "synonym '"
                   + synonym
-                  + "' of type '"
-                  + type.id()
+                  + "' of "
+                  + kind
+                  + " '"
+                  + id
                   + "' collides with a type or purpose id");
         }
       }
     }
-    for (Taxonomy.Purpose purpose : purposes.values()) {
-      for (String synonym : purpose.synonyms()) {
-        if (ids.contains(synonym)) {
-          throw new IllegalStateException(
-              source
-                  + ": synonym '"
-                  + synonym
-                  + "' of purpose '"
-                  + purpose.id()
-                  + "' collides with a type or purpose id");
+
+    private Map<String, Object> readYaml(InputStream in) {
+      LoaderOptions options = new LoaderOptions();
+      options.setAllowDuplicateKeys(false);
+      Yaml yaml = new Yaml(new SafeConstructor(options));
+      Object loaded;
+      try {
+        loaded = yaml.load(in);
+      } catch (YAMLException e) {
+        throw new IllegalStateException(source + ": invalid YAML: " + e.getMessage(), e);
+      }
+      return mapOf(loaded, "<root>");
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> mapOf(Object value, String path) {
+      if (!(value instanceof Map<?, ?> map)) {
+        throw invalid("'" + path + "' must be a mapping");
+      }
+      return (Map<String, Object>) map;
+    }
+
+    private String stringOf(Map<String, Object> fields, String path, String key) {
+      if (!(fields.get(key) instanceof String string) || string.isBlank()) {
+        throw invalid("'" + path + "." + key + "' must be a non-blank string");
+      }
+      return string;
+    }
+
+    private List<String> stringListOf(Map<String, Object> fields, String path, String key) {
+      Object value = fields.get(key);
+      if (value == null) {
+        return List.of();
+      }
+      if (!(value instanceof List<?> list)) {
+        throw invalid("'" + path + "." + key + "' must be a list");
+      }
+      List<String> result = new ArrayList<>();
+      for (Object element : list) {
+        if (!(element instanceof String string) || string.isBlank()) {
+          throw invalid("'" + path + "." + key + "' must contain only non-blank strings");
         }
+        result.add(string);
       }
+      return result;
     }
-  }
 
-  private static Map<String, Object> readYaml(InputStream in, String source) {
-    LoaderOptions options = new LoaderOptions();
-    options.setAllowDuplicateKeys(false);
-    Yaml yaml = new Yaml(new SafeConstructor(options));
-    Object loaded;
-    try {
-      loaded = yaml.load(in);
-    } catch (YAMLException e) {
-      throw new IllegalStateException(source + ": invalid YAML: " + e.getMessage(), e);
+    private IllegalStateException invalid(String message) {
+      return new IllegalStateException(source + ": " + message);
     }
-    return mapOf(loaded, source, "<root>");
-  }
-
-  @SuppressWarnings("unchecked")
-  private static Map<String, Object> mapOf(Object value, String source, String path) {
-    if (!(value instanceof Map<?, ?> map)) {
-      throw new IllegalStateException(source + ": '" + path + "' must be a mapping");
-    }
-    return (Map<String, Object>) map;
-  }
-
-  private static String stringOf(Object value, String source, String path) {
-    if (!(value instanceof String string) || string.isBlank()) {
-      throw new IllegalStateException(source + ": '" + path + "' must be a non-blank string");
-    }
-    return string;
-  }
-
-  private static List<String> stringListOf(Object value, String source, String path) {
-    if (value == null) {
-      return List.of();
-    }
-    if (!(value instanceof List<?> list)) {
-      throw new IllegalStateException(source + ": '" + path + "' must be a list");
-    }
-    List<String> result = new ArrayList<>();
-    for (Object element : list) {
-      if (!(element instanceof String string) || string.isBlank()) {
-        throw new IllegalStateException(
-            source + ": '" + path + "' must contain only non-blank strings");
-      }
-      result.add(string);
-    }
-    return result;
   }
 }

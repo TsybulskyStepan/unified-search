@@ -2,6 +2,7 @@ package com.example.searchapp.shared.embedding;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.List;
 import org.junit.jupiter.api.Test;
 
 class EmbedderTest {
@@ -29,7 +30,7 @@ class EmbedderTest {
 
   @Test
   void embedsABatchInOneCall() {
-    var vectors = embedder.embedAll(java.util.List.of("first chunk", "second chunk"));
+    var vectors = embedder.embedAll(List.of("first chunk", "second chunk"));
 
     assertThat(vectors).hasSize(2);
     assertThat(vectors.get(0)).hasSize(384);

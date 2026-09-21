@@ -3,6 +3,7 @@ package com.example.searchapp.eval;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.searchapp.IntegrationTest;
+import com.example.searchapp.onboarding.seed.DemoClient;
 import com.example.searchapp.onboarding.seed.DemoCorpus;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -65,8 +66,7 @@ class SearchRelevanceEvalApiIntegrationTest extends IntegrationTest {
         corpus.clients().stream()
             .collect(
                 Collectors.toMap(
-                    DemoCorpus.DemoClient::email,
-                    client -> client.firstName() + " " + client.lastName()));
+                    DemoClient::email, client -> client.firstName() + " " + client.lastName()));
 
     // Measure and log every query before asserting, so one failure cannot hide the rest.
     List<Outcome> outcomes = new ArrayList<>();

@@ -1,5 +1,7 @@
 package com.example.searchapp.onboarding.service;
 
+import com.example.searchapp.shared.taxonomy.DocumentType;
+import com.example.searchapp.shared.taxonomy.Purpose;
 import com.example.searchapp.shared.taxonomy.Taxonomy;
 import com.example.searchapp.shared.web.RequestValidationException;
 import java.util.LinkedHashMap;
@@ -63,7 +65,7 @@ public class DocumentClassifier {
    * the stored type no longer exists in the current file.
    */
   public Classification relabel(String documentType, List<String> purposes, String source) {
-    Taxonomy.DocumentType type = taxonomy.types().get(documentType);
+    DocumentType type = taxonomy.types().get(documentType);
     if (type == null) {
       return unknownClassification();
     }
@@ -72,7 +74,7 @@ public class DocumentClassifier {
   }
 
   private Classification classifyRequested(String requestedType, List<String> requestedPurposes) {
-    Taxonomy.DocumentType type = taxonomy.types().get(requestedType);
+    DocumentType type = taxonomy.types().get(requestedType);
     if (type == null) {
       throw new RequestValidationException(Map.of("document_type", "must be a taxonomy type id"));
     }
@@ -104,7 +106,7 @@ public class DocumentClassifier {
     String bestTypeId = null;
     int bestScore = 0;
     int bestScoreCount = 0;
-    for (Taxonomy.DocumentType type : taxonomy.types().values()) {
+    for (DocumentType type : taxonomy.types().values()) {
       if (Taxonomy.UNKNOWN_TYPE.equals(type.id())) {
         continue;
       }
@@ -122,7 +124,7 @@ public class DocumentClassifier {
       return unknownClassification();
     }
 
-    Taxonomy.DocumentType type = taxonomy.types().get(bestTypeId);
+    DocumentType type = taxonomy.types().get(bestTypeId);
     return new Classification(
         type.id(),
         type.defaultPurposes(),
@@ -131,8 +133,7 @@ public class DocumentClassifier {
         labelText(type, type.defaultPurposes()));
   }
 
-  private static int score(
-      Taxonomy.DocumentType type, String normalizedTitle, String normalizedContent) {
+  private static int score(DocumentType type, String normalizedTitle, String normalizedContent) {
     int score = 0;
     for (String pattern : type.titlePatterns()) {
       if (normalizedTitle.contains(pattern.toLowerCase(Locale.ROOT))) {
@@ -150,13 +151,13 @@ public class DocumentClassifier {
   /**
    * The type label followed by each purpose's label, space separated; empty for {@code unknown}.
    */
-  private String labelText(Taxonomy.DocumentType type, List<String> purposes) {
+  private String labelText(DocumentType type, List<String> purposes) {
     if (Taxonomy.UNKNOWN_TYPE.equals(type.id())) {
       return "";
     }
     StringBuilder labelText = new StringBuilder(type.label());
     for (String purposeId : purposes) {
-      Taxonomy.Purpose purpose = taxonomy.purposes().get(purposeId);
+      Purpose purpose = taxonomy.purposes().get(purposeId);
       labelText.append(' ').append(purpose.label());
     }
     return labelText.toString();

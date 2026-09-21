@@ -6,7 +6,9 @@ import com.example.searchapp.search.planner.ClientMention;
 import com.example.searchapp.search.planner.QueryPlan;
 import com.example.searchapp.search.repository.ClientMatch;
 import com.example.searchapp.search.repository.DocumentMatch;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
@@ -52,8 +54,7 @@ class ResultOrderingTest {
             ResultOrdering.order(
                 clients,
                 documents,
-                new QueryPlan(
-                    "john mary", List.of(), "john mary", java.util.Set.of(), java.util.Set.of())))
+                new QueryPlan("john mary", List.of(), "john mary", Set.of(), Set.of())))
         .extracting(ResultOrdering.Candidate::id)
         .containsExactly(MARY, JOHN, MARYS_BILL);
     assertThat(ResultOrdering.order(clients, documents, plan(JOHN, "utility bill")))
@@ -94,12 +95,7 @@ class ResultOrderingTest {
         ResultOrdering.order(
             List.of(client(JOHN, "identity"), client(MARY, "context")),
             List.of(document(MARYS_BILL, MARY)),
-            new QueryPlan(
-                "advisory fees",
-                List.of(),
-                "advisory fees",
-                java.util.Set.of(),
-                java.util.Set.of()));
+            new QueryPlan("advisory fees", List.of(), "advisory fees", Set.of(), Set.of()));
 
     assertThat(candidates)
         .extracting(ResultOrdering.Candidate::id)
@@ -125,12 +121,10 @@ class ResultOrderingTest {
   private static QueryPlan tiedPlan(String residual, UUID... clientIds) {
     return new QueryPlan(
         residual.isEmpty() ? "john" : "john " + residual,
-        java.util.Arrays.stream(clientIds)
-            .map(clientId -> new ClientMention(clientId, "name", 1.0))
-            .toList(),
+        Arrays.stream(clientIds).map(clientId -> new ClientMention(clientId, "name", 1.0)).toList(),
         residual,
-        java.util.Set.of(),
-        java.util.Set.of());
+        Set.of(),
+        Set.of());
   }
 
   @Test
@@ -153,8 +147,7 @@ class ResultOrderingTest {
   void movesResultsWithoutDroppingOrDuplicatingAnyOfThemInEitherShape() {
     var clients = List.of(client(MARY, "context"), client(JOHN, "identity"));
     var documents = List.of(document(MARYS_BILL, MARY), document(JOHNS_BILL, JOHN));
-    var noMention =
-        new QueryPlan("bill", List.of(), "bill", java.util.Set.of(), java.util.Set.of());
+    var noMention = new QueryPlan("bill", List.of(), "bill", Set.of(), Set.of());
 
     for (QueryPlan plan : List.of(noMention, plan(JOHN, "bill"), tiedPlan("bill", JOHN, MARY))) {
       var candidates = ResultOrdering.order(clients, documents, plan);

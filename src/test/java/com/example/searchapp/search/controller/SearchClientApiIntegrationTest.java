@@ -3,9 +3,11 @@ package com.example.searchapp.search.controller;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.searchapp.IntegrationTest;
+import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.util.regex.Pattern;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.web.server.LocalServerPort;
 
@@ -145,7 +147,7 @@ class SearchClientApiIntegrationTest extends IntegrationTest {
   }
 
   private static String firstEmail(String body) {
-    var matcher = java.util.regex.Pattern.compile("\"email\":\"([^\"]+)\"").matcher(body);
+    var matcher = Pattern.compile("\"email\":\"([^\"]+)\"").matcher(body);
     assertThat(matcher.find()).isTrue();
     return matcher.group(1);
   }
@@ -153,7 +155,7 @@ class SearchClientApiIntegrationTest extends IntegrationTest {
   private void createClient(String body) throws Exception {
     var response =
         HTTP.send(
-            HttpRequest.newBuilder(java.net.URI.create("http://localhost:" + port + "/clients"))
+            HttpRequest.newBuilder(URI.create("http://localhost:" + port + "/clients"))
                 .header("X-API-Key", TEST_API_KEY)
                 .header("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(body))

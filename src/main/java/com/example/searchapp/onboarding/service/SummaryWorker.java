@@ -10,6 +10,7 @@ import jakarta.annotation.PreDestroy;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -105,8 +106,7 @@ public class SummaryWorker {
     try {
       return summarizer.summarize(job.title(), job.content());
     } finally {
-      summaryTimer.record(
-          System.nanoTime() - startNanos, java.util.concurrent.TimeUnit.NANOSECONDS);
+      summaryTimer.record(System.nanoTime() - startNanos, TimeUnit.NANOSECONDS);
     }
   }
 
