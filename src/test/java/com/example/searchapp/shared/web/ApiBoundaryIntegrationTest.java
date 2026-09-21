@@ -1,7 +1,8 @@
-package com.example.searchapp;
+package com.example.searchapp.shared.web;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.example.searchapp.IntegrationTest;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.web.server.LocalServerPort;

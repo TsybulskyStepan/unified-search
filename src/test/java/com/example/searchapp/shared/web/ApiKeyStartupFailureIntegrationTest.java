@@ -1,7 +1,8 @@
-package com.example.searchapp;
+package com.example.searchapp.shared.web;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.example.searchapp.SearchApplication;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.WebApplicationType;
 import org.springframework.boot.builder.SpringApplicationBuilder;

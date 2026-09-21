@@ -1,7 +1,8 @@
-package com.example.searchapp;
+package com.example.searchapp.onboarding.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.example.searchapp.IntegrationTest;
 import com.example.searchapp.shared.embedding.Embedder;
 import java.net.URI;
 import java.util.UUID;

@@ -1,11 +1,11 @@
-package com.example.searchapp;
+package com.example.searchapp.shared.web;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
-import com.example.searchapp.shared.web.RequestIdFilter;
+import com.example.searchapp.IntegrationTest;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

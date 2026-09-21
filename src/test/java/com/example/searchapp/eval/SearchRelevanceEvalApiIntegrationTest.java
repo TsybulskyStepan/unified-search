@@ -1,9 +1,8 @@
-package com.example.searchapp;
+package com.example.searchapp.eval;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.example.searchapp.eval.EvalCorpusLoader;
-import com.example.searchapp.eval.EvalQueries;
+import com.example.searchapp.IntegrationTest;
 import com.example.searchapp.onboarding.seed.DemoCorpus;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
