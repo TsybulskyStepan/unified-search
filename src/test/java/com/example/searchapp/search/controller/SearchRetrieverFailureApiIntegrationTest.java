@@ -1,7 +1,8 @@
-package com.example.searchapp;
+package com.example.searchapp.search.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.example.searchapp.IntegrationTest;
 import com.example.searchapp.search.repository.DocumentSearchRepository;
 import com.example.searchapp.search.repository.RankedDocumentMatch;
 import java.util.List;

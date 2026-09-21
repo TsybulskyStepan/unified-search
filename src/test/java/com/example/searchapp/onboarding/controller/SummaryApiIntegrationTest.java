@@ -1,10 +1,11 @@
-package com.example.searchapp;
+package com.example.searchapp.onboarding.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
+import com.example.searchapp.IntegrationTest;
 import com.example.searchapp.onboarding.exception.PermanentSummarizationException;
 import com.example.searchapp.onboarding.exception.TransientSummarizationException;
 import com.example.searchapp.onboarding.service.StubSummarizer;

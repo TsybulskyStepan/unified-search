@@ -1,12 +1,12 @@
-package com.example.searchapp;
+package com.example.searchapp.search.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.example.searchapp.IntegrationTest;
 import com.example.searchapp.search.planner.QueryPlan;
 import com.example.searchapp.search.planner.QueryPlanner;
 import com.example.searchapp.search.repository.DocumentMatch;
 import com.example.searchapp.search.repository.HydratedDocument;
-import com.example.searchapp.search.service.DocumentRetriever;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;

@@ -1,8 +1,7 @@
-package com.example.searchapp;
+package com.example.searchapp.shared.web;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.example.searchapp.shared.web.ApiKeyProperties;
 import org.junit.jupiter.api.Test;
 
 class ApiKeyPropertiesTest {

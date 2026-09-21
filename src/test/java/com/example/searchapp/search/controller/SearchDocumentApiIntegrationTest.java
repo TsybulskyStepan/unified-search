@@ -1,7 +1,8 @@
-package com.example.searchapp;
+package com.example.searchapp.search.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.example.searchapp.IntegrationTest;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;

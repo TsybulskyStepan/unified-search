@@ -27,23 +27,24 @@ import org.testcontainers.utility.DockerImageName;
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 public abstract class IntegrationTest {
-  static final String TEST_API_KEY = "test-api-key-that-is-at-least-32-characters";
+  protected static final String TEST_API_KEY = "test-api-key-that-is-at-least-32-characters";
 
   @Container @ServiceConnection
   static final PostgreSQLContainer<?> database =
       new PostgreSQLContainer<>(
           DockerImageName.parse("pgvector/pgvector:pg17").asCompatibleSubstituteFor("postgres"));
 
-  static HttpResponse<String> get(int port, String path) throws IOException, InterruptedException {
+  protected static HttpResponse<String> get(int port, String path)
+      throws IOException, InterruptedException {
     return get(port, path, null, null);
   }
 
-  static HttpResponse<String> get(int port, String path, String apiKey)
+  protected static HttpResponse<String> get(int port, String path, String apiKey)
       throws IOException, InterruptedException {
     return get(port, path, apiKey, null);
   }
 
-  static HttpResponse<String> get(int port, String path, String apiKey, String trace)
+  protected static HttpResponse<String> get(int port, String path, String apiKey, String trace)
       throws IOException, InterruptedException {
     var builder = HttpRequest.newBuilder(URI.create("http://localhost:" + port + path)).GET();
     if (apiKey != null) {
@@ -55,7 +56,7 @@ public abstract class IntegrationTest {
     return HttpClient.newHttpClient().send(builder.build(), HttpResponse.BodyHandlers.ofString());
   }
 
-  static HttpResponse<String> post(int port, String path, String apiKey, String body)
+  protected static HttpResponse<String> post(int port, String path, String apiKey, String body)
       throws IOException, InterruptedException {
     var builder =
         HttpRequest.newBuilder(URI.create("http://localhost:" + port + path))

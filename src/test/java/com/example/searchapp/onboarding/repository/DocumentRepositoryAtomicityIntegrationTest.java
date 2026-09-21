@@ -1,11 +1,10 @@
-package com.example.searchapp;
+package com.example.searchapp.onboarding.repository;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.example.searchapp.IntegrationTest;
 import com.example.searchapp.onboarding.dto.CreateClientRequest;
-import com.example.searchapp.onboarding.repository.ClientRepository;
-import com.example.searchapp.onboarding.repository.DocumentRepository;
 import com.example.searchapp.onboarding.service.Chunk;
 import com.example.searchapp.onboarding.service.Classification;
 import com.example.searchapp.onboarding.service.EmbeddedChunk;
