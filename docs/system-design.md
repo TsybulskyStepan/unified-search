@@ -315,7 +315,11 @@ On request only. `POST …/summary` moves `none` or `failed` to `pending` and re
 
 ## Deployment
 
-Local is the only built target. `docker compose up` starts `pgvector/pgvector:pg17` and the app, which waits on the database healthcheck. A three-stage Dockerfile builds the SPA (Node), then the jar (Gradle, JDK 25), then runs on `eclipse-temurin:25-jre` as non-root with `-XX:MaxRAMPercentage=60`. The model and SPA are inside the jar. `./gradlew composeBuild` rebuilds the images and `./gradlew composeRedeploy` also recreates the containers. The Postgres volume survives, and `docker compose down -v` resets it. Without Docker, run `./gradlew buildFrontend` then `./gradlew bootRun`. For frontend work, `cd frontend && npm run dev` proxies `/api` to the backend.
+**Two targets: local and Cloud Run.** Local is the development target; Cloud Run is production.
+
+### Local
+
+`docker compose up` starts `pgvector/pgvector:pg17` and the app, which waits on the database healthcheck. A three-stage Dockerfile builds the SPA (Node), then the jar (Gradle, JDK 25), then runs on `eclipse-temurin:25-jre` as non-root with `-XX:MaxRAMPercentage=60`. The model and SPA are inside the jar. `./gradlew composeBuild` rebuilds the images and `./gradlew composeRedeploy` also recreates the containers. The Postgres volume survives, and `docker compose down -v` resets it. Without Docker, run `./gradlew buildFrontend` then `./gradlew bootRun`. For frontend work, `cd frontend && npm run dev` proxies `/api` to the backend.
 
 | Env var | Default | Purpose |
 |---|---|---|
@@ -327,7 +331,21 @@ Local is the only built target. `docker compose up` starts `pgvector/pgvector:pg
 
 `semanticFloor` lives in `application.yaml`. The lexical floor, the mention threshold and the RRF constant are code constants, not deployment knobs. The demo seeder loads the seed corpus through the same creation path as the API, so seed documents are classified, chunked and embedded like real ones.
 
-**GCP, documented, not built.** One Cloud Run service (2 vCPU, 2 GiB, `min-instances=1`, `max-instances=2`, CPU always allocated so the summary sweep is not throttled), Cloud SQL Postgres 17, secrets from Secret Manager, summaries through Vertex with ADC. The summary lease is what makes more than one instance correct, and additive-only migrations let a split `search` keep working across an `onboarding` rollout.
+### Cloud Run (production)
+
+One Cloud Run service (2 vCPU, 2 GiB, `min-instances=1`, `max-instances=2`, CPU always allocated so the summary sweep is not throttled), Cloud SQL Postgres 17 (existing instance), secrets from Secret Manager, summaries through Gemini with a plain API key (Vertex with ADC is the production follow-up). The summary lease is what makes more than one instance correct, and additive-only migrations let a split `search` keep working across an `onboarding` rollout.
+
+**Deployment pipeline:**
+
+1. **Database setup (one-time).** Run `DB_PASSWORD=... db/setup/init-db.sh` against the Cloud SQL instance as the `postgres` user. This creates the `unified_search` database, installs `vector`, `pg_trgm` and `citext`, creates the application role with `DB_PASSWORD` as its password, and grants it access. Flyway migrations create everything else on first app startup.
+
+2. **Secrets.** `DB_USER`, `DB_PASSWORD` (the value used in step 1), `API_KEY` and optional `GEMINI_API_KEY` in Secret Manager. The Cloud Run service account needs `secretmanager.versions.access` on each. `cloudbuild.yaml` mounts the Gemini secret only when `_GEMINI_API_KEY_SECRET` is set, so a deployment without summaries needs no such secret.
+
+3. **Build and deploy.** `cloudbuild.yaml` builds the Docker image, pushes to Artifact Registry, and deploys to Cloud Run. The `cloudrun` Spring profile (`application-cloudrun.yaml`) configures the Cloud SQL socket factory and HikariCP pool.
+
+4. **Public endpoint.** Cloud Run assigns a default `*.run.app` HTTPS URL. No custom domain needed.
+
+See `README.md` for the full walkthrough with commands.
 
 ## Testing
 

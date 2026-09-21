@@ -1,0 +1,36 @@
+# Cloud Run profile — activated by SPRING_PROFILES_ACTIVE=cloudrun.
+#
+# Overrides:
+#   - Server port: Cloud Run sets the PORT env var (usually 8080).
+#   - Database: Cloud SQL socket factory via the DB_URL set by Cloud Build.
+#   - Auto-configure Cloud Trace and other GCP observability integrations.
+#
+# Secrets (DB_USER, DB_PASSWORD, API_KEY, GEMINI_API_KEY) are injected by Cloud Run
+# from Secret Manager as environment variables, so the base application.yaml defaults
+# apply — no override needed here.
+
+server:
+  port: ${PORT:8080}
+
+spring:
+  datasource:
+    # Cloud SQL socket factory: the JDBC URL is set via environment variable in
+    # cloudbuild.yaml because it includes the instance connection name.
+    # The URL format is:
+    # jdbc:postgresql:///DATABASE_NAME?cloudSqlInstance=PROJECT:REGION:INSTANCE&socketFactory=com.google.cloud.sql.postgres.SocketFactory&sslmode=disable
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      idle-timeout: 300000
+      connection-timeout: 10000
+      # Cloud SQL proxy connections over Unix sockets are local — no SSL needed.
+      # The socket factory handles encryption.
+  flyway:
+    # Flyway connects as the application user (DB_USER / DB_PASSWORD secrets).
+    # Extensions must already exist in the database (created by init-db.sql).
+    enabled: true
+
+logging:
+  level:
+    # Reduce Cloud SQL socket factory noise
+    com.google.cloud.sql: WARN

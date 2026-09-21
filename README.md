@@ -387,7 +387,6 @@ document searchable the moment `201` returns.
 
 | Cut | Why |
 |---|---|
-| **Deployment** | Nothing is deployed. The GCP shape is designed and written down, but a reviewer's time is better spent on `docker compose up` than on my Cloud Run bill. Migrations and the summary lease are already written so more than one instance would be correct. |
 | **Load testing** | No benchmark was run, so no measured latency is claimed (see below). Per-stage timers are in place so the numbers can be taken in operation, which is the only place they would mean anything. |
 | **Multi-tenancy** | No tenant column, no row-level security. It changes every query and every index, and the brief describes one advisor's view. The migration path is noted in the design. |
 | **An ANN index** | Exact scan over roughly 4×10⁴ chunks. HNSW is worth adding when the scan exceeds its budget and not before; at this corpus size it would only add a parameter to tune. |
@@ -461,6 +460,134 @@ linear in length. The per-stage breakdown lives in
 [the system design](docs/system-design.md#performance-and-capacity) so the figures have one home
 rather than two.
 
+## Production deployment (GCP Cloud Run)
+
+This branch adds production deployment support. The application runs on **Cloud Run** with a **Cloud SQL
+PostgreSQL 17** database. One command builds, pushes and deploys.
+
+### Architecture
+
+```
+Cloud Run (2 vCPU, 2 GiB, min 1, max 2, CPU always allocated)
+  │
+  ├── Cloud SQL PostgreSQL 17 (existing instance)
+  │     └── pgvector, pg_trgm, citext extensions
+  │
+  └── Secret Manager
+        ├── DB_USER / DB_PASSWORD  — Cloud SQL credentials
+        ├── API_KEY                — application auth
+        └── GEMINI_API_KEY         — optional, for summaries
+```
+
+Cloud Run's default `run.app` domain provides a public HTTPS endpoint. No custom domain needed.
+
+### Prerequisites
+
+1. A GCP project with billing enabled.
+2. A Cloud SQL PostgreSQL 17 instance already running (the one you created).
+3. `gcloud` CLI installed and authenticated.
+
+### One-time database setup
+
+The Cloud SQL instance exists but needs the schema extensions. Connect as the `postgres` user
+(cloudsqlsuperuser) and run the setup script:
+
+```bash
+# Create the database, extensions and application role
+DB_PASSWORD='YOUR_STRONG_DB_PASSWORD' \
+  ./db/setup/init-db.sh --project=YOUR_PROJECT_ID --instance=YOUR_INSTANCE_NAME
+```
+
+This creates the `unified_search` database, installs `vector`, `pg_trgm` and `citext`, creates the
+`unified_search` role with `DB_PASSWORD` as its password, and grants it access. Store the same value
+in the `DB_PASSWORD` secret below. **Flyway migrations run automatically** on the first app startup —
+they create the tables and indexes.
+
+This script is a privileged bootstrap and the one exception to "Flyway only": Cloud SQL lets only a
+superuser run `CREATE EXTENSION`, and the application role does not exist yet. Run it once.
+
+Alternatively, create the database and run the SQL directly:
+
+```bash
+gcloud sql databases create unified_search --instance=YOUR_INSTANCE
+DB_PASSWORD='YOUR_STRONG_DB_PASSWORD' \
+  gcloud sql connect YOUR_INSTANCE --user=postgres --database=postgres < db/setup/init-db.sql
+```
+
+### Secrets
+
+Create secrets in Secret Manager. The application reads these at startup:
+
+```bash
+echo -n 'unified_search' | gcloud secrets create DB_USER --replication-policy=automatic --data-file=-
+echo -n 'YOUR_STRONG_DB_PASSWORD' | gcloud secrets create DB_PASSWORD --replication-policy=automatic --data-file=-   # same value as the setup step
+echo -n 'YOUR_STRONG_API_KEY' | gcloud secrets create API_KEY --replication-policy=automatic --data-file=-
+# Optional: for summaries
+echo -n 'YOUR_GEMINI_KEY' | gcloud secrets create GEMINI_API_KEY --replication-policy=automatic --data-file=-
+```
+
+The API key must be at least 32 characters (same requirement as local). Grant the Cloud Run
+compute service account access to these secrets.
+
+### Artifact Registry
+
+```bash
+gcloud artifacts repositories create unified-search \
+  --repository-format=docker \
+  --location=us-central1
+```
+
+### Deploy
+
+```bash
+./deploy.sh --project=YOUR_PROJECT_ID --instance=YOUR_INSTANCE_NAME --region=us-central1
+```
+
+Or manually:
+
+```bash
+gcloud builds submit --region=us-central1 --config=cloudbuild.yaml \
+  --substitutions=_DB_INSTANCE=PROJECT_ID:us-central1:INSTANCE_NAME
+```
+
+Summaries stay disabled unless you name the Gemini secret: add `--gemini-secret=GEMINI_API_KEY` to
+`deploy.sh`, or `,_GEMINI_API_KEY_SECRET=GEMINI_API_KEY` to `--substitutions`. Without it the secret
+is not mounted, so a deployment without that secret works.
+
+### Public endpoint
+
+Cloud Run assigns a default HTTPS URL:
+```
+https://unified-search-xxxxxxxxxx-uc.a.run.app
+```
+
+Find it with:
+
+```bash
+gcloud run services describe unified-search \
+  --region=us-central1 --project=YOUR_PROJECT_ID \
+  --format='value(status.url)'
+```
+
+Use it exactly like the local endpoint, with the same `X-API-Key` header:
+
+```bash
+curl -s "https://YOUR_URL/search?q=NevisWealth" \
+  -H "X-API-Key: YOUR_API_KEY"
+```
+
+The SPA is at the root URL — open it in a browser and enter the API key in the modal.
+
+### Cloud Run profile
+
+The `cloudrun` Spring profile (activated by `SPRING_PROFILES_ACTIVE=cloudrun`) configures:
+
+- **Port**: respects `$PORT` from Cloud Run.
+- **Database**: connects via the Cloud SQL socket factory (Unix socket, no public IP needed).
+- **Pool**: HikariCP with 10 max connections (sufficient for 2 instances at 80 concurrent requests).
+
+See `src/main/resources/application-cloudrun.yaml`.
+
 ## Tests
 
 ```bash
@@ -488,8 +615,12 @@ four failures in the table at the top of this file are all in it.
 src/main/java/…/onboarding/   write side: clients, documents, classification, chunking, summaries
 src/main/java/…/search/       read side: planning, retrieval, fusion, ordering, hydration
 src/main/java/…/shared/       embedding model, taxonomy, web plumbing
-src/main/resources/taxonomy/  the vocabulary you are expected to edit
-frontend/                     React SPA, built into the jar
-http/                         runnable requests for every endpoint
-docs/                         system design, PRD, the original brief
+src/main/resources/taxonomy/    the vocabulary you are expected to edit
+src/main/resources/application-cloudrun.yaml  Cloud Run profile
+frontend/                       React SPA, built into the jar
+http/                           runnable requests for every endpoint
+docs/                           system design, PRD, the original brief
+db/setup/                       Cloud SQL database init scripts
+cloudbuild.yaml                 Cloud Build pipeline
+deploy.sh                       one-command deploy script
 ```

@@ -35,6 +35,9 @@ dependencies {
     // Official Google Gen AI SDK, Gemini API mode with a plain API key (§1.4). GeminiSummarizer
     // is the only class that imports it.
     implementation 'com.google.genai:google-genai:1.72.0'
+    // Cloud SQL Postgres Socket Factory for Cloud Run (§11.4 GCP deployment). The
+    // cloudrun profile uses this to connect via the Cloud SQL proxy Unix socket.
+    implementation 'com.google.cloud.sql:postgres-socket-factory:1.23.1'
 
     runtimeOnly 'org.postgresql:postgresql'
 
