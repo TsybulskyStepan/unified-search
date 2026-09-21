@@ -2,8 +2,9 @@ package com.example.searchapp.search.service;
 
 import com.example.searchapp.search.planner.ClientMention;
 import com.example.searchapp.search.planner.QueryPlan;
-import com.example.searchapp.search.repository.ClientMatch;
-import com.example.searchapp.search.repository.DocumentMatch;
+import com.example.searchapp.search.repository.model.ClientMatch;
+import com.example.searchapp.search.repository.model.DocumentMatch;
+import com.example.searchapp.search.repository.model.MatchTier;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -12,9 +13,6 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 final class ResultOrdering {
-  private static final String IDENTITY = "identity";
-  private static final String CONTEXT = "context";
-
   private ResultOrdering() {}
 
   /**
@@ -25,9 +23,9 @@ final class ResultOrdering {
       List<ClientMatch> clients, List<DocumentMatch> documents, QueryPlan plan) {
     if (plan.mentions().isEmpty()) {
       return concat(
-          clientCandidates(clients, IDENTITY),
+          clientCandidates(clients, MatchTier.IDENTITY),
           documentCandidates(documents),
-          clientCandidates(clients, CONTEXT));
+          clientCandidates(clients, MatchTier.CONTEXT));
     }
 
     Set<UUID> mentionedIds =
@@ -42,8 +40,8 @@ final class ResultOrdering {
         documentCandidates(documentsByMention.get(true)),
         mentionedClientCandidates(plan.mentions(), clients),
         documentCandidates(documentsByMention.get(false)),
-        clientCandidates(otherClients, IDENTITY),
-        clientCandidates(otherClients, CONTEXT));
+        clientCandidates(otherClients, MatchTier.IDENTITY),
+        clientCandidates(otherClients, MatchTier.CONTEXT));
   }
 
   /** A mentioned client keeps its own match when the lexical query found it, else the mention's. */
@@ -61,14 +59,14 @@ final class ResultOrdering {
                                 new ClientMatch(
                                     mention.clientId(),
                                     mention.field(),
-                                    IDENTITY,
+                                    MatchTier.IDENTITY,
                                     mention.score()))))
         .toList();
   }
 
-  private static List<Candidate> clientCandidates(List<ClientMatch> clients, String tier) {
+  private static List<Candidate> clientCandidates(List<ClientMatch> clients, MatchTier tier) {
     return clients.stream()
-        .filter(client -> client.tier().equals(tier))
+        .filter(client -> client.tier() == tier)
         .<Candidate>map(ClientCandidate::new)
         .toList();
   }

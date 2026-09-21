@@ -2,6 +2,8 @@ package com.example.searchapp.search.repository;
 
 import com.example.searchapp.search.entity.SearchClient;
 import com.example.searchapp.search.planner.MentionCandidate;
+import com.example.searchapp.search.repository.model.ClientMatch;
+import com.example.searchapp.search.repository.model.MatchTier;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
@@ -65,17 +67,18 @@ public class ClientSearchRepository {
     if (tokens.isEmpty()) {
       return List.of();
     }
-    String[] queryTokens = tokens.toArray(String[]::new);
+    String fullQuery = String.join(" ", tokens);
+    String[] queryTokens = tokens.stream().filter(t -> t.length() >= 3).toArray(String[]::new);
+    if (queryTokens.length == 0) {
+      return List.of();
+    }
     return jdbc.sql(
             """
-            WITH query_tokens AS (
-                SELECT token, position
-                FROM unnest(CAST(:tokens AS text[])) WITH ORDINALITY AS query_tokens(token, position)
-                WHERE char_length(token) >= 3
-            ), token_scores AS (
+            WITH token_scores AS (
                 SELECT c.id, query_tokens.position, best.field, best.score
                 FROM client c
-                CROSS JOIN query_tokens
+                CROSS JOIN unnest(CAST(:tokens AS text[])) WITH ORDINALITY
+                    AS query_tokens(token, position)
                 CROSS JOIN LATERAL (
                     SELECT field, word_similarity(query_tokens.token, value) AS score
                     FROM (VALUES
@@ -86,8 +89,8 @@ public class ClientSearchRepository {
                     LIMIT 1
                 ) best
             ), runs AS (
-                SELECT id, position, field, score,
-                       bool_and(score >= :mention_floor)
+                SELECT id, field, score, position,
+                       bool_and(score >= :mentionFloor)
                            OVER (PARTITION BY id ORDER BY position) AS in_leading_run
                 FROM token_scores
             ), leading_runs AS (
@@ -110,10 +113,16 @@ public class ClientSearchRepository {
                          word_similarity(:query, c.email::text)) DESC,
                      c.last_name, c.id
             """)
-        .param("query", String.join(" ", tokens))
+        .param("query", fullQuery)
         .param("tokens", queryTokens)
-        .param("mention_floor", MENTION_FLOOR)
-        .query(ClientSearchRepository::mapMention)
+        .param("mentionFloor", MENTION_FLOOR)
+        .query(
+            (rs, n) ->
+                new MentionCandidate(
+                    rs.getObject("id", UUID.class),
+                    rs.getString("field"),
+                    rs.getDouble("score"),
+                    rs.getInt("matched_through_position")))
         .list();
   }
 
@@ -121,7 +130,7 @@ public class ClientSearchRepository {
     return new ClientMatch(
         resultSet.getObject("id", UUID.class),
         resultSet.getString("field"),
-        resultSet.getString("tier"),
+        MatchTier.fromDb(resultSet.getString("tier")),
         resultSet.getDouble("score"));
   }
 
@@ -138,14 +147,5 @@ public class ClientSearchRepository {
         resultSet.getString("description"),
         List.of(socialLinks),
         resultSet.getTimestamp("created_at").toInstant());
-  }
-
-  private static MentionCandidate mapMention(ResultSet resultSet, int rowNumber)
-      throws SQLException {
-    return new MentionCandidate(
-        resultSet.getObject("id", UUID.class),
-        resultSet.getString("field"),
-        resultSet.getDouble("score"),
-        resultSet.getInt("matched_through_position"));
   }
 }

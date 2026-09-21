@@ -10,10 +10,10 @@ import com.example.searchapp.search.planner.NormalizedQuery;
 import com.example.searchapp.search.planner.NormalizedToken;
 import com.example.searchapp.search.planner.QueryPlan;
 import com.example.searchapp.search.planner.QueryPlanner;
-import com.example.searchapp.search.repository.ClientMatch;
 import com.example.searchapp.search.repository.ClientSearchRepository;
-import com.example.searchapp.search.repository.DocumentMatch;
-import com.example.searchapp.search.repository.HydratedDocument;
+import com.example.searchapp.search.repository.model.ClientMatch;
+import com.example.searchapp.search.repository.model.DocumentMatch;
+import com.example.searchapp.search.repository.model.HydratedDocument;
 import com.example.searchapp.search.service.SearchTelemetry.Stage;
 import jakarta.annotation.PreDestroy;
 import java.math.BigDecimal;
@@ -144,7 +144,11 @@ public class SearchService {
   private static SearchResult clientResult(ClientMatch match, SearchClient client) {
     BigDecimal score = BigDecimal.valueOf(match.score()).setScale(6, RoundingMode.HALF_UP);
     return new SearchResult(
-        "client", score, new SearchMatch.Field(match.field(), match.tier()), client, null);
+        "client",
+        score,
+        new SearchMatch.Field(match.field(), match.tier().dbValue()),
+        client,
+        null);
   }
 
   private static SearchResult documentResult(DocumentMatch match, HydratedDocument document) {
@@ -152,7 +156,10 @@ public class SearchService {
     return new SearchResult(
         "document",
         score,
-        new SearchMatch.Passage(document.passage(), match.signals(), match.labels()),
+        new SearchMatch.Passage(
+            document.passage(),
+            match.signals().stream().map(Enum::name).map(String::toLowerCase).toList(),
+            match.labels()),
         null,
         document.document());
   }

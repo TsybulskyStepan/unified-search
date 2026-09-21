@@ -1,5 +1,6 @@
 package com.example.searchapp.search.entity;
 
+import com.example.searchapp.search.repository.model.Signal;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -15,7 +16,7 @@ public record FusionCandidate(
     UUID clientId,
     Instant createdAt,
     List<String> labels,
-    List<String> signals,
+    List<Signal> signals,
     double fusedScore,
     Double semanticScore) {
 
@@ -24,7 +25,7 @@ public record FusionCandidate(
   }
 
   public boolean labelMatch() {
-    return signals.contains("label");
+    return signals.contains(Signal.LABEL);
   }
 
   public FusionCandidate withLabels(List<String> matchedLabels) {
@@ -33,7 +34,7 @@ public record FusionCandidate(
         clientId,
         createdAt,
         union(labels, matchedLabels),
-        union(signals, List.of("label")),
+        union(signals, List.of(Signal.LABEL)),
         fusedScore,
         semanticScore);
   }
@@ -44,7 +45,7 @@ public record FusionCandidate(
         clientId,
         createdAt,
         labels,
-        union(signals, List.of("lexical")),
+        union(signals, List.of(Signal.LEXICAL)),
         fusedScore + reciprocalRank,
         semanticScore);
   }
@@ -55,12 +56,13 @@ public record FusionCandidate(
         clientId,
         createdAt,
         labels,
-        union(signals, List.of("semantic")),
+        union(signals, List.of(Signal.SEMANTIC)),
         fusedScore + reciprocalRank,
         score);
   }
 
-  private static List<String> union(List<String> existing, List<String> added) {
+  @SuppressWarnings("unchecked")
+  private static <T> List<T> union(List<T> existing, List<T> added) {
     return Stream.concat(existing.stream(), added.stream()).distinct().toList();
   }
 }

@@ -1,9 +1,9 @@
 package com.example.searchapp.search.service;
 
 import com.example.searchapp.search.entity.FusionCandidate;
-import com.example.searchapp.search.repository.DocumentMatch;
-import com.example.searchapp.search.repository.LabelDocumentMatch;
-import com.example.searchapp.search.repository.RankedDocumentMatch;
+import com.example.searchapp.search.repository.model.DocumentMatch;
+import com.example.searchapp.search.repository.model.LabelDocumentMatch;
+import com.example.searchapp.search.repository.model.RankedDocumentMatch;
 import java.time.Instant;
 import java.util.Comparator;
 import java.util.LinkedHashMap;

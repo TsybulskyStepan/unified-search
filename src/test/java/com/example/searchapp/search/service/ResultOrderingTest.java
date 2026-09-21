@@ -4,8 +4,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.searchapp.search.planner.ClientMention;
 import com.example.searchapp.search.planner.QueryPlan;
-import com.example.searchapp.search.repository.ClientMatch;
-import com.example.searchapp.search.repository.DocumentMatch;
+import com.example.searchapp.search.repository.model.ClientMatch;
+import com.example.searchapp.search.repository.model.DocumentMatch;
+import com.example.searchapp.search.repository.model.MatchTier;
+import com.example.searchapp.search.repository.model.Signal;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
@@ -93,7 +95,7 @@ class ResultOrderingTest {
   void placesContextClientsAfterDocumentsWhileKeepingIdentityClientsFirst() {
     var candidates =
         ResultOrdering.order(
-            List.of(client(JOHN, "identity"), client(MARY, "context")),
+            List.of(client(JOHN, MatchTier.IDENTITY), client(MARY, MatchTier.CONTEXT)),
             List.of(document(MARYS_BILL, MARY)),
             new QueryPlan("advisory fees", List.of(), "advisory fees", Set.of(), Set.of()));
 
@@ -103,15 +105,15 @@ class ResultOrderingTest {
   }
 
   private static ClientMatch client(UUID id) {
-    return client(id, "identity");
+    return client(id, MatchTier.IDENTITY);
   }
 
-  private static ClientMatch client(UUID id, String tier) {
+  private static ClientMatch client(UUID id, MatchTier tier) {
     return new ClientMatch(id, "name", tier, 1.0);
   }
 
   private static DocumentMatch document(UUID documentId, UUID clientId) {
-    return new DocumentMatch(documentId, clientId, 1.0, List.of("semantic"), List.of());
+    return new DocumentMatch(documentId, clientId, 1.0, List.of(Signal.SEMANTIC), List.of());
   }
 
   private static QueryPlan plan(UUID clientId, String residual) {
@@ -134,7 +136,10 @@ class ResultOrderingTest {
 
     var candidates =
         ResultOrdering.order(
-            List.of(client(grace, "context"), client(sam, "identity"), client(JOHN, "identity")),
+            List.of(
+                client(grace, MatchTier.CONTEXT),
+                client(sam, MatchTier.IDENTITY),
+                client(JOHN, MatchTier.IDENTITY)),
             List.of(document(MARYS_BILL, MARY), document(JOHNS_BILL, JOHN)),
             plan(JOHN, "utility bill"));
 
@@ -145,7 +150,7 @@ class ResultOrderingTest {
 
   @Test
   void movesResultsWithoutDroppingOrDuplicatingAnyOfThemInEitherShape() {
-    var clients = List.of(client(MARY, "context"), client(JOHN, "identity"));
+    var clients = List.of(client(MARY, MatchTier.CONTEXT), client(JOHN, MatchTier.IDENTITY));
     var documents = List.of(document(MARYS_BILL, MARY), document(JOHNS_BILL, JOHN));
     var noMention = new QueryPlan("bill", List.of(), "bill", Set.of(), Set.of());
 

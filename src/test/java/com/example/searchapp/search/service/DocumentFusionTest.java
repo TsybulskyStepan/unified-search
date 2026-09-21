@@ -2,8 +2,9 @@ package com.example.searchapp.search.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.example.searchapp.search.repository.LabelDocumentMatch;
-import com.example.searchapp.search.repository.RankedDocumentMatch;
+import com.example.searchapp.search.repository.model.LabelDocumentMatch;
+import com.example.searchapp.search.repository.model.RankedDocumentMatch;
+import com.example.searchapp.search.repository.model.Signal;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -29,9 +30,9 @@ class DocumentFusionTest {
     assertThat(results)
         .extracting(result -> result.documentId())
         .containsExactly(LABELLED, UNLABELLED);
-    assertThat(results.getFirst().signals()).containsExactly("label", "semantic");
+    assertThat(results.getFirst().signals()).containsExactly(Signal.LABEL, Signal.SEMANTIC);
     assertThat(results.getFirst().labels()).containsExactly("purpose:proof_of_address");
-    assertThat(results.get(1).signals()).containsExactly("lexical", "semantic");
+    assertThat(results.get(1).signals()).containsExactly(Signal.LEXICAL, Signal.SEMANTIC);
   }
 
   @Test
@@ -51,7 +52,7 @@ class DocumentFusionTest {
                 new RankedDocumentMatch(both, CLIENT, NOW, 0.6)));
 
     assertThat(results.getFirst().documentId()).isEqualTo(both);
-    assertThat(results.getFirst().signals()).containsExactly("lexical", "semantic");
+    assertThat(results.getFirst().signals()).containsExactly(Signal.LEXICAL, Signal.SEMANTIC);
   }
 
   @Test
@@ -65,7 +66,7 @@ class DocumentFusionTest {
     assertThat(results)
         .extracting(result -> result.documentId())
         .containsExactly(LABELLED, UNLABELLED);
-    assertThat(results.getFirst().signals()).containsExactly("label");
+    assertThat(results.getFirst().signals()).containsExactly(Signal.LABEL);
   }
 
   @Test
