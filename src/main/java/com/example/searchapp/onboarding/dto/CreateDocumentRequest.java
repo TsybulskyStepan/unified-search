@@ -1,5 +1,6 @@
 package com.example.searchapp.onboarding.dto;
 
+import com.example.searchapp.shared.Strings;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import java.util.List;
@@ -15,30 +16,14 @@ public record CreateDocumentRequest(
     List<String> purposes) {
 
   public CreateDocumentRequest {
-    title = trim(title);
-    content = trim(content);
-    documentType = trimToNull(documentType);
-    purposes = normalize(purposes);
+    title = Strings.trim(title);
+    content = Strings.trim(content);
+    documentType = Strings.trimToNull(documentType);
+    purposes = Strings.trimAll(purposes);
   }
 
   /** Convenience for callers with no classification opinion (seeding, most tests). */
   public CreateDocumentRequest(String title, String content) {
     this(title, content, null, List.of());
-  }
-
-  private static String trim(String value) {
-    return value == null ? null : value.trim();
-  }
-
-  private static String trimToNull(String value) {
-    String trimmed = trim(value);
-    return trimmed == null || trimmed.isEmpty() ? null : trimmed;
-  }
-
-  private static List<String> normalize(List<String> purposes) {
-    if (purposes == null) {
-      return List.of();
-    }
-    return purposes.stream().map(CreateDocumentRequest::trim).toList();
   }
 }

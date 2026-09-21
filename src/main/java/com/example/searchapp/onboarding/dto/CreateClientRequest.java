@@ -1,5 +1,6 @@
 package com.example.searchapp.onboarding.dto;
 
+import com.example.searchapp.shared.Strings;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -21,10 +22,10 @@ public record CreateClientRequest(
         List<@NotBlank(message = "must not be blank") @Size(max = 2_048) String> socialLinks) {
 
   public CreateClientRequest {
-    firstName = trim(firstName);
-    lastName = trim(lastName);
-    email = trim(email);
-    description = trimToNull(description);
+    firstName = Strings.trim(firstName);
+    lastName = Strings.trim(lastName);
+    email = Strings.trim(email);
+    description = Strings.trimToNull(description);
     socialLinks = normalizeLinks(socialLinks);
   }
 
@@ -42,20 +43,8 @@ public record CreateClientRequest(
     return errors;
   }
 
-  private static String trim(String value) {
-    return value == null ? null : value.trim();
-  }
-
-  private static String trimToNull(String value) {
-    String trimmed = trim(value);
-    return trimmed == null || trimmed.isEmpty() ? null : trimmed;
-  }
-
   private static List<String> normalizeLinks(List<String> links) {
-    if (links == null) {
-      return List.of();
-    }
-    return links.stream().map(CreateClientRequest::trim).toList();
+    return Strings.trimAll(links);
   }
 
   private static boolean hasDottedDomain(String value) {
