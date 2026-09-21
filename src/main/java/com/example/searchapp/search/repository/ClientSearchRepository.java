@@ -71,44 +71,33 @@ public class ClientSearchRepository {
             WITH query_tokens AS (
                 SELECT token, position
                 FROM unnest(CAST(:tokens AS text[])) WITH ORDINALITY AS query_tokens(token, position)
+                WHERE char_length(token) >= 3
             ), token_scores AS (
-                SELECT c.id, query_tokens.position, field,
-                       word_similarity(query_tokens.token, value) AS score
+                SELECT c.id, query_tokens.position, best.field, best.score
                 FROM client c
                 CROSS JOIN query_tokens
-                CROSS JOIN LATERAL (VALUES
-                    ('name', c.first_name || ' ' || c.last_name),
-                    ('email', c.email::text)
-                ) AS fields(field, value)
-                WHERE char_length(query_tokens.token) >= 3
-            ), token_matches AS (
-                SELECT DISTINCT ON (id, position) id, position, field, score
+                CROSS JOIN LATERAL (
+                    SELECT field, word_similarity(query_tokens.token, value) AS score
+                    FROM (VALUES
+                        ('name', c.first_name || ' ' || c.last_name),
+                        ('email', c.email::text)
+                    ) AS fields(field, value)
+                    ORDER BY score DESC, field
+                    LIMIT 1
+                ) best
+            ), runs AS (
+                SELECT id, position, field, score,
+                       bool_and(score >= :mention_floor)
+                           OVER (PARTITION BY id ORDER BY position) AS in_leading_run
                 FROM token_scores
-                WHERE score >= :mention_floor
-                ORDER BY id, position, score DESC, field
-            ), first_non_identity_token AS (
-                SELECT c.id,
-                       coalesce(min(query_tokens.position), :token_count + 1) AS position
-                FROM client c
-                LEFT JOIN query_tokens
-                  ON char_length(query_tokens.token) >= 3
-                  AND NOT EXISTS (
-                    SELECT 1
-                    FROM token_matches
-                    WHERE token_matches.id = c.id
-                      AND token_matches.position = query_tokens.position
-                )
-                GROUP BY c.id
             ), leading_runs AS (
-                SELECT token_matches.id,
+                SELECT id,
                        (array_agg(field ORDER BY score DESC, field))[1] AS field,
                        max(score) AS score,
-                       max(token_matches.position) AS matched_through_position
-                FROM token_matches
-                JOIN first_non_identity_token
-                  ON first_non_identity_token.id = token_matches.id
-                WHERE token_matches.position < first_non_identity_token.position
-                GROUP BY token_matches.id
+                       max(position) AS matched_through_position
+                FROM runs
+                WHERE in_leading_run
+                GROUP BY id
             )
             SELECT leading_runs.id, leading_runs.field, leading_runs.score,
                    leading_runs.matched_through_position
@@ -124,7 +113,6 @@ public class ClientSearchRepository {
         .param("query", String.join(" ", tokens))
         .param("tokens", queryTokens)
         .param("mention_floor", MENTION_FLOOR)
-        .param("token_count", queryTokens.length)
         .query(ClientSearchRepository::mapMention)
         .list();
   }
