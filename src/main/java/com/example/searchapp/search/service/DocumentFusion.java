@@ -31,18 +31,22 @@ final class DocumentFusion {
       List<RankedDocumentMatch> semantic) {
     Map<UUID, FusionCandidate> candidates = new LinkedHashMap<>();
     for (LabelDocumentMatch match : labels) {
-      candidateFor(candidates, match.documentId(), match.clientId(), match.createdAt())
-          .addLabels(match.labels());
+      FusionCandidate candidate =
+          candidateFor(candidates, match.documentId(), match.clientId(), match.createdAt());
+      candidates.put(match.documentId(), candidate.withLabels(match.labels()));
     }
     for (int rank = 0; rank < lexical.size(); rank++) {
       RankedDocumentMatch match = lexical.get(rank);
-      candidateFor(candidates, match.documentId(), match.clientId(), match.createdAt())
-          .addLexical(reciprocalRank(rank));
+      FusionCandidate candidate =
+          candidateFor(candidates, match.documentId(), match.clientId(), match.createdAt());
+      candidates.put(match.documentId(), candidate.withLexical(reciprocalRank(rank)));
     }
     for (int rank = 0; rank < semantic.size(); rank++) {
       RankedDocumentMatch match = semantic.get(rank);
-      candidateFor(candidates, match.documentId(), match.clientId(), match.createdAt())
-          .addSemantic(reciprocalRank(rank), match.score());
+      FusionCandidate candidate =
+          candidateFor(candidates, match.documentId(), match.clientId(), match.createdAt());
+      candidates.put(
+          match.documentId(), candidate.withSemantic(reciprocalRank(rank), match.score()));
     }
 
     return candidates.values().stream().sorted(BEST_FIRST).map(DocumentFusion::toMatch).toList();
@@ -50,8 +54,7 @@ final class DocumentFusion {
 
   private static FusionCandidate candidateFor(
       Map<UUID, FusionCandidate> candidates, UUID documentId, UUID clientId, Instant createdAt) {
-    return candidates.computeIfAbsent(
-        documentId, id -> new FusionCandidate(id, clientId, createdAt));
+    return candidates.getOrDefault(documentId, FusionCandidate.of(documentId, clientId, createdAt));
   }
 
   private static double reciprocalRank(int zeroBasedRank) {

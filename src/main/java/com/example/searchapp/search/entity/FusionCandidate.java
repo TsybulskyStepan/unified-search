@@ -1,79 +1,66 @@
 package com.example.searchapp.search.entity;
 
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Stream;
 
 /**
  * One document's evidence while the label, lexical and semantic result lists are fused: which
  * signals found it, the labels that admitted it, and the reciprocal-rank score the ranked signals
- * add up to.
+ * add up to. Immutable; each {@code with...} returns the candidate with that evidence added.
  */
-public final class FusionCandidate {
-  private final UUID documentId;
-  private final UUID clientId;
-  private final Instant createdAt;
-  private final Set<String> signals = new LinkedHashSet<>();
-  private final Set<String> labels = new LinkedHashSet<>();
-  private boolean labelMatch;
-  private double fusedScore;
-  private Double semanticScore;
+public record FusionCandidate(
+    UUID documentId,
+    UUID clientId,
+    Instant createdAt,
+    List<String> labels,
+    List<String> signals,
+    double fusedScore,
+    Double semanticScore) {
 
-  public FusionCandidate(UUID documentId, UUID clientId, Instant createdAt) {
-    this.documentId = documentId;
-    this.clientId = clientId;
-    this.createdAt = createdAt;
-  }
-
-  public void addLabels(List<String> matchedLabels) {
-    labelMatch = true;
-    labels.addAll(matchedLabels);
-    signals.add("label");
-  }
-
-  public void addLexical(double reciprocalRank) {
-    fusedScore += reciprocalRank;
-    signals.add("lexical");
-  }
-
-  public void addSemantic(double reciprocalRank, double score) {
-    fusedScore += reciprocalRank;
-    signals.add("semantic");
-    semanticScore = score;
-  }
-
-  public UUID documentId() {
-    return documentId;
-  }
-
-  public UUID clientId() {
-    return clientId;
-  }
-
-  public Instant createdAt() {
-    return createdAt;
+  public static FusionCandidate of(UUID documentId, UUID clientId, Instant createdAt) {
+    return new FusionCandidate(documentId, clientId, createdAt, List.of(), List.of(), 0, null);
   }
 
   public boolean labelMatch() {
-    return labelMatch;
+    return signals.contains("label");
   }
 
-  public double fusedScore() {
-    return fusedScore;
+  public FusionCandidate withLabels(List<String> matchedLabels) {
+    return new FusionCandidate(
+        documentId,
+        clientId,
+        createdAt,
+        union(labels, matchedLabels),
+        union(signals, List.of("label")),
+        fusedScore,
+        semanticScore);
   }
 
-  public Double semanticScore() {
-    return semanticScore;
+  public FusionCandidate withLexical(double reciprocalRank) {
+    return new FusionCandidate(
+        documentId,
+        clientId,
+        createdAt,
+        labels,
+        union(signals, List.of("lexical")),
+        fusedScore + reciprocalRank,
+        semanticScore);
   }
 
-  public List<String> signals() {
-    return new ArrayList<>(signals);
+  public FusionCandidate withSemantic(double reciprocalRank, double score) {
+    return new FusionCandidate(
+        documentId,
+        clientId,
+        createdAt,
+        labels,
+        union(signals, List.of("semantic")),
+        fusedScore + reciprocalRank,
+        score);
   }
 
-  public List<String> labels() {
-    return new ArrayList<>(labels);
+  private static List<String> union(List<String> existing, List<String> added) {
+    return Stream.concat(existing.stream(), added.stream()).distinct().toList();
   }
 }
