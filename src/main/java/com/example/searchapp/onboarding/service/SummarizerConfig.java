@@ -15,7 +15,7 @@ import org.springframework.context.annotation.Configuration;
  */
 @Configuration
 class SummarizerConfig {
-  static final String DEFAULT_MODEL = "gemini-2.5-flash";
+  static final String DEFAULT_MODEL = "gemini-3.6-flash";
 
   @Bean
   Summarizer summarizer(

@@ -20,7 +20,7 @@ import org.junit.jupiter.api.Test;
  * exercise an actual model call, which these tests deliberately don't need.
  */
 class GeminiSummarizerTest {
-  private final GeminiSummarizer summarizer = new GeminiSummarizer("test-key", "gemini-2.5-flash");
+  private final GeminiSummarizer summarizer = new GeminiSummarizer("test-key", "gemini-3.6-flash");
 
   @Test
   void authenticationFailuresArePermanent() {
