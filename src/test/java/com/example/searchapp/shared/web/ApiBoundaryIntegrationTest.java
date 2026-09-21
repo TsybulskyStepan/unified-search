@@ -3,6 +3,10 @@ package com.example.searchapp.shared.web;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.searchapp.IntegrationTest;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.web.server.LocalServerPort;
@@ -34,6 +38,19 @@ class ApiBoundaryIntegrationTest extends IntegrationTest {
     assertThat(unknownRoute.body())
         .contains("The requested resource was not found")
         .doesNotContain("static resource");
+  }
+
+  @Test
+  void openApiServerUrlFollowsTheSchemeTheProxyForwarded() throws Exception {
+    var request =
+        HttpRequest.newBuilder(URI.create("http://localhost:" + port + "/v3/api-docs"))
+            .header("X-Forwarded-Proto", "https")
+            .GET()
+            .build();
+
+    var response = HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString());
+
+    assertThat(response.body()).contains("\"servers\":[{\"url\":\"https://");
   }
 
   @Test
