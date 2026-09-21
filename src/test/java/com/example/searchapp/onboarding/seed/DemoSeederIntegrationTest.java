@@ -101,13 +101,13 @@ class DemoSeederIntegrationTest {
   @Test
   void twoConcurrentSeedersCannotDoubleSeedTheSameClient() throws Exception {
     var client =
-        new DemoCorpus.DemoClient(
+        new DemoClient(
             "Race",
             "Condition",
             "race.condition@example.com",
             null,
             List.of(),
-            List.of(new DemoCorpus.DemoDocument("Note", "A short note for the race test.")));
+            List.of(new DemoDocument("Note", "A short note for the race test.")));
 
     try (ConfigurableApplicationContext context = boot(true, false)) {
       // The startup seed already ran; empty the table again so both threads race to insert the
@@ -141,7 +141,7 @@ class DemoSeederIntegrationTest {
   }
 
   private static boolean race(
-      DemoSeeder seeder, DemoCorpus.DemoClient client, CountDownLatch ready, CountDownLatch go)
+      DemoSeeder seeder, DemoClient client, CountDownLatch ready, CountDownLatch go)
       throws InterruptedException {
     ready.countDown();
     go.await(10, TimeUnit.SECONDS);

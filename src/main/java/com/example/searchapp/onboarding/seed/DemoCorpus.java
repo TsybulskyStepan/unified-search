@@ -8,14 +8,4 @@ import java.util.List;
  * under {@code src/main/resources/seed/}, on the classpath both {@link DemoSeeder} and the eval
  * tests read from — so the demo and the eval set can never drift apart (§11.3).
  */
-public record DemoCorpus(List<DemoClient> clients) {
-  public record DemoClient(
-      String firstName,
-      String lastName,
-      String email,
-      String description,
-      List<String> socialLinks,
-      List<DemoDocument> documents) {}
-
-  public record DemoDocument(String title, String content) {}
-}
+public record DemoCorpus(List<DemoClient> clients) {}

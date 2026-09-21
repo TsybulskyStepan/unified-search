@@ -3,7 +3,9 @@ package com.example.searchapp.eval;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;
 
+import com.example.searchapp.onboarding.seed.DemoClient;
 import com.example.searchapp.onboarding.seed.DemoCorpus;
+import com.example.searchapp.onboarding.seed.DemoDocument;
 import com.example.searchapp.onboarding.service.Classification;
 import com.example.searchapp.onboarding.service.DocumentChunkSet;
 import com.example.searchapp.onboarding.service.DocumentClassifier;
@@ -128,8 +130,8 @@ class SemanticFloorEvalTest {
     Taxonomy taxonomy = TaxonomyLoader.load(TaxonomyLoader.TAXONOMY_RESOURCE);
     DocumentClassifier classifier = new DocumentClassifier(taxonomy);
     List<EmbeddedDocument> documents = new ArrayList<>();
-    for (DemoCorpus.DemoClient client : corpus.clients()) {
-      for (DemoCorpus.DemoDocument document : client.documents()) {
+    for (DemoClient client : corpus.clients()) {
+      for (DemoDocument document : client.documents()) {
         Classification classification =
             classifier.classify(document.title(), document.content(), null, List.of());
         DocumentChunkSet chunkSet =
