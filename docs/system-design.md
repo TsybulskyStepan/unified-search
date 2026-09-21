@@ -1,24 +1,24 @@
 # Unified Search: System Design
 
-One Spring Boot service (Java 25) on one PostgreSQL 17 database with `pgvector`, `pg_trgm` and `citext`. Runs locally with `docker compose up`. A React SPA is the primary UI, and Swagger UI is available for API exploration. No broker, cache, ANN index or second service.
+One Spring Boot service (Java 25) on one PostgreSQL database with `pgvector`, `pg_trgm` and `citext`: PostgreSQL 17 locally and PostgreSQL 16 on the existing production Cloud SQL instance. Runs locally with `docker compose up`. A React SPA is the primary UI, and Swagger UI is available for API exploration. No broker, cache, ANN index or second service.
 
 - **Documents carry a type and a set of KYC purposes** from a closed taxonomy, assigned at ingest by a deterministic classifier.
 - **Every query is parsed into a plan** before retrieval: the client it names, if any, the residual text, and the taxonomy labels that text refers to.
 - **Clients** are matched with `pg_trgm` `word_similarity` in two tiers: identity fields (name, email, social links) and context (description).
 - **Documents** are retrieved by three signals, label match, lexical match on a `tsvector` and semantic match on MiniLM chunks in `pgvector`, then fused with reciprocal rank fusion.
 - **Ordering** is a deterministic tier order chosen by the plan's shape. Scores are never compared across types.
-- **Writes** are searchable on `201`. **Summaries** are generated on request through Gemini and never touch search.
+- **Document writes** return `201` only after the document row and all of its chunks commit together, so a search immediately after that response can find the document. **Summaries** are generated on request through Gemini and never touch search.
 
 ## Rationale
 
-Similarity alone (embeddings plus a lexical signal) fails on the questions advisors ask, because it has no notion of what a document is *for*. Replacing MiniLM with E5 reproduced the same failures, so the cause is structural, not the model.
+Similarity alone (embeddings plus a lexical signal) fails on the questions advisors ask, because it has no notion of what a document is *for*.
 
-| Query | Similarity alone | Design response |
+| Advisor question | Similarity-only outcome | What this solution offers |
 |---|---|---|
-| `tax residency` | Council Tax Bills first: the bills literally say "residency", and word overlap beats meaning | Purpose labels. Bills are `proof_of_address`, the W-9 and tax return are `tax_status`, and label matches lead |
-| `source of funds` | Engagement letter first: the completion statement's answer sits in a chunk full of GBP figures | A `source_of_funds` label, lexical retrieval over labels and content, and one label chunk per document |
-| `proof of address` | 5 of 7 found: two bills never use address wording | Label retrieval admits every tagged document, whatever its wording |
-| `advisory fees` | Client Grace Kim first: her description says "advisory arrangements" (0.64) | A context tier for description hits, ranked below documents. Only identity fields outrank documents |
+| `Does Mary Henderson have evidence of US tax residency?` | Council Tax Bills can rank first because they literally say "residency", and word overlap beats meaning | Purpose labels distinguish address evidence from tax-status evidence, so W-9s and tax returns lead |
+| `Show me Elena Petrova's source-of-funds evidence` | An engagement letter can rank first because the completion statement's relevant text sits beside GBP figures | A `source_of_funds` label, lexical retrieval over labels and content, and one label chunk per document |
+| `Which documents prove Sarah Achebe's address?` | Some bills can be missed because they never use address wording | Label retrieval admits every tagged document, whatever its wording |
+| `Find Fatima Al-Sayed's advisory fee agreement` | A client description mentioning advisory arrangements can outrank the agreement | Context matches rank below documents; only identity matches can outrank documents |
 
 ## Architecture
 
@@ -44,7 +44,7 @@ flowchart TB
             TAX["taxonomy"]
         end
     end
-    PG[("PostgreSQL 17, pgvector, pg_trgm, citext")]
+    PG[("PostgreSQL: 17 local, 16 production; pgvector, pg_trgm, citext")]
     VX["Gemini API"]
 
     UI --> AUTH
@@ -63,7 +63,7 @@ flowchart TB
 
 The code is three packages: `onboarding` (write side: clients, documents, classification, chunking, summaries, seeding), `search` (read side: planning, retrieval, fusion, ordering, hydration, the audit line) and `shared` (embedding model, taxonomy, web plumbing). Client creation is validate, insert, map the unique violation to `409`, so it has no service layer. Document creation has real logic, so it does.
 
-`onboarding` and `search` run in one process and never import each other. `search` reads `client`, `document` and `document_chunk` with its own SQL and row types, so splitting into two services later is routing and wiring, not a rewrite. Three contracts exist between them, and only the first has a compiler behind it.
+`onboarding` and `search` run in one process and never import each other. This is an in-process CQRS split: onboarding owns commands and writes, while search owns query planning and its read-side SQL. `search` reads `client`, `document` and `document_chunk` with its own row types, so a later service split is routing and wiring rather than a rewrite. Three contracts exist between them, and only the first has a compiler behind it.
 
 1. **The schema**, versioned by Flyway.
 2. **The vector space.** Every chunk records its embedding model and search filters on it, so a model swap without a re-index cannot silently mix vector spaces.
@@ -71,21 +71,19 @@ The code is three packages: `onboarding` (write side: clients, documents, classi
 
 ### Technology choices
 
-| Concern | Choice | Why | Rejected |
-|---|---|---|---|
-| Runtime | Java 25, Spring Boot 4.1 | Virtual threads, ProblemDetail, Actuator built in | Quarkus, Micronaut |
-| Data access | `JdbcClient` + `pgvector` | Every interesting query is native SQL | JPA, would be bypassed everywhere |
-| Migrations | Flyway, additive only | Explicit, versioned | `ddl-auto` |
-| Embeddings | `langchain4j-embeddings-all-minilm-l6-v2` (ONNX, inside the jar) | Nothing downloads at runtime. One module imports it | DJL, Spring AI Transformers |
-| Lexical documents | Postgres `tsvector` + GIN | Built in, stemmed, weighted, indexed | Elasticsearch, a second store for one signal |
-| Classification | Rules over title and content, taxonomy in YAML | Deterministic, zero latency, no credentials | An LLM at ingest: a network call and a credential on `POST` |
-| Summaries | `google-genai`, API key | One env var for a reviewer. Vertex with ADC is the production shape | Spring AI |
-| Tests | JUnit, Testcontainers `pgvector/pgvector:pg17` | Real extensions | H2 |
-| UI | React SPA (Vite) served from the jar | One deployable | Swagger only |
+| Concern | Choice | Why |
+|---|---|---|
+| Runtime | Java 25, Spring Boot 4.1 | Virtual threads, ProblemDetail, Actuator built in |
+| Data access | `JdbcClient` + `pgvector` | Every interesting query is native SQL |
+| Migrations | Flyway, additive only | Explicit, versioned |
+| Embeddings | `langchain4j-embeddings-all-minilm-l6-v2` (ONNX, inside the jar) | Nothing downloads at runtime. One module imports it |
+| Lexical documents | Postgres `tsvector` + GIN | Built in, stemmed, weighted, indexed |
+| Classification | Rules over title and content, taxonomy in YAML | Deterministic, zero latency, no credentials |
+| Summaries | `google-genai`, API key | One env var for a reviewer. Vertex with ADC is the production shape |
+| Tests | JUnit, Testcontainers `pgvector/pgvector:pg17` | Real extensions |
+| UI | React SPA (Vite) served from the jar | One deployable |
 
 ## Data model
-
-The current schema; migrations are additive.
 
 ```sql
 CREATE TABLE client (
@@ -135,10 +133,6 @@ CREATE TABLE document_chunk (
 );
 ```
 
-- `document_type` and `purposes` are validated against the taxonomy in the application, not by `CHECK`, so the vocabulary lives in one file. `unknown` is a legal type with no purposes.
-- `label_text` is the readable form of the labels ("utility bill proof of address"), written by the service because a generated column cannot call `array_to_string`. One `english` text-search configuration is used everywhere, so a query term and a label term with the same stem match.
-- `embedding_model` is in the primary key so a re-index can write new-model chunks beside the old ones and cut over by changing the query filter.
-
 | Invariant | Enforced by |
 |---|---|
 | Email unique, case-insensitive | `UNIQUE (email)` on `citext`, mapped to `409` |
@@ -161,17 +155,13 @@ Twelve document types, seven purposes and one `unknown`. A purpose is the KYC qu
 | `investment_mandate` | `investment_policy_statement` |
 | `trust_structure` | `trust_deed` |
 
-`bank_statement` and `tax_return` are deliberately not tagged `source_of_funds`, and `driving_licence` is not tagged `proof_of_address`, because that is how the evaluation set defines those questions. Change the YAML and the evaluation together if compliance disagrees.
-
 `taxonomy.yaml` is loaded once at startup and validated: unique ids, no id that is both a type and a purpose (the planner splits intents by id), every purpose a type names exists, and no synonym equal to a type or purpose id. Each type has a `label`, default `purposes`, title and content patterns and query synonyms, and each purpose has a `label` and synonyms.
 
-**Classifier.** A deterministic function of title, content and an optional requested type. A requested type is validated and used (source `request`). Otherwise each type scores 2 per title pattern found and 1 per content pattern found, and the highest wins. A best score below 2 (one title pattern, or two content patterns) or a tie yields `unknown` (source `unknown`): one content word is not evidence, and a letter of authority that mentions "beneficiaries" is not a trust deed. `label_text` is the type label followed by the purpose labels. An LLM classifier is deliberately not in the write path.
+**Classifier.** A deterministic function of title, content and an optional requested type. A requested type is validated and used (source `request`); otherwise the classifier assigns the best-supported type or `unknown`. An LLM classifier is deliberately not in the write path.
 
 **Reclassification.** At startup, after Flyway and before the seeder, rows below the current `taxonomy_version` are reclassified in batches of 100: rule and unknown rows are re-classified, request rows keep their type, and every row gets a fresh label, version and label chunk. One transaction per batch, idempotent, safe to interrupt. Readiness does not wait for it.
 
 ## API contract
-
-JSON is `snake_case`. Errors are RFC 9457 `application/problem+json`. IDs are UUIDs, timestamps ISO-8601 UTC, auth is the `X-API-Key` header.
 
 | Method and path | Success | Errors | Notes |
 |---|---|---|---|
@@ -186,15 +176,6 @@ JSON is `snake_case`. Errors are RFC 9457 `application/problem+json`. IDs are UU
 | `GET /health`, `/v3/api-docs`, `/swagger-ui/**`, `/` | `200` | | Unauthenticated. `/` serves the SPA, and `/api/*` is rewritten to `/*` |
 
 A missing id is `404`, a malformed UUID is `400`, and an unknown route is `404` with the same generic body as any other. Requests declaring `Content-Length` over 256 KB get `413` before binding.
-
-The SPA's home route lists clients as tiles (a create-client tile first) until a query is typed into the header search, which debounces a five-result preview and submits to a full results page. Creating a client writes the client and then each optional title and content entry through the same endpoints. It does not upload files: content is text.
-
-**Validation.** Strings are trimmed first, and required means non-blank. Names ≤ 100 chars. `email` a valid address with a `.` in the domain, ≤ 254. `description` ≤ 2 000. `social_links` ≤ 10 absolute `http(s)` URLs of ≤ 2 048. `title` ≤ 300 and `content` ≤ 64 000, both required. `document_type` must be a taxonomy type id, and `purposes` must be taxonomy purpose ids and only alongside `document_type`. `q` is 1 to 200 chars, `limit` 1 to 50 (default 20), `offset` ≥ 0.
-
-**Responses.** A client is its brief fields plus `created_at`. A document adds `summary`, `summary_status`, `document_type`, `purposes` and `classification_source`. A search result is a union on `type`:
-
-- A **client** result carries `match.field` (`name`, `email`, `social_links` or `description`), `match.tier` (`identity` or `context`) and the client.
-- A **document** result carries `match.passage`, `match.signals` (which of `label`, `lexical`, `semantic` admitted it), `match.labels` (the taxonomy labels that matched) and the document with `client_name`, but not `content`. Signals and labels exist so a wrong ranking can be explained from the response alone.
 
 `score` is comparable within a type only: clients carry `word_similarity`, documents the fused score. Position comes from the ordering rules. Each retrieval signal fetches at most 200 candidates, so `X-Total-Count` is exact below that and a lower bound at it. Ordering is total, so a page is a slice and deep pages are stable.
 
@@ -333,11 +314,11 @@ On request only. `POST …/summary` moves `none` or `failed` to `pending` and re
 
 ### Cloud Run (production)
 
-One Cloud Run service (2 vCPU, 2 GiB, `min-instances=1`, `max-instances=2`, CPU always allocated so the summary sweep is not throttled), Cloud SQL Postgres 17 (existing instance), secrets from Secret Manager, summaries through Gemini with a plain API key (Vertex with ADC is the production follow-up). The summary lease is what makes more than one instance correct, and additive-only migrations let a split `search` keep working across an `onboarding` rollout.
+One Cloud Run service (1 vCPU, 2 GiB, `min-instances=0`, `max-instances=1`, CPU throttled), Cloud SQL PostgreSQL 16 (the existing instance), and secrets from Secret Manager. The application owns the `unified_search` schema; the existing `public` schema remains separate. Summaries remain optional through Gemini with a plain API key. The summary lease is what makes more than one instance correct, and additive-only migrations let a split `search` keep working across an `onboarding` rollout.
 
 **Deployment pipeline:**
 
-1. **Database setup (one-time).** Run `DB_PASSWORD=... db/setup/init-db.sh` against the Cloud SQL instance as the `postgres` user. This creates the `unified_search` database, installs `vector`, `pg_trgm` and `citext`, creates the application role with `DB_PASSWORD` as its password, and grants it access. Flyway migrations create everything else on first app startup.
+1. **Database setup (one-time).** Create the isolated `unified_search` schema in the existing database and install `vector`, `pg_trgm` and `citext`. Flyway creates the application tables and indexes on first startup.
 
 2. **Secrets.** `DB_USER`, `DB_PASSWORD` (the value used in step 1), `API_KEY` and optional `GEMINI_API_KEY` in Secret Manager. The Cloud Run service account needs `secretmanager.versions.access` on each. `cloudbuild.yaml` mounts the Gemini secret only when `_GEMINI_API_KEY_SECRET` is set, so a deployment without summaries needs no such secret.
 
@@ -385,20 +366,3 @@ Estimates, unverified. The timers under Observability are the measurement hook.
 | **Total** | **about 45 to 110 ms**, budget p99 < 300 ms |
 
 Document creation is embedding plus one transaction: 10 to 50 ms typical, up to about 1 s at the 64 000-character cap (about 265 chunks), because cost is linear in length. Scale triggers: semantic p95 over about 100 ms means HNSW and a top-K rewrite, client SQL p95 over about 30 ms means GIN `gin_trgm_ops`, writes slowing search means splitting the modules into services, larger documents need an asynchronous ingestion mode that gives up searchable-on-`201`, and multi-tenancy needs a tenant column, scoped uniqueness and row-level security.
-
-## Follow-ups and ideas not adopted
-
-In rough order of expected value; none is in scope.
-
-1. **Async LLM classification** for documents the rules left `unknown`, reusing the summary worker and writing `classification_source = llm`. Never in the write path.
-2. **Prototype embeddings for intents:** embed each purpose's synonyms into one vector and detect an intent when the residual's cosine clears a calibrated floor with a margin. Catches paraphrases the synonym list misses, but must be calibrated on the evaluation or it invents intents.
-3. **Typo-tolerant intents** (`word_similarity ≥ 0.8` against synonym phrases), and **Levenshtein for short names** (`jhon`), each needing evaluation negatives to prove they do not over-fire.
-4. **Cross-encoder rerank** of the top 50 documents once ranking quality plateaus: the first place a second model earns its cost.
-5. **Trailing mentions** (`utility bill for John`), and **filters on `/search`** (`client_id`, `document_type`, `purpose`).
-6. **Browse tier for identity queries**, so `John` returns John followed by his documents. A product decision, because it changes what a result means.
-7. **Sentence-aware chunking**, and **summary as a chunk**, which embeds well but couples summaries to search.
-8. **Click logging** on result position, to find missing synonyms and mis-tagged documents from real usage.
-
-Known limits: short-name typos, one- or two-character queries, English-only synonyms and stemming.
-
-**The semantic floor is a coarse gate, and no single cosine threshold is right.** Near-domain queries outside the corpus score above the floor (`cheap hotel deals in Rome` 0.328, `weekend flight to Lisbon` 0.297), while paraphrases with no taxonomy synonym score as low as 0.345 (`paper showing the home address`) and 0.12 (one electricity bill under `evidence of where the client lives`). The ranges overlap, so raising the floor would drop real paraphrase hits before travel noise. Such hits are admitted by the semantic signal alone and rank below every label and lexical hit. The remedies are prototype embeddings and a cross-encoder rerank, not a tuned number.
