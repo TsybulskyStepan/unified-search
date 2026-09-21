@@ -29,7 +29,7 @@ Java 25 via Gradle toolchain. Integration tests need Docker (Testcontainers, `pg
 
 Each one is enforced by a test once its code exists. Adding code that could break one means adding or extending that test.
 
-- **Module boundary.** `onboarding` and `search` never import each other; both may use `shared`. They share two contracts, not one: the database schema, and the vector space — which is why `Embedder` lives in `shared`. Enforced by package structure only, not by a test; the ArchUnit test that once checked this was removed in `61c4854`.
+- **Module boundary.** `onboarding` and `search` never import each other; both may use `shared`. They share two contracts, not one: the database schema, and the vector space — which is why `Embedder` lives in `shared`. Enforced by package structure only, not by a test; the ArchUnit test that once checked this was removed in the `refactor: remove architectural test boundary` commit.
 - **SQL is bound, never concatenated.** `JdbcClient` with parameters. No JPA.
 - **Migrations are additive** (expand/contract), Flyway only.
 
