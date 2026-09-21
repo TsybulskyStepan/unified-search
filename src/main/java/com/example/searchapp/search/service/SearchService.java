@@ -18,6 +18,7 @@ import com.example.searchapp.search.service.SearchTelemetry.Stage;
 import jakarta.annotation.PreDestroy;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -117,8 +118,8 @@ public class SearchService {
   }
 
   private static PageMatches partition(List<ResultOrdering.Candidate> candidates) {
-    List<UUID> clientIds = new java.util.ArrayList<>();
-    List<DocumentMatch> documentMatches = new java.util.ArrayList<>();
+    List<UUID> clientIds = new ArrayList<>();
+    List<DocumentMatch> documentMatches = new ArrayList<>();
     for (ResultOrdering.Candidate candidate : candidates) {
       switch (candidate) {
         case ResultOrdering.ClientCandidate(ClientMatch match) -> clientIds.add(match.clientId());

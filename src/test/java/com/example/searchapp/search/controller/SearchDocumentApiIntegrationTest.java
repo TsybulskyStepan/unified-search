@@ -3,6 +3,7 @@ package com.example.searchapp.search.controller;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.searchapp.IntegrationTest;
+import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -133,8 +134,7 @@ class SearchDocumentApiIntegrationTest extends IntegrationTest {
     var response =
         HTTP.send(
             HttpRequest.newBuilder(
-                    java.net.URI.create(
-                        "http://localhost:" + port + "/clients/" + clientId + "/documents"))
+                    URI.create("http://localhost:" + port + "/clients/" + clientId + "/documents"))
                 .header("X-API-Key", TEST_API_KEY)
                 .header("Content-Type", "application/json")
                 .POST(

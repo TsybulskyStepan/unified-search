@@ -1,6 +1,7 @@
 package com.example.searchapp.search.entity;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 public record SearchDocument(
@@ -11,6 +12,6 @@ public record SearchDocument(
     String summary,
     String summaryStatus,
     String documentType,
-    java.util.List<String> purposes,
+    List<String> purposes,
     String classificationSource,
     Instant createdAt) {}
