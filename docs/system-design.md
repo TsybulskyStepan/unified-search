@@ -165,7 +165,7 @@ Twelve document types, seven purposes and one `unknown`. A purpose is the KYC qu
 
 `taxonomy.yaml` is loaded once at startup and validated: unique ids, no id that is both a type and a purpose (the planner splits intents by id), every purpose a type names exists, and no synonym equal to a type or purpose id. Each type has a `label`, default `purposes`, title and content patterns and query synonyms, and each purpose has a `label` and synonyms.
 
-**Classifier.** A deterministic function of title, content and an optional requested type. A requested type is validated and used (source `request`). Otherwise each type scores 2 per title pattern found and 1 per content pattern found, and the highest wins. A best score of 0 or a tie yields `unknown` (source `rule`). `label_text` is the type label followed by the purpose labels. An LLM classifier is deliberately not in the write path.
+**Classifier.** A deterministic function of title, content and an optional requested type. A requested type is validated and used (source `request`). Otherwise each type scores 2 per title pattern found and 1 per content pattern found, and the highest wins. A best score below 2 (one title pattern, or two content patterns) or a tie yields `unknown` (source `unknown`): one content word is not evidence, and a letter of authority that mentions "beneficiaries" is not a trust deed. `label_text` is the type label followed by the purpose labels. An LLM classifier is deliberately not in the write path.
 
 **Reclassification.** At startup, after Flyway and before the seeder, rows below the current `taxonomy_version` are reclassified in batches of 100: rule and unknown rows are re-classified, request rows keep their type, and every row gets a fresh label, version and label chunk. One transaction per batch, idempotent, safe to interrupt. Readiness does not wait for it.
 
@@ -364,11 +364,11 @@ See `README.md` for the full walkthrough with commands.
 | `none` | Zero results |
 | `gibberish` | Zero results, rejected by the readability gate rather than the floor |
 
-Every document query also asserts that **no client ranks above any expected document**, which still lets a context-tier client appear below the answers. A "top 3" check cannot pass for a query with seven correct answers, so `all_within` measures recall@n. MRR and recall@n are logged on every run; over the current 34 queries MRR is 1.000 and mean recall@n is 0.96. Expected items are hand-labelled from the taxonomy's definition of what answers the question, never read back from a search result. Shared answer sets (`proof_of_address` is 53 documents) keep synonymous queries consistent.
+Every document query also asserts that **no client ranks above any expected document**, which still lets a context-tier client appear below the answers. A "top 3" check cannot pass for a query with seven correct answers, so `all_within` measures recall@n. MRR and recall@n are logged on every run; over the current 34 queries MRR is 1.000 and mean recall@n is 0.96. Expected items are hand-labelled from the taxonomy's definition of what answers the question, never read back from a search result. Shared answer sets (`proof_of_address` is 55 documents) keep synonymous queries consistent.
 
 `semanticFloor` is set by this test as the midpoint of the gap between the lowest positive and highest negative cosine (0.2917 and 0.1836, midpoint 0.2377). The build fails if the gap closes or `application.yaml` drifts from the midpoint. The lexical floor stays 0.6 and is guarded from both sides at the endpoint: `Hendersen` (0.70) is admitted and `joe` (0.50) is not. The classifier must reach 100% on the labelled corpus. The negative queries use `how to bake sourdough bread` rather than a weather query, because `weather` is a substring of the client Zoë Fairweather and trigram matching admits her on the email.
 
-**Known gap.** Two Broadband and Landline bills are genuine address evidence but classify `unknown`, so they never surface for `proof of address`. Adding `broadband` to the `utility_bill` title patterns closes it, together with the labelled corpus and the evaluation.
+The evaluation also guards precision that recall cannot see: every document admitted by label for `trust deed` or `trust restructuring` must be a hand-labelled trust document, so a document that merely mentions trustees or beneficiaries cannot be tagged `trust_structure` by a single content word.
 
 ## Performance and capacity
 

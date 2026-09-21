@@ -11,6 +11,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 import org.assertj.core.api.SoftAssertions;
 import org.junit.jupiter.api.Test;
@@ -216,6 +217,27 @@ class SearchRelevanceEvalApiIntegrationTest extends IntegrationTest {
       }
     }
     return results;
+  }
+
+  @Test
+  void aTrustQueryLabelsOnlyTrustDocuments() throws Exception {
+    // Recall cannot see a wrong label: a document that merely mentions beneficiaries or trustees
+    // must not be tagged trust_structure and admitted by label for a trust query.
+    Set<String> trustTitles =
+        EvalCorpusLoader.queries().sets().get("trust_structure").stream()
+            .map(EvalQueries.Expected::title)
+            .collect(Collectors.toSet());
+
+    for (String query : List.of("trust deed", "trust restructuring")) {
+      for (JsonNode result : allResults(query)) {
+        if (result.path("type").asText().equals("document")
+            && !result.path("match").path("labels").isEmpty()) {
+          assertThat(result.path("document").path("title").asText())
+              .as("'%s': label-admitted document", query)
+              .isIn(trustTitles);
+        }
+      }
+    }
   }
 
   @Test

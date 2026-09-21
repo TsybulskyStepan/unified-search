@@ -26,7 +26,7 @@ class DocumentClassificationApiIntegrationTest extends IntegrationTest {
             port,
             "/clients/" + clientId + "/documents",
             TEST_API_KEY,
-            "{\"title\":\"Broadband and Landline Bill\",\"content\":\"Nothing matches a pattern here.\"}");
+            "{\"title\":\"Holiday Itinerary\",\"content\":\"Nothing matches a pattern here.\"}");
 
     assertThat(create.statusCode()).isEqualTo(201);
     assertThat(create.body())
